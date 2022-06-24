@@ -35,6 +35,46 @@ class RtpTransceiverProxy(override var obj: RtpTransceiver) : Proxy<RtpTransceiv
     obj.direction = direction.intoWebRtc()
   }
 
+  /** todo */
+  fun setRecv(recv: Boolean) {
+    var currentDirection = RtpTransceiverDirection.fromWebRtc(obj)
+    if (recv) {
+      when (currentDirection) {
+        RtpTransceiver.RtpTransceiverDirection.INACTIVE -> RECV_ONLY
+        RtpTransceiver.RtpTransceiverDirection.RECV_ONLY -> RECV_ONLY
+        RtpTransceiver.RtpTransceiverDirection.SEND_RECV -> SEND_RECV
+        RtpTransceiver.RtpTransceiverDirection.SEND_ONLY -> SEND_RECV
+      }
+    } else {
+      when (currentDirection) {
+        RtpTransceiver.RtpTransceiverDirection.INACTIVE -> INACTIVE
+        RtpTransceiver.RtpTransceiverDirection.RECV_ONLY -> INACTIVE
+        RtpTransceiver.RtpTransceiverDirection.SEND_RECV -> SEND_ONLY
+        RtpTransceiver.RtpTransceiverDirection.SEND_ONLY -> SEND_ONLY
+      }
+    }
+  }
+
+  /** todo */
+  fun setSend(send: Boolean) {
+    var currentDirection = RtpTransceiverDirection.fromWebRtc(obj)
+    if (send) {
+      when (currentDirection) {
+        RtpTransceiver.RtpTransceiverDirection.INACTIVE -> SEND_ONLY
+        RtpTransceiver.RtpTransceiverDirection.SEND_ONLY -> SEND_ONLY 
+        RtpTransceiver.RtpTransceiverDirection.RECV_ONLY -> SEND_RECV
+        RtpTransceiver.RtpTransceiverDirection.SEND_RECV -> SEND_RECV
+      }
+    } else {
+      when (currentDirection) {
+        RtpTransceiver.RtpTransceiverDirection.INACTIVE -> INACTIVE
+        RtpTransceiver.RtpTransceiverDirection.SEND_ONLY -> INACTIVE
+        RtpTransceiver.RtpTransceiverDirection.RECV_ONLY -> RECV_ONLY
+        RtpTransceiver.RtpTransceiverDirection.SEND_RECV -> RECV_ONLY
+      }
+    }
+  }
+
   /** @return mID of the underlying [RtpTransceiver]. */
   fun getMid(): String? {
     return obj.mid

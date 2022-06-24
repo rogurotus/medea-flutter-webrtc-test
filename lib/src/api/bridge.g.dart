@@ -94,6 +94,22 @@ abstract class FlutterWebrtcNative {
 
   FlutterRustBridgeTaskConstMeta get kSetTransceiverDirectionConstMeta;
 
+  Future<void> setTransceiverRecv(
+      {required int peerId,
+      required int transceiverIndex,
+      required bool recv,
+      dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kSetTransceiverRecvConstMeta;
+
+  Future<void> setTransceiverSend(
+      {required int peerId,
+      required int transceiverIndex,
+      required bool send,
+      dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kSetTransceiverSendConstMeta;
+
   /// Returns the [negotiated media ID (mid)][1] of the specified
   /// [`RtcRtpTransceiver`].
   ///
@@ -1120,6 +1136,46 @@ class FlutterWebrtcNativeImpl
       const FlutterRustBridgeTaskConstMeta(
         debugName: "set_transceiver_direction",
         argNames: ["peerId", "transceiverIndex", "direction"],
+      );
+
+  Future<void> setTransceiverRecv(
+          {required int peerId,
+          required int transceiverIndex,
+          required bool recv,
+          dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_set_transceiver_recv(port_,
+            _api2wire_u64(peerId), _api2wire_u32(transceiverIndex), recv),
+        parseSuccessData: _wire2api_unit,
+        constMeta: kSetTransceiverRecvConstMeta,
+        argValues: [peerId, transceiverIndex, recv],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kSetTransceiverRecvConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "set_transceiver_recv",
+        argNames: ["peerId", "transceiverIndex", "recv"],
+      );
+
+  Future<void> setTransceiverSend(
+          {required int peerId,
+          required int transceiverIndex,
+          required bool send,
+          dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_set_transceiver_send(port_,
+            _api2wire_u64(peerId), _api2wire_u32(transceiverIndex), send),
+        parseSuccessData: _wire2api_unit,
+        constMeta: kSetTransceiverSendConstMeta,
+        argValues: [peerId, transceiverIndex, send],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kSetTransceiverSendConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "set_transceiver_send",
+        argNames: ["peerId", "transceiverIndex", "send"],
       );
 
   Future<String?> getTransceiverMid(

@@ -306,35 +306,15 @@ impl Webrtc {
             bail!("`Transceiver` with ID `{transceiver_index}` doesn't exist");
         };
 
-        let new_direction = match transceiver.direction() {
-            D::kInactive => {
-                if recv {
-                    D::kRecvOnly
-                } else {
-                    D::kInactive
-                }
-            }
-            D::kSendOnly => {
-                if recv {
-                    D::kSendRecv
-                } else {
-                    D::kSendOnly
-                }
-            }
-            D::kRecvOnly => {
-                if recv {
-                    D::kRecvOnly
-                } else {
-                    D::kInactive
-                }
-            }
-            D::kSendRecv => {
-                if recv {
-                    D::kSendRecv
-                } else {
-                    D::kSendOnly
-                }
-            }
+        let new_direction = match (transceiver.direction(), recv) {
+            (D::kInactive, true) => D::kRecvOnly,
+            (D::kRecvOnly, true) => D::kRecvOnly,
+            (D::kSendOnly, true) => D::kSendRecv,
+            (D::kSendRecv, true) => D::kSendRecv,
+            (D::kInactive, false) => D::kInactive,
+            (D::kRecvOnly, false) => D::kInactive,
+            (D::kSendOnly, false) => D::kSendOnly,
+            (D::kSendRecv, false) => D::kSendOnly,
             _ => D::kStopped,
         };
 
@@ -369,35 +349,15 @@ impl Webrtc {
             bail!("`Transceiver` with ID `{transceiver_index}` doesn't exist");
         };
 
-        let new_direction = match transceiver.direction() {
-            D::kInactive => {
-                if send {
-                    D::kSendOnly
-                } else {
-                    D::kInactive
-                }
-            }
-            D::kRecvOnly => {
-                if send {
-                    D::kSendRecv
-                } else {
-                    D::kRecvOnly
-                }
-            }
-            D::kSendOnly => {
-                if send {
-                    D::kSendOnly
-                } else {
-                    D::kInactive
-                }
-            }
-            D::kSendRecv => {
-                if send {
-                    D::kSendRecv
-                } else {
-                    D::kRecvOnly
-                }
-            }
+        let new_direction = match (transceiver.direction(), send) {
+            (D::kInactive, true) => D::kSendOnly,
+            (D::kSendOnly, true) => D::kSendOnly,
+            (D::kRecvOnly, true) => D::kSendRecv,
+            (D::kSendRecv, true) => D::kSendRecv,
+            (D::kInactive, false) => D::kInactive,
+            (D::kSendOnly, false) => D::kInactive,
+            (D::kRecvOnly, false) => D::kRecvOnly,
+            (D::kSendRecv, false) => D::kRecvOnly,
             _ => D::kStopped,
         };
 

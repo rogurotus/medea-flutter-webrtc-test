@@ -531,7 +531,7 @@ void main() {
     var pc = await PeerConnection.create(IceTransportType.all, []);
     // ignore: prefer_function_declarations_over_variables
     var testEnableRecv = (beforeDirection, afterDirection) async {
-      var transceiver= await pc.addTransceiver(
+      var transceiver = await pc.addTransceiver(
           MediaKind.video, RtpTransceiverInit(beforeDirection));
       await transceiver.setRecv(true);
       expect(await transceiver.getDirection(), afterDirection);
@@ -541,7 +541,7 @@ void main() {
     var testDisableRecv = (beforeDirection, afterDirection) async {
       var transceiver = await pc.addTransceiver(
           MediaKind.video, RtpTransceiverInit(beforeDirection));
-      await transceiver.setRecv(true);
+      await transceiver.setRecv(false);
       expect(await transceiver.getDirection(), afterDirection);
     };
 
@@ -576,7 +576,7 @@ void main() {
     var pc = await PeerConnection.create(IceTransportType.all, []);
     // ignore: prefer_function_declarations_over_variables
     var testEnableRecv = (beforeDirection, afterDirection) async {
-      var transceiver= await pc.addTransceiver(
+      var transceiver = await pc.addTransceiver(
           MediaKind.video, RtpTransceiverInit(beforeDirection));
       await transceiver.setSend(true);
       expect(await transceiver.getDirection(), afterDirection);
@@ -586,7 +586,7 @@ void main() {
     var testDisableRecv = (beforeDirection, afterDirection) async {
       var transceiver = await pc.addTransceiver(
           MediaKind.video, RtpTransceiverInit(beforeDirection));
-      await transceiver.setSend(true);
+      await transceiver.setSend(false);
       expect(await transceiver.getDirection(), afterDirection);
     };
 
