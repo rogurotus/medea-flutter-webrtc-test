@@ -890,6 +890,32 @@ pub fn set_transceiver_direction(
     )
 }
 
+// todo
+pub fn set_transceiver_recv(
+    peer_id: u64,
+    transceiver_index: u32,
+    recv: bool,
+) -> anyhow::Result<()> {
+    WEBRTC.lock().unwrap().set_transceiver_recv(
+        peer_id,
+        transceiver_index,
+        recv,
+    )
+}
+
+// todo
+pub fn set_transceiver_send(
+    peer_id: u64,
+    transceiver_index: u32,
+    send: bool,
+) -> anyhow::Result<()> {
+    WEBRTC.lock().unwrap().set_transceiver_send(
+        peer_id,
+        transceiver_index,
+        send,
+    )
+}
+
 /// Returns the [negotiated media ID (mid)][1] of the specified
 /// [`RtcRtpTransceiver`].
 ///

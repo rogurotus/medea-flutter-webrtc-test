@@ -76,6 +76,18 @@ abstract class FlutterWebrtcNative {
       required RtpTransceiverDirection direction,
       dynamic hint});
 
+  Future<void> setTransceiverRecv(
+      {required int peerId,
+      required int transceiverIndex,
+      required bool recv,
+      dynamic hint});
+
+  Future<void> setTransceiverSend(
+      {required int peerId,
+      required int transceiverIndex,
+      required bool send,
+      dynamic hint});
+
   /// Returns the [negotiated media ID (mid)][1] of the specified
   /// [`RtcRtpTransceiver`].
   ///
@@ -1037,6 +1049,40 @@ class FlutterWebrtcNativeImpl
         hint: hint,
       ));
 
+  Future<void> setTransceiverRecv(
+          {required int peerId,
+          required int transceiverIndex,
+          required bool recv,
+          dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_set_transceiver_recv(port_,
+            _api2wire_u64(peerId), _api2wire_u32(transceiverIndex), recv),
+        parseSuccessData: _wire2api_unit,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "set_transceiver_recv",
+          argNames: ["peerId", "transceiverIndex", "recv"],
+        ),
+        argValues: [peerId, transceiverIndex, recv],
+        hint: hint,
+      ));
+
+  Future<void> setTransceiverSend(
+          {required int peerId,
+          required int transceiverIndex,
+          required bool send,
+          dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_set_transceiver_send(port_,
+            _api2wire_u64(peerId), _api2wire_u32(transceiverIndex), send),
+        parseSuccessData: _wire2api_unit,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "set_transceiver_send",
+          argNames: ["peerId", "transceiverIndex", "send"],
+        ),
+        argValues: [peerId, transceiverIndex, send],
+        hint: hint,
+      ));
+
   Future<String?> getTransceiverMid(
           {required int peerId, required int transceiverIndex, dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
@@ -1953,6 +1999,48 @@ class FlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
   late final _wire_set_transceiver_direction =
       _wire_set_transceiver_directionPtr
           .asFunction<void Function(int, int, int, int)>();
+
+  void wire_set_transceiver_recv(
+    int port_,
+    int peer_id,
+    int transceiver_index,
+    bool recv,
+  ) {
+    return _wire_set_transceiver_recv(
+      port_,
+      peer_id,
+      transceiver_index,
+      recv ? 1 : 0,
+    );
+  }
+
+  late final _wire_set_transceiver_recvPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64, ffi.Uint64, ffi.Uint32,
+              ffi.Uint8)>>('wire_set_transceiver_recv');
+  late final _wire_set_transceiver_recv = _wire_set_transceiver_recvPtr
+      .asFunction<void Function(int, int, int, int)>();
+
+  void wire_set_transceiver_send(
+    int port_,
+    int peer_id,
+    int transceiver_index,
+    bool send,
+  ) {
+    return _wire_set_transceiver_send(
+      port_,
+      peer_id,
+      transceiver_index,
+      send ? 1 : 0,
+    );
+  }
+
+  late final _wire_set_transceiver_sendPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64, ffi.Uint64, ffi.Uint32,
+              ffi.Uint8)>>('wire_set_transceiver_send');
+  late final _wire_set_transceiver_send = _wire_set_transceiver_sendPtr
+      .asFunction<void Function(int, int, int, int)>();
 
   void wire_get_transceiver_mid(
     int port_,
