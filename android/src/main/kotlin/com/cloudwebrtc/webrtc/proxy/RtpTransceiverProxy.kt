@@ -38,41 +38,61 @@ class RtpTransceiverProxy(override var obj: RtpTransceiver) : Proxy<RtpTransceiv
   /** todo */
   fun setRecv(recv: Boolean) {
     var currentDirection = RtpTransceiverDirection.fromWebRtc(obj)
-    if (recv) {
-      when (currentDirection) {
-        RtpTransceiver.RtpTransceiverDirection.INACTIVE -> RECV_ONLY
-        RtpTransceiver.RtpTransceiverDirection.RECV_ONLY -> RECV_ONLY
-        RtpTransceiver.RtpTransceiverDirection.SEND_RECV -> SEND_RECV
-        RtpTransceiver.RtpTransceiverDirection.SEND_ONLY -> SEND_RECV
-      }
-    } else {
-      when (currentDirection) {
-        RtpTransceiver.RtpTransceiverDirection.INACTIVE -> INACTIVE
-        RtpTransceiver.RtpTransceiverDirection.RECV_ONLY -> INACTIVE
-        RtpTransceiver.RtpTransceiverDirection.SEND_RECV -> SEND_ONLY
-        RtpTransceiver.RtpTransceiverDirection.SEND_ONLY -> SEND_ONLY
-      }
-    }
+    var newDirection =
+        if (recv) {
+          when (currentDirection) {
+            RtpTransceiver.RtpTransceiverDirection.INACTIVE ->
+                RtpTransceiver.RtpTransceiverDirection.RECV_ONLY
+            RtpTransceiver.RtpTransceiverDirection.RECV_ONLY ->
+                RtpTransceiver.RtpTransceiverDirection.RECV_ONLY
+            RtpTransceiver.RtpTransceiverDirection.SEND_RECV ->
+                RtpTransceiver.RtpTransceiverDirection.SEND_RECV
+            RtpTransceiver.RtpTransceiverDirection.SEND_ONLY ->
+                RtpTransceiver.RtpTransceiverDirection.SEND_RECV
+          }
+        } else {
+          when (currentDirection) {
+            RtpTransceiver.RtpTransceiverDirection.INACTIVE ->
+                RtpTransceiver.RtpTransceiverDirection.INACTIVE
+            RtpTransceiver.RtpTransceiverDirection.RECV_ONLY ->
+                RtpTransceiver.RtpTransceiverDirection.INACTIVE
+            RtpTransceiver.RtpTransceiverDirection.SEND_RECV ->
+                RtpTransceiver.RtpTransceiverDirection.SEND_ONLY
+            RtpTransceiver.RtpTransceiverDirection.SEND_ONLY ->
+                RtpTransceiver.RtpTransceiverDirection.SEND_ONLY
+          }
+        }
+    obj.direction = newDirection
   }
 
   /** todo */
   fun setSend(send: Boolean) {
     var currentDirection = RtpTransceiverDirection.fromWebRtc(obj)
-    if (send) {
-      when (currentDirection) {
-        RtpTransceiver.RtpTransceiverDirection.INACTIVE -> SEND_ONLY
-        RtpTransceiver.RtpTransceiverDirection.SEND_ONLY -> SEND_ONLY 
-        RtpTransceiver.RtpTransceiverDirection.RECV_ONLY -> SEND_RECV
-        RtpTransceiver.RtpTransceiverDirection.SEND_RECV -> SEND_RECV
-      }
-    } else {
-      when (currentDirection) {
-        RtpTransceiver.RtpTransceiverDirection.INACTIVE -> INACTIVE
-        RtpTransceiver.RtpTransceiverDirection.SEND_ONLY -> INACTIVE
-        RtpTransceiver.RtpTransceiverDirection.RECV_ONLY -> RECV_ONLY
-        RtpTransceiver.RtpTransceiverDirection.SEND_RECV -> RECV_ONLY
-      }
-    }
+    var newDirection =
+        if (send) {
+          when (currentDirection) {
+            RtpTransceiver.RtpTransceiverDirection.INACTIVE ->
+                RtpTransceiver.RtpTransceiverDirection.SEND_ONLY
+            RtpTransceiver.RtpTransceiverDirection.SEND_ONLY ->
+                RtpTransceiver.RtpTransceiverDirection.SEND_ONLY
+            RtpTransceiver.RtpTransceiverDirection.RECV_ONLY ->
+                RtpTransceiver.RtpTransceiverDirection.SEND_RECV
+            RtpTransceiver.RtpTransceiverDirection.SEND_RECV ->
+                RtpTransceiver.RtpTransceiverDirection.SEND_RECV
+          }
+        } else {
+          when (currentDirection) {
+            RtpTransceiver.RtpTransceiverDirection.INACTIVE ->
+                RtpTransceiver.RtpTransceiverDirection.INACTIVE
+            RtpTransceiver.RtpTransceiverDirection.SEND_ONLY ->
+                RtpTransceiver.RtpTransceiverDirection.INACTIVE
+            RtpTransceiver.RtpTransceiverDirection.RECV_ONLY ->
+                RtpTransceiver.RtpTransceiverDirection.RECV_ONLY
+            RtpTransceiver.RtpTransceiverDirection.SEND_RECV ->
+                RtpTransceiver.RtpTransceiverDirection.RECV_ONLY
+          }
+        }
+    obj.direction = newDirection
   }
 
   /** @return mID of the underlying [RtpTransceiver]. */

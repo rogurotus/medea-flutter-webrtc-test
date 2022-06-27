@@ -307,18 +307,18 @@ impl Webrtc {
         };
 
         let new_direction = match (transceiver.direction(), recv) {
-            (D::kInactive, true) => D::kRecvOnly,
-            (D::kRecvOnly, true) => D::kRecvOnly,
-            (D::kSendOnly, true) => D::kSendRecv,
-            (D::kSendRecv, true) => D::kSendRecv,
-            (D::kInactive, false) => D::kInactive,
-            (D::kRecvOnly, false) => D::kInactive,
-            (D::kSendOnly, false) => D::kSendOnly,
-            (D::kSendRecv, false) => D::kSendOnly,
+            (D::kInactive | D::kRecvOnly, true) => D::kRecvOnly,
+            (D::kSendOnly | D::kSendRecv, true) => D::kSendRecv,
+            (D::kInactive | D::kRecvOnly, false) => D::kInactive,
+            (D::kSendOnly | D::kSendRecv, false) => D::kSendOnly,
             _ => D::kStopped,
         };
 
-        transceiver.set_direction(new_direction.into())
+        if new_direction == D::kStopped {
+            Ok(())
+        } else {
+            transceiver.set_direction(new_direction)
+        }
     }
 
     /// todo
@@ -350,18 +350,18 @@ impl Webrtc {
         };
 
         let new_direction = match (transceiver.direction(), send) {
-            (D::kInactive, true) => D::kSendOnly,
-            (D::kSendOnly, true) => D::kSendOnly,
-            (D::kRecvOnly, true) => D::kSendRecv,
-            (D::kSendRecv, true) => D::kSendRecv,
-            (D::kInactive, false) => D::kInactive,
-            (D::kSendOnly, false) => D::kInactive,
-            (D::kRecvOnly, false) => D::kRecvOnly,
-            (D::kSendRecv, false) => D::kRecvOnly,
+            (D::kInactive | D::kSendOnly, true) => D::kSendOnly,
+            (D::kRecvOnly | D::kSendRecv, true) => D::kSendRecv,
+            (D::kInactive | D::kSendOnly, false) => D::kInactive,
+            (D::kSendRecv | D::kRecvOnly, false) => D::kRecvOnly,
             _ => D::kStopped,
         };
 
-        transceiver.set_direction(new_direction.into())
+        if new_direction == D::kStopped {
+            Ok(())
+        } else {
+            transceiver.set_direction(new_direction)
+        }
     }
 
     /// Returns the [Negotiated media ID (mid)][1] of the specified
