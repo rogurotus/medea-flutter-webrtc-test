@@ -41,28 +41,28 @@ class RtpTransceiverProxy(override var obj: RtpTransceiver) : Proxy<RtpTransceiv
     var newDirection =
         if (recv) {
           when (currentDirection) {
-            RtpTransceiver.RtpTransceiverDirection.INACTIVE ->
-                RtpTransceiver.RtpTransceiverDirection.RECV_ONLY
-            RtpTransceiver.RtpTransceiverDirection.RECV_ONLY ->
-                RtpTransceiver.RtpTransceiverDirection.RECV_ONLY
-            RtpTransceiver.RtpTransceiverDirection.SEND_RECV ->
-                RtpTransceiver.RtpTransceiverDirection.SEND_RECV
-            RtpTransceiver.RtpTransceiverDirection.SEND_ONLY ->
-                RtpTransceiver.RtpTransceiverDirection.SEND_RECV
+            RtpTransceiverDirection.INACTIVE -> RtpTransceiverDirection.RECV_ONLY
+            RtpTransceiverDirection.RECV_ONLY -> RtpTransceiverDirection.RECV_ONLY
+            RtpTransceiverDirection.SEND_RECV -> RtpTransceiverDirection.SEND_RECV
+            RtpTransceiverDirection.SEND_ONLY -> RtpTransceiverDirection.SEND_RECV
+            else -> {
+              RtpTransceiverDirection.STOPPED
+            }
           }
         } else {
           when (currentDirection) {
-            RtpTransceiver.RtpTransceiverDirection.INACTIVE ->
-                RtpTransceiver.RtpTransceiverDirection.INACTIVE
-            RtpTransceiver.RtpTransceiverDirection.RECV_ONLY ->
-                RtpTransceiver.RtpTransceiverDirection.INACTIVE
-            RtpTransceiver.RtpTransceiverDirection.SEND_RECV ->
-                RtpTransceiver.RtpTransceiverDirection.SEND_ONLY
-            RtpTransceiver.RtpTransceiverDirection.SEND_ONLY ->
-                RtpTransceiver.RtpTransceiverDirection.SEND_ONLY
+            RtpTransceiverDirection.INACTIVE -> RtpTransceiverDirection.INACTIVE
+            RtpTransceiverDirection.RECV_ONLY -> RtpTransceiverDirection.INACTIVE
+            RtpTransceiverDirection.SEND_RECV -> RtpTransceiverDirection.SEND_ONLY
+            RtpTransceiverDirection.SEND_ONLY -> RtpTransceiverDirection.SEND_ONLY
+            else -> {
+              RtpTransceiverDirection.STOPPED
+            }
           }
         }
-    obj.direction = newDirection.intoWebRtc()
+    if (newDirection != RtpTransceiverDirection.STOPPED) {
+      setDirection(newDirection)
+    }
   }
 
   /** Sets send of the underlying [RtpTransceiver]. */
@@ -71,28 +71,28 @@ class RtpTransceiverProxy(override var obj: RtpTransceiver) : Proxy<RtpTransceiv
     var newDirection =
         if (send) {
           when (currentDirection) {
-            RtpTransceiver.RtpTransceiverDirection.INACTIVE ->
-                RtpTransceiver.RtpTransceiverDirection.SEND_ONLY
-            RtpTransceiver.RtpTransceiverDirection.SEND_ONLY ->
-                RtpTransceiver.RtpTransceiverDirection.SEND_ONLY
-            RtpTransceiver.RtpTransceiverDirection.RECV_ONLY ->
-                RtpTransceiver.RtpTransceiverDirection.SEND_RECV
-            RtpTransceiver.RtpTransceiverDirection.SEND_RECV ->
-                RtpTransceiver.RtpTransceiverDirection.SEND_RECV
+            RtpTransceiverDirection.INACTIVE -> RtpTransceiverDirection.SEND_ONLY
+            RtpTransceiverDirection.SEND_ONLY -> RtpTransceiverDirection.SEND_ONLY
+            RtpTransceiverDirection.SEND_RECV -> RtpTransceiverDirection.SEND_RECV
+            RtpTransceiverDirection.RECV_ONLY -> RtpTransceiverDirection.SEND_RECV
+            else -> {
+              RtpTransceiverDirection.STOPPED
+            }
           }
         } else {
           when (currentDirection) {
-            RtpTransceiver.RtpTransceiverDirection.INACTIVE ->
-                RtpTransceiver.RtpTransceiverDirection.INACTIVE
-            RtpTransceiver.RtpTransceiverDirection.SEND_ONLY ->
-                RtpTransceiver.RtpTransceiverDirection.INACTIVE
-            RtpTransceiver.RtpTransceiverDirection.RECV_ONLY ->
-                RtpTransceiver.RtpTransceiverDirection.RECV_ONLY
-            RtpTransceiver.RtpTransceiverDirection.SEND_RECV ->
-                RtpTransceiver.RtpTransceiverDirection.RECV_ONLY
+            RtpTransceiverDirection.INACTIVE -> RtpTransceiverDirection.INACTIVE
+            RtpTransceiverDirection.SEND_ONLY -> RtpTransceiverDirection.INACTIVE
+            RtpTransceiverDirection.SEND_RECV -> RtpTransceiverDirection.RECV_ONLY
+            RtpTransceiverDirection.RECV_ONLY -> RtpTransceiverDirection.RECV_ONLY
+            else -> {
+              RtpTransceiverDirection.STOPPED
+            }
           }
         }
-    obj.direction = newDirection.intoWebRtc()
+    if (newDirection != RtpTransceiverDirection.STOPPED) {
+      setDirection(newDirection)
+    }
   }
 
   /** @return mID of the underlying [RtpTransceiver]. */

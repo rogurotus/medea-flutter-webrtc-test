@@ -115,7 +115,7 @@ class _RtpTransceiverChannel extends RtpTransceiver {
 
   @override
   Future<void> setSend(bool send) async {
-    await _chan.invokeMethod('setSend', {'recv': send});
+    await _chan.invokeMethod('setSend', {'send': send});
   }
 }
 
