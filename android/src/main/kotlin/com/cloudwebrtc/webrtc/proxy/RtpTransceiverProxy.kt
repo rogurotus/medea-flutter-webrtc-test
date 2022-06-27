@@ -35,7 +35,7 @@ class RtpTransceiverProxy(override var obj: RtpTransceiver) : Proxy<RtpTransceiv
     obj.direction = direction.intoWebRtc()
   }
 
-  /** todo */
+  /** Sets receiv of the underlying [RtpTransceiver]. */
   fun setRecv(recv: Boolean) {
     var currentDirection = RtpTransceiverDirection.fromWebRtc(obj)
     var newDirection =
@@ -62,10 +62,10 @@ class RtpTransceiverProxy(override var obj: RtpTransceiver) : Proxy<RtpTransceiv
                 RtpTransceiver.RtpTransceiverDirection.SEND_ONLY
           }
         }
-    obj.direction = newDirection
+    obj.direction = newDirection.intoWebRtc()
   }
 
-  /** todo */
+  /** Sets send of the underlying [RtpTransceiver]. */
   fun setSend(send: Boolean) {
     var currentDirection = RtpTransceiverDirection.fromWebRtc(obj)
     var newDirection =
@@ -92,7 +92,7 @@ class RtpTransceiverProxy(override var obj: RtpTransceiver) : Proxy<RtpTransceiv
                 RtpTransceiver.RtpTransceiverDirection.RECV_ONLY
           }
         }
-    obj.direction = newDirection
+    obj.direction = newDirection.intoWebRtc()
   }
 
   /** @return mID of the underlying [RtpTransceiver]. */

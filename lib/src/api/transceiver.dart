@@ -43,10 +43,10 @@ abstract class RtpTransceiver {
   /// Changes the [TransceiverDirection] of this [RtpTransceiver].
   Future<void> setDirection(TransceiverDirection direction);
 
-  /// todo
+  /// Set the receiv of this [RtpTransceiver].
   Future<void> setRecv(bool recv);
 
-  /// todo
+  /// Set the send of this [RtpTransceiver].
   Future<void> setSend(bool send);
 
   /// Returns current preferred [TransceiverDirection] of this [RtpTransceiver].

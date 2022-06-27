@@ -890,7 +890,7 @@ pub fn set_transceiver_direction(
     )
 }
 
-// todo
+/// Changes the receiv `direction` of the specified [`RtcRtpTransceiver`].
 pub fn set_transceiver_recv(
     peer_id: u64,
     transceiver_index: u32,
@@ -903,7 +903,7 @@ pub fn set_transceiver_recv(
     )
 }
 
-// todo
+/// Changes the send `direction` of the specified [`RtcRtpTransceiver`].
 pub fn set_transceiver_send(
     peer_id: u64,
     transceiver_index: u32,
