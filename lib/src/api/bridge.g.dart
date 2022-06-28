@@ -94,6 +94,7 @@ abstract class FlutterWebrtcNative {
 
   FlutterRustBridgeTaskConstMeta get kSetTransceiverDirectionConstMeta;
 
+  /// Changes the receive direction of the specified [`RtcRtpTransceiver`].
   Future<void> setTransceiverRecv(
       {required int peerId,
       required int transceiverIndex,
@@ -102,6 +103,7 @@ abstract class FlutterWebrtcNative {
 
   FlutterRustBridgeTaskConstMeta get kSetTransceiverRecvConstMeta;
 
+  /// Changes the send direction of the specified [`RtcRtpTransceiver`].
   Future<void> setTransceiverSend(
       {required int peerId,
       required int transceiverIndex,
@@ -256,7 +258,7 @@ abstract class FlutterWebrtcNative {
   FlutterRustBridgeTaskConstMeta get kCreateVideoSinkConstMeta;
 
   /// Destroys the [`VideoSink`] by the provided ID.
-  Uint8List disposeVideoSink({required int sinkId, dynamic hint});
+  Future<void> disposeVideoSink({required int sinkId, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kDisposeVideoSinkConstMeta;
 }
@@ -1515,9 +1517,11 @@ class FlutterWebrtcNativeImpl
         argNames: ["sinkId", "trackId", "callbackPtr"],
       );
 
-  Uint8List disposeVideoSink({required int sinkId, dynamic hint}) =>
-      executeSync(FlutterRustBridgeSyncTask(
-        callFfi: () => inner.wire_dispose_video_sink(_api2wire_i64(sinkId)),
+  Future<void> disposeVideoSink({required int sinkId, dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) =>
+            inner.wire_dispose_video_sink(port_, _api2wire_i64(sinkId)),
+        parseSuccessData: _wire2api_unit,
         constMeta: kDisposeVideoSinkConstMeta,
         argValues: [sinkId],
         hint: hint,
@@ -1722,10 +1726,6 @@ class FlutterWebrtcNativeImpl
 // Section: wire2api
 String _wire2api_String(dynamic raw) {
   return raw as String;
-}
-
-Uint8List _wire2api_SyncReturnVecU8(dynamic raw) {
-  return raw as Uint8List;
 }
 
 bool _wire2api_bool(dynamic raw) {
@@ -2547,19 +2547,21 @@ class FlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
   late final _wire_create_video_sink = _wire_create_video_sinkPtr.asFunction<
       void Function(int, int, ffi.Pointer<wire_uint_8_list>, int)>();
 
-  WireSyncReturnStruct wire_dispose_video_sink(
+  void wire_dispose_video_sink(
+    int port_,
     int sink_id,
   ) {
     return _wire_dispose_video_sink(
+      port_,
       sink_id,
     );
   }
 
   late final _wire_dispose_video_sinkPtr =
-      _lookup<ffi.NativeFunction<WireSyncReturnStruct Function(ffi.Int64)>>(
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64, ffi.Int64)>>(
           'wire_dispose_video_sink');
-  late final _wire_dispose_video_sink = _wire_dispose_video_sinkPtr
-      .asFunction<WireSyncReturnStruct Function(int)>();
+  late final _wire_dispose_video_sink =
+      _wire_dispose_video_sinkPtr.asFunction<void Function(int, int)>();
 
   ffi.Pointer<wire_StringList> new_StringList(
     int len,
