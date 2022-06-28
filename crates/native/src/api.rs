@@ -1,7 +1,7 @@
 use std::{mem, sync::Mutex};
 
 use cxx::UniquePtr;
-use flutter_rust_bridge::{StreamSink, SyncReturn};
+use flutter_rust_bridge::StreamSink;
 use libwebrtc_sys as sys;
 
 use crate::{cpp_api::OnFrameCallbackInterface, Webrtc};
