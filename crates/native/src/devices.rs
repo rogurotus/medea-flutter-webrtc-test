@@ -118,7 +118,7 @@ impl Webrtc {
     ///
     /// On any error returned from `libWebRTC`.
     pub fn enumerate_devices(
-        &mut self,
+        &self,
     ) -> anyhow::Result<Vec<api::MediaDeviceInfo>> {
         let mut audio = {
             let count_playout = self.audio_device_module.playout_devices();

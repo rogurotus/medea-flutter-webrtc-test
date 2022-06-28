@@ -10,10 +10,13 @@ use dashmap::DashMap;
 use derive_more::{Display, From, Into};
 use libwebrtc_sys as sys;
 use once_cell::sync::OnceCell;
-use threadpool::ThreadPool;
+use rusty_pool::ThreadPool;
 
 use crate::{
-    api, next_id, stream_sink::StreamSink, AudioTrack, AudioTrackId,
+    api,
+    next_id,
+    stream_sink::StreamSink,
+    AudioTrack, AudioTrackId,
     VideoTrack, VideoTrackId, Webrtc,
 };
 

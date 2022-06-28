@@ -1,13 +1,16 @@
-use std::{mem, sync::Mutex};
+use std::mem;
 
 use cxx::UniquePtr;
 use flutter_rust_bridge::StreamSink;
 use libwebrtc_sys as sys;
 
-use crate::{cpp_api::OnFrameCallbackInterface, Webrtc};
+use crate::{
+    // cpp_api::OnFrameCallbackInterface,
+    Webrtc
+};
 
 lazy_static::lazy_static! {
-    static ref WEBRTC: Mutex<Webrtc> = Mutex::new(Webrtc::new().unwrap());
+    static ref WEBRTC: Webrtc = Webrtc::new().unwrap();
 }
 
 /// Indicator of the current state of a [`MediaStreamTrack`].
@@ -783,7 +786,7 @@ pub struct RtcIceServer {
 /// Returns a list of all available media input and output devices, such as
 /// microphones, cameras, headsets, and so forth.
 pub fn enumerate_devices() -> anyhow::Result<Vec<MediaDeviceInfo>> {
-    WEBRTC.lock().unwrap().enumerate_devices()
+    WEBRTC.enumerate_devices()
 }
 
 /// Creates a new [`PeerConnection`] and returns its ID.
@@ -792,10 +795,9 @@ pub fn create_peer_connection(
     cb: StreamSink<PeerConnectionEvent>,
     configuration: RtcConfiguration,
 ) -> anyhow::Result<()> {
-    WEBRTC
-        .lock()
-        .unwrap()
-        .create_peer_connection(&(cb.into()), configuration)
+    // WEBRTC
+    //     .create_peer_connection(&(cb.into()), configuration)
+    unimplemented!()
 }
 
 /// Initiates the creation of an SDP offer for the purpose of starting a new
@@ -806,12 +808,13 @@ pub fn create_offer(
     ice_restart: bool,
     use_rtp_mux: bool,
 ) -> anyhow::Result<RtcSessionDescription> {
-    WEBRTC.lock().unwrap().create_offer(
-        peer_id,
-        voice_activity_detection,
-        ice_restart,
-        use_rtp_mux,
-    )
+    // WEBRTC.create_offer(
+    //     peer_id,
+    //     voice_activity_detection,
+    //     ice_restart,
+    //     use_rtp_mux,
+    // )
+    unimplemented!()
 }
 
 /// Creates an SDP answer to an offer received from a remote peer during an
@@ -822,12 +825,13 @@ pub fn create_answer(
     ice_restart: bool,
     use_rtp_mux: bool,
 ) -> anyhow::Result<RtcSessionDescription> {
-    WEBRTC.lock().unwrap().create_answer(
-        peer_id,
-        voice_activity_detection,
-        ice_restart,
-        use_rtp_mux,
-    )
+    // WEBRTC.create_answer(
+    //     peer_id,
+    //     voice_activity_detection,
+    //     ice_restart,
+    //     use_rtp_mux,
+    // )
+    unimplemented!()
 }
 
 /// Changes the local description associated with the connection.
@@ -836,10 +840,9 @@ pub fn set_local_description(
     kind: SdpType,
     sdp: String,
 ) -> anyhow::Result<()> {
-    WEBRTC
-        .lock()
-        .unwrap()
-        .set_local_description(peer_id, kind.into(), sdp)
+    unimplemented!()
+    // WEBRTC
+    //     .set_local_description(peer_id, kind.into(), sdp)
 }
 
 /// Sets the specified session description as the remote peer's current offer or
@@ -849,10 +852,9 @@ pub fn set_remote_description(
     kind: SdpType,
     sdp: String,
 ) -> anyhow::Result<()> {
-    WEBRTC
-        .lock()
-        .unwrap()
-        .set_remote_description(peer_id, kind.into(), sdp)
+    unimplemented!()
+    // WEBRTC
+    //     .set_remote_description(peer_id, kind.into(), sdp)
 }
 
 /// Creates a new [`RtcRtpTransceiver`] and adds it to the set of transceivers
@@ -862,11 +864,12 @@ pub fn add_transceiver(
     media_type: MediaType,
     direction: RtpTransceiverDirection,
 ) -> anyhow::Result<RtcRtpTransceiver> {
-    WEBRTC.lock().unwrap().add_transceiver(
-        peer_id,
-        media_type.into(),
-        direction.into(),
-    )
+    unimplemented!()
+    // WEBRTC.add_transceiver(
+    //     peer_id,
+    //     media_type.into(),
+    //     direction.into(),
+    // )
 }
 
 /// Returns a sequence of [`RtcRtpTransceiver`] objects representing the RTP
@@ -874,7 +877,8 @@ pub fn add_transceiver(
 pub fn get_transceivers(
     peer_id: u64,
 ) -> anyhow::Result<Vec<RtcRtpTransceiver>> {
-    WEBRTC.lock().unwrap().get_transceivers(peer_id)
+    unimplemented!()
+    // WEBRTC.get_transceivers(peer_id)
 }
 
 /// Changes the preferred `direction` of the specified [`RtcRtpTransceiver`].
@@ -883,11 +887,12 @@ pub fn set_transceiver_direction(
     transceiver_index: u32,
     direction: RtpTransceiverDirection,
 ) -> anyhow::Result<()> {
-    WEBRTC.lock().unwrap().set_transceiver_direction(
-        peer_id,
-        transceiver_index,
-        direction,
-    )
+    unimplemented!()
+    // WEBRTC.set_transceiver_direction(
+    //     peer_id,
+    //     transceiver_index,
+    //     direction,
+    // )
 }
 
 /// Changes the receive direction of the specified [`RtcRtpTransceiver`].
@@ -896,11 +901,12 @@ pub fn set_transceiver_recv(
     transceiver_index: u32,
     recv: bool,
 ) -> anyhow::Result<()> {
-    WEBRTC.lock().unwrap().set_transceiver_recv(
-        peer_id,
-        transceiver_index,
-        recv,
-    )
+    unimplemented!()
+    // WEBRTC.set_transceiver_recv(
+    //     peer_id,
+    //     transceiver_index,
+    //     recv,
+    // )
 }
 
 /// Changes the send direction of the specified [`RtcRtpTransceiver`].
@@ -909,11 +915,12 @@ pub fn set_transceiver_send(
     transceiver_index: u32,
     send: bool,
 ) -> anyhow::Result<()> {
-    WEBRTC.lock().unwrap().set_transceiver_send(
-        peer_id,
-        transceiver_index,
-        send,
-    )
+    unimplemented!()
+    // WEBRTC.set_transceiver_send(
+    //     peer_id,
+    //     transceiver_index,
+    //     send,
+    // )
 }
 
 /// Returns the [negotiated media ID (mid)][1] of the specified
@@ -924,10 +931,9 @@ pub fn get_transceiver_mid(
     peer_id: u64,
     transceiver_index: u32,
 ) -> anyhow::Result<Option<String>> {
-    WEBRTC
-        .lock()
-        .unwrap()
-        .get_transceiver_mid(peer_id, transceiver_index)
+    unimplemented!()
+    // WEBRTC
+    //     .get_transceiver_mid(peer_id, transceiver_index)
 }
 
 /// Returns the preferred direction of the specified [`RtcRtpTransceiver`].
@@ -935,11 +941,10 @@ pub fn get_transceiver_direction(
     peer_id: u64,
     transceiver_index: u32,
 ) -> anyhow::Result<RtpTransceiverDirection> {
-    WEBRTC
-        .lock()
-        .unwrap()
-        .get_transceiver_direction(peer_id, transceiver_index)
-        .map(Into::into)
+    unimplemented!()
+    // WEBRTC
+    //     .get_transceiver_direction(peer_id, transceiver_index)
+    //     .map(Into::into)
 }
 
 /// Irreversibly marks the specified [`RtcRtpTransceiver`] as stopping, unless
@@ -951,10 +956,9 @@ pub fn stop_transceiver(
     peer_id: u64,
     transceiver_index: u32,
 ) -> anyhow::Result<()> {
-    WEBRTC
-        .lock()
-        .unwrap()
-        .stop_transceiver(peer_id, transceiver_index)
+    unimplemented!()
+    // WEBRTC
+    //     .stop_transceiver(peer_id, transceiver_index)
 }
 
 /// Replaces the specified [`AudioTrack`] (or [`VideoTrack`]) on the
@@ -964,11 +968,12 @@ pub fn sender_replace_track(
     transceiver_index: u32,
     track_id: Option<String>,
 ) -> anyhow::Result<()> {
-    WEBRTC.lock().unwrap().sender_replace_track(
-        peer_id,
-        transceiver_index,
-        track_id,
-    )
+    unimplemented!()
+    // WEBRTC.sender_replace_track(
+    //     peer_id,
+    //     transceiver_index,
+    //     track_id,
+    // )
 }
 
 /// Adds the new ICE `candidate` to the given [`PeerConnection`].
@@ -979,41 +984,47 @@ pub fn add_ice_candidate(
     sdp_mid: String,
     sdp_mline_index: i32,
 ) -> anyhow::Result<()> {
-    WEBRTC.lock().unwrap().add_ice_candidate(
-        peer_id,
-        candidate,
-        sdp_mid,
-        sdp_mline_index,
-    )
+    unimplemented!()
+    // WEBRTC.add_ice_candidate(
+    //     peer_id,
+    //     candidate,
+    //     sdp_mid,
+    //     sdp_mline_index,
+    // )
 }
 
 /// Tells the [`PeerConnection`] that ICE should be restarted.
 pub fn restart_ice(peer_id: u64) -> anyhow::Result<()> {
-    WEBRTC.lock().unwrap().restart_ice(peer_id)
+    // WEBRTC.restart_ice(peer_id)
+    unimplemented!()
 }
 
 /// Closes the [`PeerConnection`].
 pub fn dispose_peer_connection(peer_id: u64) {
-    WEBRTC.lock().unwrap().dispose_peer_connection(peer_id);
+    // WEBRTC.dispose_peer_connection(peer_id);
+    unimplemented!()
 }
 
 /// Creates a [`MediaStream`] with tracks according to provided
 /// [`MediaStreamConstraints`].
 pub fn get_media(constraints: MediaStreamConstraints) -> GetMediaResult {
-    match WEBRTC.lock().unwrap().get_media(constraints) {
-        Ok(tracks) => GetMediaResult::Ok(tracks),
-        Err(err) => GetMediaResult::Err(err),
-    }
+    // match WEBRTC.get_media(constraints) {
+    //     Ok(tracks) => GetMediaResult::Ok(tracks),
+    //     Err(err) => GetMediaResult::Err(err),
+    // }
+    unimplemented!()
 }
 
 /// Sets the specified `audio playout` device.
 pub fn set_audio_playout_device(device_id: String) -> anyhow::Result<()> {
-    WEBRTC.lock().unwrap().set_audio_playout_device(device_id)
+    // WEBRTC.set_audio_playout_device(device_id)
+    unimplemented!()
 }
 
 /// Indicates whether the microphone is available to set volume.
 pub fn microphone_volume_is_available() -> anyhow::Result<bool> {
-    WEBRTC.lock().unwrap().microphone_volume_is_available()
+    // WEBRTC.microphone_volume_is_available()
+    unimplemented!()
 }
 
 /// Sets the microphone system volume according to the specified `level` in
@@ -1021,17 +1032,20 @@ pub fn microphone_volume_is_available() -> anyhow::Result<bool> {
 ///
 /// Valid values range is `[0; 100]`.
 pub fn set_microphone_volume(level: u8) -> anyhow::Result<()> {
-    WEBRTC.lock().unwrap().set_microphone_volume(level)
+    // WEBRTC.set_microphone_volume(level)
+    unimplemented!()
 }
 
 /// Returns the current level of the microphone volume in `[0; 100]` range.
 pub fn microphone_volume() -> anyhow::Result<u32> {
-    WEBRTC.lock().unwrap().microphone_volume()
+    // WEBRTC.microphone_volume()
+    unimplemented!()
 }
 
 /// Disposes the specified [`MediaStreamTrack`].
 pub fn dispose_track(track_id: String, kind: MediaType) {
-    WEBRTC.lock().unwrap().dispose_track(track_id, kind);
+    // WEBRTC.dispose_track(track_id, kind);
+    unimplemented!()
 }
 
 /// Returns the [readyState][0] property of the [`MediaStreamTrack`] by its ID
@@ -1042,7 +1056,8 @@ pub fn track_state(
     track_id: String,
     kind: MediaType,
 ) -> anyhow::Result<TrackState> {
-    WEBRTC.lock().unwrap().track_state(track_id, kind)
+    // WEBRTC.track_state(track_id, kind)
+    unimplemented!()
 }
 
 /// Changes the [enabled][1] property of the [`MediaStreamTrack`] by its ID and
@@ -1054,10 +1069,9 @@ pub fn set_track_enabled(
     kind: MediaType,
     enabled: bool,
 ) -> anyhow::Result<()> {
-    WEBRTC
-        .lock()
-        .unwrap()
-        .set_track_enabled(track_id, kind, enabled)
+    // WEBRTC
+    //     .set_track_enabled(track_id, kind, enabled)
+    unimplemented!()
 }
 
 /// Clones the specified [`MediaStreamTrack`].
@@ -1065,7 +1079,8 @@ pub fn clone_track(
     track_id: String,
     kind: MediaType,
 ) -> anyhow::Result<MediaStreamTrack> {
-    WEBRTC.lock().unwrap().clone_track(track_id, kind)
+    // WEBRTC.clone_track(track_id, kind)
+    unimplemented!()
 }
 
 /// Registers an observer to the [`MediaStreamTrack`] events.
@@ -1074,10 +1089,9 @@ pub fn register_track_observer(
     track_id: String,
     kind: MediaType,
 ) -> anyhow::Result<()> {
-    WEBRTC
-        .lock()
-        .unwrap()
-        .register_track_observer(track_id, kind, cb.into())
+    // WEBRTC
+    //     .register_track_observer(track_id, kind, cb.into())
+    unimplemented!()
 }
 
 /// Sets the provided [`OnDeviceChangeCallback`] as the callback to be called
@@ -1086,7 +1100,8 @@ pub fn register_track_observer(
 /// Only one callback can be set at a time, so the previous one will be dropped,
 /// if any.
 pub fn set_on_device_changed(cb: StreamSink<()>) -> anyhow::Result<()> {
-    WEBRTC.lock().unwrap().set_on_device_changed(cb.into())
+    // WEBRTC.set_on_device_changed(cb.into())
+    unimplemented!()
 }
 
 /// Creates a new [`VideoSink`] attached to the specified video track.
@@ -1098,17 +1113,17 @@ pub fn create_video_sink(
     track_id: String,
     callback_ptr: u64,
 ) -> anyhow::Result<()> {
-    let handler = unsafe {
-        let ptr: *mut OnFrameCallbackInterface = mem::transmute(callback_ptr);
-        UniquePtr::from_raw(ptr)
-    };
-    WEBRTC
-        .lock()
-        .unwrap()
-        .create_video_sink(sink_id, track_id, handler)
+    // let handler = unsafe {
+    //     let ptr: *mut OnFrameCallbackInterface = mem::transmute(callback_ptr);
+    //     UniquePtr::from_raw(ptr)
+    // };
+    // WEBRTC
+    //     .create_video_sink(sink_id, track_id, handler)
+    unimplemented!()
 }
 
 /// Destroys the [`VideoSink`] by the provided ID.
 pub fn dispose_video_sink(sink_id: i64) {
-    WEBRTC.lock().unwrap().dispose_video_sink(sink_id);
+    // WEBRTC.dispose_video_sink(sink_id);
+    unimplemented!()
 }

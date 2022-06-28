@@ -26,7 +26,7 @@ use std::{
 
 use dashmap::DashMap;
 use libwebrtc_sys as sys;
-use threadpool::ThreadPool;
+use rusty_pool::ThreadPool;
 
 use crate::video_sink::Id as VideoSinkId;
 
@@ -34,8 +34,12 @@ use crate::video_sink::Id as VideoSinkId;
 pub use crate::{
     pc::{PeerConnection, PeerConnectionId},
     user_media::{
-        AudioDeviceId, AudioDeviceModule, AudioTrack, AudioTrackId,
-        MediaStreamId, VideoDeviceId, VideoSource, VideoTrack, VideoTrackId,
+        AudioDeviceId,
+        AudioDeviceModule,
+        AudioTrack, AudioTrackId,
+        MediaStreamId,
+        VideoDeviceId, VideoSource,
+        VideoTrack, VideoTrackId,
     },
     video_sink::{Frame, VideoSink},
 };
@@ -111,7 +115,7 @@ impl Webrtc {
             audio_tracks: Arc::new(DashMap::new()),
             peer_connections: HashMap::new(),
             video_sinks: HashMap::new(),
-            callback_pool: ThreadPool::new(4),
+            callback_pool: ThreadPool::default(),
         })
     }
 }
