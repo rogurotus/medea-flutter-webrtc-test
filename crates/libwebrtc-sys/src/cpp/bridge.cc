@@ -46,22 +46,21 @@ std::unique_ptr<VideoTrackSourceInterface> create_device_video_source(
     size_t height,
     size_t fps,
     uint32_t device) {
-
   auto fake_video_source = webrtc::FakeVideoTrackSource::Create(false);
 
   int fps_ms = 1000 / fps;
   int timestamp_offset_us = 1000000 / fps;
   auto th = std::thread([=] {
-    auto frame = cricket::FakeFrameSource(width,height,timestamp_offset_us);
-    while(true) {
+    auto frame = cricket::FakeFrameSource(width, height, timestamp_offset_us);
+    while (true) {
       fake_video_source->InjectFrame(frame.GetFrame());
       std::this_thread::sleep_for(std::chrono::milliseconds(fps_ms));
     }
   });
   th.detach();
 
-  auto src = webrtc::CreateVideoTrackSourceProxy(&signaling_thread,
-                                                 &worker_thread, fake_video_source);
+  auto src = webrtc::CreateVideoTrackSourceProxy(
+      &signaling_thread, &worker_thread, fake_video_source);
   if (src == nullptr) {
     return nullptr;
   }
@@ -75,14 +74,12 @@ std::unique_ptr<AudioDeviceModule> create_audio_device_module(
     Thread& worker_thread,
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory) {
+  auto capture =
+      webrtc::TestAudioDeviceModule::CreatePulsedNoiseCapturer(1024, 8000);
+  auto renderer = webrtc::TestAudioDeviceModule::CreateDiscardRenderer(8000);
 
-    auto capture = webrtc::TestAudioDeviceModule::CreatePulsedNoiseCapturer(1024, 8000);
-    auto renderer = webrtc::TestAudioDeviceModule::CreateDiscardRenderer(8000);
-
-    auto adm_fake = webrtc::TestAudioDeviceModule::Create(
-      &task_queue_factory,
-      std::move(capture),
-      std::move(renderer));
+  auto adm_fake = webrtc::TestAudioDeviceModule::Create(
+      &task_queue_factory, std::move(capture), std::move(renderer));
   return std::make_unique<AudioDeviceModule>(adm_fake);
 }
 #else
@@ -241,7 +238,7 @@ std::unique_ptr<VideoDeviceInfo> create_video_device_info() {
 }
 
 // Calls `VideoDeviceInfo->GetDeviceName()` with the provided arguments.
-int32_t video_device_name(VideoDeviceInfo& device_info,
+int32_t video_device_name(const std::unique_ptr<VideoDeviceInfo>& device_info,
                           uint32_t index,
                           rust::String& name,
                           rust::String& guid) {
@@ -249,12 +246,18 @@ int32_t video_device_name(VideoDeviceInfo& device_info,
   char guid_buff[256];
 
   const int32_t size =
-      device_info.GetDeviceName(index, name_buff, 256, guid_buff, 256);
+      device_info->GetDeviceName(index, name_buff, 256, guid_buff, 256);
 
   name = name_buff;
   guid = guid_buff;
 
   return size;
+}
+
+// Calls `VideoDeviceInfo->NumberOfDevices()` with the provided arguments.
+uint32_t number_of_video_devices(
+    const std::unique_ptr<VideoDeviceInfo>& device_info) {
+  return device_info->NumberOfDevices();
 }
 
 // Calls `Thread->Create()`.
@@ -452,12 +455,12 @@ std::unique_ptr<PeerConnectionFactoryInterface> create_peer_connection_factory(
 
 // Calls `PeerConnectionFactoryInterface->CreatePeerConnectionOrError`.
 std::unique_ptr<PeerConnectionInterface> create_peer_connection_or_error(
-    PeerConnectionFactoryInterface& peer_connection_factory,
+    const std::unique_ptr<PeerConnectionFactoryInterface>& pcf,
     const RTCConfiguration& configuration,
     std::unique_ptr<PeerConnectionDependencies> dependencies,
     rust::String& error) {
-  auto pc = peer_connection_factory->CreatePeerConnectionOrError(
-      configuration, std::move(*dependencies));
+  auto pc = pcf.get()->get()->CreatePeerConnectionOrError(configuration,
+                                                   std::move(*dependencies));
 
   if (pc.ok()) {
     return std::make_unique<PeerConnectionInterface>(pc.MoveValue());

@@ -3,6 +3,7 @@ use std::{
     sync::{mpsc, Arc, Mutex},
     time::Duration,
 };
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use anyhow::{anyhow, bail};
 use cxx::{CxxString, CxxVector};
@@ -26,14 +27,14 @@ static RX_TIMEOUT: Duration = Duration::from_secs(5);
 impl Webrtc {
     /// Creates a new [`PeerConnection`] and returns its ID.
     pub fn create_peer_connection(
-        &mut self,
+        &self,
         obs: &StreamSink<api::PeerConnectionEvent>,
         configuration: api::RtcConfiguration,
     ) -> anyhow::Result<()> {
         let id = PeerConnectionId::from(next_id());
         let peer = PeerConnection::new(
             id,
-            &mut self.peer_connection_factory,
+            &self.peer_connection_factory,
             Arc::clone(&self.video_tracks),
             Arc::clone(&self.audio_tracks),
             obs.clone(),
@@ -156,13 +157,13 @@ impl Webrtc {
     /// If the mutex guarding the [`sys::PeerConnectionInterface`] is poisoned.
     #[allow(clippy::needless_pass_by_value)]
     pub fn set_remote_description(
-        &mut self,
+        &self,
         peer_id: u64,
         kind: sys::SdpType,
         sdp: String,
     ) -> anyhow::Result<()> {
         let peer_id = PeerConnectionId::from(peer_id);
-        let peer =
+        let mut peer =
             self.peer_connections.get_mut(&peer_id).ok_or_else(|| {
                 anyhow!("`PeerConnection` with ID `{peer_id}` doesn't exist")
             })?;
@@ -176,7 +177,7 @@ impl Webrtc {
         inner.set_remote_description(desc, obs);
 
         set_sdp_rx.recv_timeout(RX_TIMEOUT)??;
-        peer.has_remote_description = true;
+        peer.has_remote_description.store(true, Ordering::Release);
 
         let candidates = mem::take(&mut peer.candidates_buffer);
         for candidate in candidates {
@@ -570,7 +571,7 @@ impl Webrtc {
     ///
     /// If the mutex guarding the [`sys::PeerConnectionInterface`] is poisoned.
     pub fn add_ice_candidate(
-        &mut self,
+        &self,
         peer_id: u64,
         candidate: String,
         sdp_mid: String,
@@ -588,7 +589,7 @@ impl Webrtc {
             sdp_mline_index,
         };
 
-        if peer.has_remote_description {
+        if peer.has_remote_description.load(Ordering::Acquire) {
             let (add_candidate_tx, add_candidate_rx) = mpsc::channel();
             peer.inner.lock().unwrap().add_ice_candidate(
                 candidate.try_into()?,
@@ -675,7 +676,7 @@ pub struct PeerConnection {
     /// Indicates whether the
     /// [`sys::PeerConnectionInterface::set_remote_description()`] was called
     /// on the underlying peer.
-    has_remote_description: bool,
+    has_remote_description: AtomicBool,
 
     /// Candidates, added before a remote description has been set on the
     /// underlying peer.
@@ -686,7 +687,7 @@ impl PeerConnection {
     /// Creates a new [`PeerConnection`].
     fn new(
         id: PeerConnectionId,
-        factory: &mut sys::PeerConnectionFactoryInterface,
+        factory: &sys::PeerConnectionFactoryInterface,
         video_tracks: Arc<DashMap<VideoTrackId, VideoTrack>>,
         audio_tracks: Arc<DashMap<AudioTrackId, AudioTrack>>,
         observer: StreamSink<api::PeerConnectionEvent>,
@@ -744,7 +745,7 @@ impl PeerConnection {
 
         Ok(Self {
             inner,
-            has_remote_description: false,
+            has_remote_description: AtomicBool::new(false),
             candidates_buffer: Vec::new(),
         })
     }

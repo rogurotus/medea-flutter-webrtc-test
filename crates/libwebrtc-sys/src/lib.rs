@@ -429,27 +429,27 @@ impl VideoDeviceInfo {
 
     #[cfg(not(feature = "fake_media"))]
     /// Returns count of a video recording devices.
-    pub fn number_of_devices(&mut self) -> u32 {
-        self.0.pin_mut().number_of_video_devices()
+    pub fn number_of_devices(&self) -> u32 {
+        webrtc::number_of_video_devices(&self.0)
     }
 
     #[cfg(feature = "fake_media")]
     /// Always returns `1`.
-    pub fn number_of_devices(&mut self) -> u32 {
+    pub fn number_of_devices(&self) -> u32 {
         1
     }
 
     #[cfg(not(feature = "fake_media"))]
     /// Returns the `(label, id)` tuple for the given video device `index`.
     pub fn device_name(
-        &mut self,
+        &self,
         index: u32,
     ) -> anyhow::Result<(String, String)> {
         let mut name = String::new();
         let mut guid = String::new();
 
         let result = webrtc::video_device_name(
-            self.0.pin_mut(),
+            &self.0,
             index,
             &mut name,
             &mut guid,
@@ -468,7 +468,7 @@ impl VideoDeviceInfo {
     #[cfg(feature = "fake_media")]
     /// Always returns fake names.
     pub fn device_name(
-        &mut self,
+        &self,
         _index: u32,
     ) -> anyhow::Result<(String, String)> {
         Ok((String::from("fake webcam"), String::from("fake webcam id")))
@@ -1304,13 +1304,13 @@ impl PeerConnectionFactoryInterface {
 
     /// Creates a new [`PeerConnectionInterface`].
     pub fn create_peer_connection_or_error(
-        &mut self,
+        &self,
         configuration: &RtcConfiguration,
         dependencies: PeerConnectionDependencies,
     ) -> anyhow::Result<PeerConnectionInterface> {
         let mut error = String::new();
         let inner = webrtc::create_peer_connection_or_error(
-            self.0.pin_mut(),
+            &self.0,
             &configuration.0,
             dependencies.inner,
             &mut error,

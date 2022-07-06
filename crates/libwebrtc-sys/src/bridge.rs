@@ -545,14 +545,12 @@ pub(crate) mod webrtc {
         pub fn create_video_device_info() -> UniquePtr<VideoDeviceInfo>;
 
         /// Returns count of a video recording devices.
-        #[namespace = "webrtc"]
-        #[cxx_name = "NumberOfDevices"]
-        pub fn number_of_video_devices(self: Pin<&mut VideoDeviceInfo>) -> u32;
+        pub fn number_of_video_devices(device_info: &UniquePtr<VideoDeviceInfo>) -> u32;
 
         /// Writes device info to the provided `name` and `id` for the given
         /// video device `index`.
         pub fn video_device_name(
-            device_info: Pin<&mut VideoDeviceInfo>,
+            device_info: &UniquePtr<VideoDeviceInfo>,
             index: u32,
             name: &mut String,
             id: &mut String,
@@ -867,7 +865,7 @@ pub(crate) mod webrtc {
         /// If creation fails then an error will be written to the provided
         /// `error` and the returned [`UniquePtr`] will be `null`.
         pub fn create_peer_connection_or_error(
-            peer_connection_factory: Pin<&mut PeerConnectionFactoryInterface>,
+            peer_connection_factory: &UniquePtr<PeerConnectionFactoryInterface>,
             conf: &RTCConfiguration,
             deps: UniquePtr<PeerConnectionDependencies>,
             error: &mut String,

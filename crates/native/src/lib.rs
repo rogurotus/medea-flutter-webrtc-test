@@ -54,7 +54,7 @@ pub(crate) fn next_id() -> u64 {
 
 /// Global context for an application.
 struct Webrtc {
-    peer_connections: HashMap<PeerConnectionId, PeerConnection>,
+    peer_connections: DashMap<PeerConnectionId, PeerConnection>,
     video_device_info: sys::VideoDeviceInfo,
     video_sources: HashMap<VideoDeviceId, Arc<VideoSource>>,
     video_tracks: Arc<DashMap<VideoTrackId, VideoTrack>>,
@@ -113,7 +113,7 @@ impl Webrtc {
             video_tracks: Arc::new(DashMap::new()),
             audio_source: None,
             audio_tracks: Arc::new(DashMap::new()),
-            peer_connections: HashMap::new(),
+            peer_connections: DashMap::new(),
             video_sinks: HashMap::new(),
             callback_pool: ThreadPool::default(),
         })

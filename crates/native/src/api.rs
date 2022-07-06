@@ -795,9 +795,8 @@ pub fn create_peer_connection(
     cb: StreamSink<PeerConnectionEvent>,
     configuration: RtcConfiguration,
 ) -> anyhow::Result<()> {
-    // WEBRTC
-    //     .create_peer_connection(&(cb.into()), configuration)
-    unimplemented!()
+    WEBRTC
+        .create_peer_connection(&(cb.into()), configuration)
 }
 
 /// Initiates the creation of an SDP offer for the purpose of starting a new

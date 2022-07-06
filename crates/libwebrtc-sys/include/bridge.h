@@ -164,10 +164,13 @@ int32_t set_audio_playout_device(const AudioDeviceModule& audio_device_module,
 std::unique_ptr<VideoDeviceInfo> create_video_device_info();
 
 // Obtains information regarding the specified video recording device.
-int32_t video_device_name(VideoDeviceInfo& device_info,
+int32_t video_device_name(const std::unique_ptr<VideoDeviceInfo>& device_info,
                           uint32_t index,
                           rust::String& name,
                           rust::String& guid);
+
+/// Returns count of a video recording devices.
+uint32_t number_of_video_devices(const std::unique_ptr<VideoDeviceInfo>& device_info);
 
 // Creates a new `Thread`.
 std::unique_ptr<rtc::Thread> create_thread();
@@ -274,7 +277,7 @@ std::unique_ptr<PeerConnectionFactoryInterface> create_peer_connection_factory(
 
 // Creates a new `PeerConnectionInterface`.
 std::unique_ptr<PeerConnectionInterface> create_peer_connection_or_error(
-    PeerConnectionFactoryInterface& peer_connection_factory,
+    const std::unique_ptr<PeerConnectionFactoryInterface>& pcf,
     const RTCConfiguration& configuration,
     std::unique_ptr<PeerConnectionDependencies> dependencies,
     rust::String& error);
