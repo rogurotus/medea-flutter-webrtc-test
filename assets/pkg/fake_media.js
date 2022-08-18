@@ -1,30 +1,21 @@
-function _storeOldHandles() {
+function _save_old_gum() {
     navigator._getUserMedia = navigator.getUserMedia
-    if (!navigator.mediaDevices) { // Fallback. May have some issues.
-        navigator.mediaDevices = {}
-    }
     const m = navigator.mediaDevices
-    m._enumerateDevices = m.enumerateDevices
-    m._getSupportedConstraints = m.getSupportedConstraints
     m._getUserMedia = m.getUserMedia
-
 }
-_storeOldHandles();
+_save_old_gum();
 
-function restoreOldHandles() {
+function _reset_gum() {
     if (navigator._getUserMedia) {
         navigator.getUserMedia = navigator._getUserMedia
         navigator._getUserMedia = null
     }
     if (navigator.mediaDevices && navigator.mediaDevices._getUserMedia) {
-        navigator.mediaDevices.enumerateDevices = navigator.mediaDevices._enumerateDevices
-        navigator.mediaDevices.getSupportedConstraints = navigator.mediaDevices._getSupportedConstraints
         navigator.mediaDevices.getUserMedia = navigator.mediaDevices._getUserMedia
     }
-
 }
 
-function _createStopCanvasStreamFunction(stream, meta) {
+function _stop_canvas_stream(stream, meta) {
     return () => {
         window.clearInterval(meta.interval)
         const tracks = stream.getTracks()
@@ -37,7 +28,7 @@ function _createStopCanvasStreamFunction(stream, meta) {
     }
 }
 
-function createStartedRandomCanvasDrawerInterval(canvas) {
+function _drawer_canvas(canvas) {
     const FPS = 2
     const ms = 1000 / FPS
     const getRandom = (max) => {
@@ -70,55 +61,69 @@ function createStartedRandomCanvasDrawerInterval(canvas) {
     }
 }
 
-function getMockStreamFromConstraints(constraints) {
+function _get_mock_stream(constraints) {
 
     let res = new MediaStream()
 
-    if (constraints['video'] != undefined) {
-        let vstream = getMockCanvasStream(constraints);
-        let tr = vstream.getVideoTracks();
-        res.addTrack(tr[0])
+    if (constraints['video']) {
+        let vstream = _mock_canvas_stream(constraints);
+        const tracks = vstream.getTracks()
+        tracks.forEach(track => {
+            res.addTrack(track)
+        })
     }
 
+    if (constraints['audio']) {
 
-    if (constraints['audio'] === true) {
         const ac = new AudioContext();
+        const oscillator = ac.createOscillator();
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(440, ac.currentTime);
+        oscillator.connect(ac.destination);
+        oscillator.start();
+
         const dest = ac.createMediaStreamDestination();
         let astream = dest.stream;
-        let tr = astream.getAudioTracks();
-        res.addTrack(tr[0])
+
+        const tracks = astream.getTracks()
+        tracks.forEach(track => {
+            res.addTrack(track)
+        })
     }
 
     return Promise.resolve(res)
 }
 
 
-function getMockCanvasStream(constraints) {
+function _mock_canvas_stream(constraints) {
     const canvas = document.createElement('canvas')
 
-    let constraints_width = constraints['video']['width'] 
+    let constraints_width = constraints['video']['width']
     canvas.width = constraints_width == undefined ? 640 : constraints_width
 
-    let constraints_height = constraints['video']['height'] 
+    let constraints_height = constraints['video']['height']
     canvas.height = constraints_height == undefined ? 480 : constraints_height
 
-    const meta = createStartedRandomCanvasDrawerInterval(canvas)
+    const meta = _drawer_canvas(canvas)
 
-    let constraints_fps = constraints['video']['frameRate'] 
+    let constraints_fps = constraints['video']['frameRate']
     const stream = canvas.captureStream(constraints_fps == undefined ? 20 : constraints_fps)
 
-    stream.stop = _createStopCanvasStreamFunction(stream, meta)
+    stream.stop = _stop_canvas_stream(stream, meta)
     return stream
 }
 
 let mocked = false;
-export function mock() {
-    if (mocked) {
-        restoreOldHandles();
-    } else {
-        navigator.mediaDevices.getUserMedia = (constraints) => {
-            return getMockStreamFromConstraints(constraints)
-        }
+
+function enableMock() {
+    navigator.mediaDevices.getUserMedia = (constraints) => {
+        return _get_mock_stream(constraints)
     }
-    mocked = !mocked;
+    mocked = true;
+}
+
+function disableMock() {
+    if (mocked) {
+        _reset_gum();
+    }
 }

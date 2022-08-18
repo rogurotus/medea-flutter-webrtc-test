@@ -36,3 +36,5 @@ flutter:
         pluginClass: MedeaFlutterWebrtcPlugin
       windows:
         pluginClass: MedeaFlutterWebrtcPluginCApi
+  assets:
+    - assets/pkg/
