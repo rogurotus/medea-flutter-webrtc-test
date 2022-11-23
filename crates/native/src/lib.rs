@@ -1,14 +1,6 @@
 #![warn(clippy::pedantic)]
 
 mod api;
-#[allow(
-    clippy::default_trait_access,
-    clippy::let_underscore_drop,
-    clippy::semicolon_if_nothing_returned,
-    clippy::too_many_lines,
-    clippy::wildcard_imports
-)]
-mod bridge_generated;
 mod devices;
 mod pc;
 mod renderer;
@@ -32,6 +24,7 @@ use crate::video_sink::Id as VideoSinkId;
 
 #[doc(inline)]
 pub use crate::{
+    api::*,
     pc::{PeerConnection, PeerConnectionId},
     user_media::{
         AudioDeviceId, AudioDeviceModule, AudioTrack, AudioTrackId,
@@ -84,7 +77,7 @@ impl Webrtc {
         let mut signaling_thread = sys::Thread::create(false)?;
         signaling_thread.start()?;
 
-        let audio_device_module = if api::is_fake_media() {
+        let audio_device_module = if is_fake_media() {
             AudioDeviceModule::new_fake(&mut task_queue_factory)
         } else {
             AudioDeviceModule::new(

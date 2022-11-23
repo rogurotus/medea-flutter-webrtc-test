@@ -6,7 +6,12 @@ rust-version = "1.62"
 publish = false
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "lib"]
+
+[features]
+default = ["dart_api"]
+dart_api = []
+rust_api = []
 
 [dependencies]
 anyhow = "1.0"

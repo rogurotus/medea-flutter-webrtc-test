@@ -14,6 +14,27 @@ import 'package:meta/meta.dart';
 part 'bridge.g.freezed.dart';
 
 abstract class FlutterWebrtcNative {
+  /// Creates a new [`PeerConnection`] and returns its ID.
+  Stream<PeerConnectionEvent> createPeerConnection(
+      {required RtcConfiguration configuration, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kCreatePeerConnectionConstMeta;
+
+  /// Registers an observer to the [`MediaStreamTrack`] events.
+  Stream<TrackEvent> registerTrackObserver(
+      {required String trackId, required MediaType kind, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kRegisterTrackObserverConstMeta;
+
+  /// Sets the provided [`OnDeviceChangeCallback`] as the callback to be
+  /// called whenever a set of available media devices changes.
+  ///
+  /// Only one callback can be set at a time, so the previous one will be
+  /// dropped, if any.
+  Stream<void> setOnDeviceChanged({dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kSetOnDeviceChangedConstMeta;
+
   /// Configures media acquisition to use fake devices instead of actual camera
   /// and microphone.
   Future<void> enableFakeMedia({dynamic hint});
@@ -36,12 +57,6 @@ abstract class FlutterWebrtcNative {
   Future<List<MediaDisplayInfo>> enumerateDisplays({dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kEnumerateDisplaysConstMeta;
-
-  /// Creates a new [`PeerConnection`] and returns its ID.
-  Stream<PeerConnectionEvent> createPeerConnection(
-      {required RtcConfiguration configuration, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kCreatePeerConnectionConstMeta;
 
   /// Initiates the creation of an SDP offer for the purpose of starting a new
   /// WebRTC connection to a remote peer.
@@ -250,21 +265,6 @@ abstract class FlutterWebrtcNative {
       {required String trackId, required MediaType kind, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kCloneTrackConstMeta;
-
-  /// Registers an observer to the [`MediaStreamTrack`] events.
-  Stream<TrackEvent> registerTrackObserver(
-      {required String trackId, required MediaType kind, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kRegisterTrackObserverConstMeta;
-
-  /// Sets the provided [`OnDeviceChangeCallback`] as the callback to be called
-  /// whenever a set of available media devices changes.
-  ///
-  /// Only one callback can be set at a time, so the previous one will be dropped,
-  /// if any.
-  Stream<void> setOnDeviceChanged({dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kSetOnDeviceChangedConstMeta;
 
   /// Creates a new [`VideoSink`] attached to the specified video track.
   ///
@@ -1732,6 +1732,55 @@ class FlutterWebrtcNativeImpl implements FlutterWebrtcNative {
   factory FlutterWebrtcNativeImpl.wasm(FutureOr<WasmModule> module) =>
       FlutterWebrtcNativeImpl(module as ExternalLibrary);
   FlutterWebrtcNativeImpl.raw(this._platform);
+  Stream<PeerConnectionEvent> createPeerConnection(
+          {required RtcConfiguration configuration, dynamic hint}) =>
+      _platform.executeStream(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_create_peer_connection(port_,
+            _platform.api2wire_box_autoadd_rtc_configuration(configuration)),
+        parseSuccessData: _wire2api_peer_connection_event,
+        constMeta: kCreatePeerConnectionConstMeta,
+        argValues: [configuration],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kCreatePeerConnectionConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "create_peer_connection",
+        argNames: ["configuration"],
+      );
+
+  Stream<TrackEvent> registerTrackObserver(
+          {required String trackId, required MediaType kind, dynamic hint}) =>
+      _platform.executeStream(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_register_track_observer(port_,
+            _platform.api2wire_String(trackId), api2wire_media_type(kind)),
+        parseSuccessData: _wire2api_track_event,
+        constMeta: kRegisterTrackObserverConstMeta,
+        argValues: [trackId, kind],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kRegisterTrackObserverConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "register_track_observer",
+        argNames: ["trackId", "kind"],
+      );
+
+  Stream<void> setOnDeviceChanged({dynamic hint}) =>
+      _platform.executeStream(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_set_on_device_changed(port_),
+        parseSuccessData: _wire2api_unit,
+        constMeta: kSetOnDeviceChangedConstMeta,
+        argValues: [],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kSetOnDeviceChangedConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "set_on_device_changed",
+        argNames: [],
+      );
+
   Future<void> enableFakeMedia({dynamic hint}) =>
       _platform.executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) => _platform.inner.wire_enable_fake_media(port_),
@@ -1790,23 +1839,6 @@ class FlutterWebrtcNativeImpl implements FlutterWebrtcNative {
       const FlutterRustBridgeTaskConstMeta(
         debugName: "enumerate_displays",
         argNames: [],
-      );
-
-  Stream<PeerConnectionEvent> createPeerConnection(
-          {required RtcConfiguration configuration, dynamic hint}) =>
-      _platform.executeStream(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_create_peer_connection(port_,
-            _platform.api2wire_box_autoadd_rtc_configuration(configuration)),
-        parseSuccessData: _wire2api_peer_connection_event,
-        constMeta: kCreatePeerConnectionConstMeta,
-        argValues: [configuration],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kCreatePeerConnectionConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "create_peer_connection",
-        argNames: ["configuration"],
       );
 
   Future<RtcSessionDescription> createOffer(
@@ -2328,38 +2360,6 @@ class FlutterWebrtcNativeImpl implements FlutterWebrtcNative {
       const FlutterRustBridgeTaskConstMeta(
         debugName: "clone_track",
         argNames: ["trackId", "kind"],
-      );
-
-  Stream<TrackEvent> registerTrackObserver(
-          {required String trackId, required MediaType kind, dynamic hint}) =>
-      _platform.executeStream(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_register_track_observer(port_,
-            _platform.api2wire_String(trackId), api2wire_media_type(kind)),
-        parseSuccessData: _wire2api_track_event,
-        constMeta: kRegisterTrackObserverConstMeta,
-        argValues: [trackId, kind],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kRegisterTrackObserverConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "register_track_observer",
-        argNames: ["trackId", "kind"],
-      );
-
-  Stream<void> setOnDeviceChanged({dynamic hint}) =>
-      _platform.executeStream(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_set_on_device_changed(port_),
-        parseSuccessData: _wire2api_unit,
-        constMeta: kSetOnDeviceChangedConstMeta,
-        argValues: [],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kSetOnDeviceChangedConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "set_on_device_changed",
-        argNames: [],
       );
 
   Future<void> createVideoSink(
@@ -3193,6 +3193,57 @@ class FlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
   late final _store_dart_post_cobject = _store_dart_post_cobjectPtr
       .asFunction<void Function(DartPostCObjectFnType)>();
 
+  void wire_create_peer_connection(
+    int port_,
+    ffi.Pointer<wire_RtcConfiguration> configuration,
+  ) {
+    return _wire_create_peer_connection(
+      port_,
+      configuration,
+    );
+  }
+
+  late final _wire_create_peer_connectionPtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(
+                  ffi.Int64, ffi.Pointer<wire_RtcConfiguration>)>>(
+      'wire_create_peer_connection');
+  late final _wire_create_peer_connection = _wire_create_peer_connectionPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_RtcConfiguration>)>();
+
+  void wire_register_track_observer(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> track_id,
+    int kind,
+  ) {
+    return _wire_register_track_observer(
+      port_,
+      track_id,
+      kind,
+    );
+  }
+
+  late final _wire_register_track_observerPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
+              ffi.Int32)>>('wire_register_track_observer');
+  late final _wire_register_track_observer = _wire_register_track_observerPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>, int)>();
+
+  void wire_set_on_device_changed(
+    int port_,
+  ) {
+    return _wire_set_on_device_changed(
+      port_,
+    );
+  }
+
+  late final _wire_set_on_device_changedPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+          'wire_set_on_device_changed');
+  late final _wire_set_on_device_changed =
+      _wire_set_on_device_changedPtr.asFunction<void Function(int)>();
+
   void wire_enable_fake_media(
     int port_,
   ) {
@@ -3248,24 +3299,6 @@ class FlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
           'wire_enumerate_displays');
   late final _wire_enumerate_displays =
       _wire_enumerate_displaysPtr.asFunction<void Function(int)>();
-
-  void wire_create_peer_connection(
-    int port_,
-    ffi.Pointer<wire_RtcConfiguration> configuration,
-  ) {
-    return _wire_create_peer_connection(
-      port_,
-      configuration,
-    );
-  }
-
-  late final _wire_create_peer_connectionPtr = _lookup<
-          ffi.NativeFunction<
-              ffi.Void Function(
-                  ffi.Int64, ffi.Pointer<wire_RtcConfiguration>)>>(
-      'wire_create_peer_connection');
-  late final _wire_create_peer_connection = _wire_create_peer_connectionPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_RtcConfiguration>)>();
 
   void wire_create_offer(
     int port_,
@@ -3769,39 +3802,6 @@ class FlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
               ffi.Int32)>>('wire_clone_track');
   late final _wire_clone_track = _wire_clone_trackPtr
       .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>, int)>();
-
-  void wire_register_track_observer(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> track_id,
-    int kind,
-  ) {
-    return _wire_register_track_observer(
-      port_,
-      track_id,
-      kind,
-    );
-  }
-
-  late final _wire_register_track_observerPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
-              ffi.Int32)>>('wire_register_track_observer');
-  late final _wire_register_track_observer = _wire_register_track_observerPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>, int)>();
-
-  void wire_set_on_device_changed(
-    int port_,
-  ) {
-    return _wire_set_on_device_changed(
-      port_,
-    );
-  }
-
-  late final _wire_set_on_device_changedPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-          'wire_set_on_device_changed');
-  late final _wire_set_on_device_changed =
-      _wire_set_on_device_changedPtr.asFunction<void Function(int)>();
 
   void wire_create_video_sink(
     int port_,

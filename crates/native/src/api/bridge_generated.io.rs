@@ -2,6 +2,28 @@ use super::*;
 // Section: wire functions
 
 #[no_mangle]
+pub extern "C" fn wire_create_peer_connection(
+    port_: i64,
+    configuration: *mut wire_RtcConfiguration,
+) {
+    wire_create_peer_connection_impl(port_, configuration)
+}
+
+#[no_mangle]
+pub extern "C" fn wire_register_track_observer(
+    port_: i64,
+    track_id: *mut wire_uint_8_list,
+    kind: i32,
+) {
+    wire_register_track_observer_impl(port_, track_id, kind)
+}
+
+#[no_mangle]
+pub extern "C" fn wire_set_on_device_changed(port_: i64) {
+    wire_set_on_device_changed_impl(port_)
+}
+
+#[no_mangle]
 pub extern "C" fn wire_enable_fake_media(port_: i64) {
     wire_enable_fake_media_impl(port_)
 }
@@ -19,14 +41,6 @@ pub extern "C" fn wire_enumerate_devices(port_: i64) {
 #[no_mangle]
 pub extern "C" fn wire_enumerate_displays(port_: i64) {
     wire_enumerate_displays_impl(port_)
-}
-
-#[no_mangle]
-pub extern "C" fn wire_create_peer_connection(
-    port_: i64,
-    configuration: *mut wire_RtcConfiguration,
-) {
-    wire_create_peer_connection_impl(port_, configuration)
 }
 
 #[no_mangle]
@@ -268,20 +282,6 @@ pub extern "C" fn wire_clone_track(
     kind: i32,
 ) {
     wire_clone_track_impl(port_, track_id, kind)
-}
-
-#[no_mangle]
-pub extern "C" fn wire_register_track_observer(
-    port_: i64,
-    track_id: *mut wire_uint_8_list,
-    kind: i32,
-) {
-    wire_register_track_observer_impl(port_, track_id, kind)
-}
-
-#[no_mangle]
-pub extern "C" fn wire_set_on_device_changed(port_: i64) {
-    wire_set_on_device_changed_impl(port_)
 }
 
 #[no_mangle]

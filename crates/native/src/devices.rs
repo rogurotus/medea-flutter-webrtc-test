@@ -30,7 +30,7 @@ use winapi::{
 
 use crate::{
     api,
-    stream_sink::StreamSink,
+    stream_sink::Sink,
     user_media::{AudioDeviceId, VideoDeviceId},
     AudioDeviceModule, Webrtc,
 };
@@ -55,7 +55,7 @@ pub fn enumerate_displays() -> Vec<api::MediaDisplayInfo> {
 /// enumerate them (such as [`AudioDeviceModule`] and [`VideoDeviceInfo`]), and
 /// generate event with [`OnDeviceChangeCallback`], if the last is needed.
 struct DeviceState {
-    cb: StreamSink<()>,
+    cb: Sink<()>,
     adm: AudioDeviceModule,
     _thread: sys::Thread,
     vdi: sys::VideoDeviceInfo,
@@ -66,7 +66,7 @@ struct DeviceState {
 impl DeviceState {
     /// Creates a new [`DeviceState`].
     fn new(
-        cb: StreamSink<()>,
+        cb: Sink<()>,
         tq: &mut sys::TaskQueueFactory,
     ) -> anyhow::Result<Self> {
         let mut thread = sys::Thread::create(false)?;
@@ -119,7 +119,7 @@ impl DeviceState {
 
     /// Triggers the [`OnDeviceChangeCallback`].
     fn on_device_change(&mut self) {
-        self.cb.add(());
+        self.cb.send(());
     }
 }
 
@@ -307,7 +307,7 @@ impl Webrtc {
     /// dropped, if any.
     pub fn set_on_device_changed(
         &mut self,
-        cb: StreamSink<()>,
+        cb: Sink<()>,
     ) -> anyhow::Result<()> {
         let prev = ON_DEVICE_CHANGE.swap(
             Box::into_raw(Box::new(DeviceState::new(

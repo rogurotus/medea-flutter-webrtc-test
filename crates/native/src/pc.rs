@@ -1,6 +1,7 @@
 use std::{
     mem,
     sync::{mpsc, Arc, Mutex},
+    time::Duration,
 };
 
 use anyhow::{anyhow, bail};
@@ -12,15 +13,20 @@ use once_cell::sync::OnceCell;
 use threadpool::ThreadPool;
 
 use crate::{
-    api, next_id, stream_sink::StreamSink, AudioTrack, AudioTrackId,
-    VideoTrack, VideoTrackId, Webrtc,
+    api, next_id, stream_sink::Sink, AudioTrack, AudioTrackId, VideoTrack,
+    VideoTrackId, Webrtc,
 };
+
+/// Timeout for [`mpsc::Receiver::recv_timeout()`] operations.
+pub static SET_SDP_TIMEOUT: Duration = Duration::from_secs(5);
+
+pub static ADD_CANDIDATE_TIMEOUT: Duration = Duration::from_secs(5);
 
 impl Webrtc {
     /// Creates a new [`PeerConnection`] and returns its ID.
     pub fn create_peer_connection(
         &mut self,
-        obs: &StreamSink<api::PeerConnectionEvent>,
+        obs: Sink<api::PeerConnectionEvent>,
         configuration: api::RtcConfiguration,
     ) -> anyhow::Result<()> {
         let id = PeerConnectionId::from(next_id());
@@ -35,7 +41,7 @@ impl Webrtc {
         )?;
         self.peer_connections.insert(id, peer);
 
-        obs.add(api::PeerConnectionEvent::PeerCreated { id: id.into() });
+        obs.send(api::PeerConnectionEvent::PeerCreated { id: id.into() });
 
         Ok(())
     }
@@ -181,7 +187,7 @@ impl Webrtc {
         let mut inner = peer.inner.lock().unwrap();
         inner.set_remote_description(desc, obs);
 
-        set_sdp_rx.recv_timeout(api::RX_TIMEOUT)??;
+        set_sdp_rx.recv_timeout(SET_SDP_TIMEOUT)??;
         peer.has_remote_description = true;
 
         let candidates = mem::take(&mut peer.candidates_buffer);
@@ -191,7 +197,7 @@ impl Webrtc {
                 candidate.try_into()?,
                 Box::new(AddIceCandidateCallback(add_candidate_tx)),
             );
-            add_candidate_rx.recv_timeout(api::RX_TIMEOUT)??;
+            add_candidate_rx.recv_timeout(ADD_CANDIDATE_TIMEOUT)??;
         }
 
         Ok(())
@@ -715,7 +721,7 @@ impl PeerConnection {
         factory: &mut sys::PeerConnectionFactoryInterface,
         video_tracks: Arc<DashMap<VideoTrackId, VideoTrack>>,
         audio_tracks: Arc<DashMap<AudioTrackId, AudioTrack>>,
-        observer: StreamSink<api::PeerConnectionEvent>,
+        observer: Sink<api::PeerConnectionEvent>,
         configuration: api::RtcConfiguration,
         pool: ThreadPool,
     ) -> anyhow::Result<Self> {
@@ -878,7 +884,7 @@ struct PeerConnectionObserver {
     peer_id: PeerConnectionId,
 
     /// [`PeerConnectionObserverInterface`] to forward the events to.
-    observer: Arc<Mutex<StreamSink<api::PeerConnectionEvent>>>,
+    observer: Arc<Mutex<Sink<api::PeerConnectionEvent>>>,
 
     /// [`InnerPeer`] of the [`PeerConnection`] internally used in
     /// [`sys::PeerConnectionObserver::on_track()`][1]
@@ -903,14 +909,14 @@ impl sys::PeerConnectionEventsHandler for PeerConnectionObserver {
         self.observer
             .lock()
             .unwrap()
-            .add(api::PeerConnectionEvent::SignallingChange(new_state.into()));
+            .send(api::PeerConnectionEvent::SignallingChange(new_state.into()));
     }
 
     fn on_standardized_ice_connection_change(
         &mut self,
         new_state: sys::IceConnectionState,
     ) {
-        self.observer.lock().unwrap().add(
+        self.observer.lock().unwrap().send(
             api::PeerConnectionEvent::IceConnectionStateChange(
                 new_state.into(),
             ),
@@ -918,13 +924,13 @@ impl sys::PeerConnectionEventsHandler for PeerConnectionObserver {
     }
 
     fn on_connection_change(&mut self, new_state: sys::PeerConnectionState) {
-        self.observer.lock().unwrap().add(
+        self.observer.lock().unwrap().send(
             api::PeerConnectionEvent::ConnectionStateChange(new_state.into()),
         );
     }
 
     fn on_ice_gathering_change(&mut self, new_state: sys::IceGatheringState) {
-        self.observer.lock().unwrap().add(
+        self.observer.lock().unwrap().send(
             api::PeerConnectionEvent::IceGatheringStateChange(new_state.into()),
         );
     }
@@ -933,7 +939,7 @@ impl sys::PeerConnectionEventsHandler for PeerConnectionObserver {
         self.observer
             .lock()
             .unwrap()
-            .add(api::PeerConnectionEvent::NegotiationNeeded);
+            .send(api::PeerConnectionEvent::NegotiationNeeded);
     }
 
     fn on_ice_candidate_error(
@@ -944,7 +950,7 @@ impl sys::PeerConnectionEventsHandler for PeerConnectionObserver {
         error_code: i32,
         error_text: &CxxString,
     ) {
-        self.observer.lock().unwrap().add(
+        self.observer.lock().unwrap().send(
             api::PeerConnectionEvent::IceCandidateError {
                 address: address.to_string(),
                 port,
@@ -960,7 +966,7 @@ impl sys::PeerConnectionEventsHandler for PeerConnectionObserver {
     }
 
     fn on_ice_candidate(&mut self, candidate: sys::IceCandidateInterface) {
-        self.observer.lock().unwrap().add(
+        self.observer.lock().unwrap().send(
             api::PeerConnectionEvent::IceCandidate {
                 sdp_mid: candidate.mid(),
                 sdp_mline_index: candidate.mline_index(),
@@ -1014,8 +1020,8 @@ impl sys::PeerConnectionEventsHandler for PeerConnectionObserver {
             //        to be negotiated at this point.
             let mid = transceiver.mid().unwrap();
             let direction = transceiver.direction();
-            let peer = Arc::clone(&self.peer);
             let observer = Arc::clone(&self.observer);
+            let peer = Arc::clone(&self.peer);
             let peer_id = self.peer_id;
 
             move || {
@@ -1041,7 +1047,7 @@ impl sys::PeerConnectionEventsHandler for PeerConnectionObserver {
                 observer
                     .lock()
                     .unwrap()
-                    .add(api::PeerConnectionEvent::Track(result));
+                    .send(api::PeerConnectionEvent::Track(result));
             }
         });
     }

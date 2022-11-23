@@ -254,7 +254,7 @@ ifeq ($(shell brew list | grep -Fx llvm),)
 	brew install llvm
 endif
 endif
-	flutter_rust_bridge_codegen --rust-input=crates/native/src/api.rs \
+	flutter_rust_bridge_codegen --rust-input=crates/native/src/api/dart.rs \
 		--dart-output=lib/src/api/bridge.g.dart \
 		--skip-add-mod-to-lib \
 		--no-build-runner \
