@@ -14,9 +14,7 @@ pub use super::{
     TrackState, VideoConstraints,
 };
 
-use crate::stream_sink::Sink;
-
-use super::WEBRTC;
+use crate::{stream_sink::Sink, WEBRTC};
 
 /// Sets the provided [`OnDeviceChangeCallback`] as the callback to be called
 /// whenever a set of available media devices changes.
@@ -46,5 +44,5 @@ pub fn create_peer_connection(
     WEBRTC
         .lock()
         .unwrap()
-        .create_peer_connection(Sink::from(cb), configuration)
+        .create_peer_connection(&Sink::from(cb), configuration)
 }

@@ -1,10 +1,15 @@
-use std::sync::{atomic::AtomicBool, Mutex};
-
 use libwebrtc_sys as sys;
 
 mod dart;
 
 #[cfg(feature = "dart_api")]
+#[allow(
+    clippy::default_trait_access,
+    clippy::let_underscore_drop,
+    clippy::semicolon_if_nothing_returned,
+    clippy::too_many_lines,
+    clippy::wildcard_imports
+)]
 mod bridge_generated;
 
 #[cfg(feature = "rust_api")]
@@ -21,22 +26,14 @@ pub use dart::{
     create_offer, create_video_sink, dispose_peer_connection, dispose_track,
     dispose_video_sink, enable_fake_media, enumerate_devices,
     enumerate_displays, get_media, get_peer_stats, get_transceiver_direction,
-    get_transceiver_mid, get_transceivers, is_fake_media, microphone_volume,
+    get_transceiver_mid, get_transceivers, microphone_volume,
     microphone_volume_is_available, restart_ice, sender_replace_track,
     set_audio_playout_device, set_local_description, set_microphone_volume,
     set_remote_description, set_track_enabled, set_transceiver_direction,
     set_transceiver_recv, set_transceiver_send, stop_transceiver, track_state,
 };
 
-use crate::Webrtc;
-
-/// Indicator whether application is configured to use fake media devices.
-static FAKE_MEDIA: AtomicBool = AtomicBool::new(false);
-
-lazy_static::lazy_static! {
-    pub(crate) static ref WEBRTC: Mutex<Webrtc>
-        = Mutex::new(Webrtc::new().unwrap());
-}
+pub use dart::is_fake_media;
 
 /// Description of STUN and TURN servers that can be used by an [ICE Agent][1]
 /// to establish a connection with a peer.

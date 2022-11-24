@@ -26,7 +26,7 @@ impl Webrtc {
     /// Creates a new [`PeerConnection`] and returns its ID.
     pub fn create_peer_connection(
         &mut self,
-        obs: Sink<api::PeerConnectionEvent>,
+        obs: &Sink<api::PeerConnectionEvent>,
         configuration: api::RtcConfiguration,
     ) -> anyhow::Result<()> {
         let id = PeerConnectionId::from(next_id());

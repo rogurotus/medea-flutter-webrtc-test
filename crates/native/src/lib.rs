@@ -11,8 +11,8 @@ mod video_sink;
 use std::{
     collections::HashMap,
     sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
+        atomic::{AtomicBool, AtomicU64, Ordering},
+        Arc, Mutex,
     },
 };
 
@@ -36,6 +36,14 @@ pub use crate::{
 
 /// Counter used to generate unique IDs.
 static ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+/// Indicator whether application is configured to use fake media devices.
+pub(crate) static FAKE_MEDIA: AtomicBool = AtomicBool::new(false);
+
+lazy_static::lazy_static! {
+    pub(crate) static ref WEBRTC: Mutex<Webrtc>
+        = Mutex::new(Webrtc::new().unwrap());
+}
 
 /// Returns a next unique ID.
 pub(crate) fn next_id() -> u64 {

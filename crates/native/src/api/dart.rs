@@ -3,12 +3,12 @@ use std::{
     time::Duration,
 };
 
-use crate::{devices, renderer::FrameHandler};
+use crate::{devices, renderer::FrameHandler, FAKE_MEDIA, WEBRTC};
 
 use super::{
     GetMediaResult, MediaDeviceInfo, MediaDisplayInfo, MediaStreamConstraints,
     MediaStreamTrack, MediaType, RtcRtpTransceiver, RtcSessionDescription,
-    RtcStats, RtpTransceiverDirection, SdpType, TrackState, FAKE_MEDIA, WEBRTC,
+    RtcStats, RtpTransceiverDirection, SdpType, TrackState,
 };
 
 #[cfg(feature = "dart_api")]
@@ -27,7 +27,7 @@ pub fn create_peer_connection(
     WEBRTC
         .lock()
         .unwrap()
-        .create_peer_connection(cb.into(), configuration)
+        .create_peer_connection(&(cb.into()), configuration)
 }
 
 #[cfg(feature = "dart_api")]
