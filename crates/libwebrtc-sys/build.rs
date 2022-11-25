@@ -48,7 +48,7 @@ fn main() -> anyhow::Result<()> {
 
     println!("cargo:rustc-link-lib=webrtc");
 
-    link_libs();
+    link_libs()?;
 
     let mut build = cxx_build::bridge("src/bridge.rs");
     build
@@ -232,7 +232,8 @@ fn get_files_from_dir<P: AsRef<Path>>(dir: P) -> Vec<PathBuf> {
 }
 
 /// Emits all the required `rustc-link-lib` instructions.
-fn link_libs() {
+fn link_libs() -> anyhow::Result<()> {
+    let link_path = libwebrtc_base_path()?;
     #[cfg(target_os = "linux")]
     {
         for dep in [
@@ -249,18 +250,19 @@ fn link_libs() {
         match env::var("PROFILE").unwrap().as_str() {
             "debug" => {
                 println!(
-                    "cargo:rustc-link-search=\
-                     native=crates/libwebrtc-sys/lib/debug/",
+                    "cargo:rustc-link-search=native={}/debug/",
+                    link_path.display()
                 );
             }
             "release" => {
                 println!(
-                    "cargo:rustc-link-search=\
-                     native=crates/libwebrtc-sys/lib/release/",
+                    "cargo:rustc-link-search=native={}/release/",
+                    link_path.display()
                 );
             }
             _ => unreachable!(),
         }
+        Ok(())
     }
     #[cfg(target_os = "macos")]
     {
@@ -287,18 +289,19 @@ fn link_libs() {
         match env::var("PROFILE").unwrap().as_str() {
             "debug" => {
                 println!(
-                    "cargo:rustc-link-search=\
-                     native=crates/libwebrtc-sys/lib/debug/",
+                    "cargo:rustc-link-search=native={}/debug/",
+                    link_path.display()
                 );
             }
             "release" => {
                 println!(
-                    "cargo:rustc-link-search=\
-                     native=crates/libwebrtc-sys/lib/release/",
+                    "cargo:rustc-link-search=native={}/release/",
+                    link_path.display()
                 );
             }
             _ => unreachable!(),
         }
+        Ok(())
     }
     #[cfg(target_os = "windows")]
     {
@@ -319,9 +322,17 @@ fn link_libs() {
         //       always use a release build of `libwebrtc`:
         //       https://github.com/rust-lang/rust/issues/39016
         println!(
-            "cargo:rustc-link-search=native=crates/libwebrtc-sys/lib/release/",
+            "cargo:rustc-link-search=native={}/release/",
+            link_path.display()
         );
+        Ok(())
     }
+}
+
+/// Returns path to `libwebrtc` lib.
+fn libwebrtc_base_path() -> anyhow::Result<PathBuf> {
+    let manifest_path = std::env::var("CARGO_MANIFEST_DIR")?;
+    Ok(PathBuf::from(&manifest_path).join("lib"))
 }
 
 #[cfg(target_os = "macos")]

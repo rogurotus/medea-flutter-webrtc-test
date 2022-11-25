@@ -6,6 +6,9 @@ rust-version = "1.62"
 publish = false
 links = "webrtc"
 
+[lib]
+crate-type = ["lib", "cdylib"]
+
 [dependencies]
 anyhow = "1.0"
 cxx = "1.0"
