@@ -6,16 +6,29 @@ use std::{
 use crate::{devices, renderer::FrameHandler, FAKE_MEDIA, WEBRTC};
 
 use super::{
-    GetMediaResult, MediaDeviceInfo, MediaDisplayInfo, MediaStreamConstraints,
-    MediaStreamTrack, MediaType, RtcRtpTransceiver, RtcSessionDescription,
-    RtcStats, RtpTransceiverDirection, SdpType, TrackState,
+    MediaDeviceInfo, MediaDisplayInfo, MediaStreamTrack, MediaType,
+    RtcRtpTransceiver, RtcSessionDescription, RtcStats,
+    RtpTransceiverDirection, SdpType, TrackState,
 };
 
 #[cfg(feature = "dart_api")]
-use super::{PeerConnectionEvent, RtcConfiguration, TrackEvent};
+use super::{
+    GetMediaError, MediaStreamConstraints, PeerConnectionEvent,
+    RtcConfiguration, TrackEvent,
+};
 
 /// Timeout for [`mpsc::Receiver::recv_timeout()`] operations.
 pub static RX_TIMEOUT: Duration = Duration::from_secs(5);
+
+#[cfg(feature = "dart_api")]
+/// [`get_media()`] function result.
+pub enum GetMediaResult {
+    /// Requested media tracks.
+    Ok(Vec<MediaStreamTrack>),
+
+    /// Failed to get requested media.
+    Err(GetMediaError),
+}
 
 #[cfg(feature = "dart_api")]
 /// Creates a new [`PeerConnection`] and returns its ID.
@@ -42,6 +55,7 @@ pub fn register_track_observer(
         .unwrap()
         .register_track_observer(track_id, kind, cb.into())
 }
+
 #[cfg(feature = "dart_api")]
 /// Sets the provided [`OnDeviceChangeCallback`] as the callback to be
 /// called whenever a set of available media devices changes.
@@ -52,6 +66,16 @@ pub fn set_on_device_changed(
     cb: flutter_rust_bridge::StreamSink<()>,
 ) -> anyhow::Result<()> {
     WEBRTC.lock().unwrap().set_on_device_changed(cb.into())
+}
+
+#[cfg(feature = "dart_api")]
+/// Creates a [`MediaStream`] with tracks according to provided
+/// [`MediaStreamConstraints`].
+pub fn get_media(constraints: MediaStreamConstraints) -> GetMediaResult {
+    match WEBRTC.lock().unwrap().get_media(constraints) {
+        Ok(tracks) => GetMediaResult::Ok(tracks),
+        Err(err) => GetMediaResult::Err(err),
+    }
 }
 
 /// Configures media acquisition to use fake devices instead of actual camera
@@ -309,15 +333,6 @@ pub fn restart_ice(peer_id: u64) -> anyhow::Result<()> {
 /// Closes the [`PeerConnection`].
 pub fn dispose_peer_connection(peer_id: u64) {
     WEBRTC.lock().unwrap().dispose_peer_connection(peer_id);
-}
-
-/// Creates a [`MediaStream`] with tracks according to provided
-/// [`MediaStreamConstraints`].
-pub fn get_media(constraints: MediaStreamConstraints) -> GetMediaResult {
-    match WEBRTC.lock().unwrap().get_media(constraints) {
-        Ok(tracks) => GetMediaResult::Ok(tracks),
-        Err(err) => GetMediaResult::Err(err),
-    }
 }
 
 /// Sets the specified `audio playout` device.

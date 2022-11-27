@@ -19,16 +19,15 @@ use flutter_rust_bridge::*;
 
 use crate::api::{
     AudioConstraints, BundlePolicy, CandidateType, GetMediaError,
-    GetMediaResult, IceCandidateStats, IceConnectionState, IceGatheringState,
-    IceRole, IceTransportsType, MediaDeviceInfo, MediaDeviceKind,
-    MediaDisplayInfo, MediaStreamConstraints, MediaStreamTrack, MediaType,
-    PeerConnectionEvent, PeerConnectionState, Protocol, RtcConfiguration,
-    RtcIceCandidateStats, RtcIceServer, RtcInboundRtpStreamMediaType,
-    RtcMediaSourceStatsMediaType, RtcOutboundRtpStreamStatsMediaType,
-    RtcRtpTransceiver, RtcSessionDescription, RtcStats,
-    RtcStatsIceCandidatePairState, RtcStatsType, RtcTrackEvent,
-    RtpTransceiverDirection, SdpType, SignalingState, TrackEvent, TrackState,
-    VideoConstraints,
+    IceCandidateStats, IceConnectionState, IceGatheringState, IceRole,
+    IceTransportsType, MediaDeviceInfo, MediaDeviceKind, MediaDisplayInfo,
+    MediaStreamConstraints, MediaStreamTrack, MediaType, PeerConnectionEvent,
+    PeerConnectionState, Protocol, RtcConfiguration, RtcIceCandidateStats,
+    RtcIceServer, RtcInboundRtpStreamMediaType, RtcMediaSourceStatsMediaType,
+    RtcOutboundRtpStreamStatsMediaType, RtcRtpTransceiver,
+    RtcSessionDescription, RtcStats, RtcStatsIceCandidatePairState,
+    RtcStatsType, RtcTrackEvent, RtpTransceiverDirection, SdpType,
+    SignalingState, TrackEvent, TrackState, VideoConstraints,
 };
 
 // Section: wire functions
@@ -89,6 +88,22 @@ fn wire_set_on_device_changed_impl(port_: MessagePort) {
             move |task_callback| {
                 set_on_device_changed(task_callback.stream_sink())
             }
+        },
+    )
+}
+fn wire_get_media_impl(
+    port_: MessagePort,
+    constraints: impl Wire2Api<MediaStreamConstraints> + UnwindSafe,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "get_media",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_constraints = constraints.wire2api();
+            move |task_callback| Ok(get_media(api_constraints))
         },
     )
 }
@@ -512,22 +527,6 @@ fn wire_dispose_peer_connection_impl(
         move || {
             let api_peer_id = peer_id.wire2api();
             move |task_callback| Ok(dispose_peer_connection(api_peer_id))
-        },
-    )
-}
-fn wire_get_media_impl(
-    port_: MessagePort,
-    constraints: impl Wire2Api<MediaStreamConstraints> + UnwindSafe,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
-        WrapInfo {
-            debug_name: "get_media",
-            port: Some(port_),
-            mode: FfiCallMode::Normal,
-        },
-        move || {
-            let api_constraints = constraints.wire2api();
-            move |task_callback| Ok(get_media(api_constraints))
         },
     )
 }
@@ -1360,8 +1359,8 @@ impl support::IntoDart for TrackState {
 // Section: executor
 
 support::lazy_static! {
-    pub static ref FLUTTER_RUST_BRIDGE_HANDLER: support::DefaultHandler
-        = Default::default();
+    pub static ref FLUTTER_RUST_BRIDGE_HANDLER: support::DefaultHandler =
+        Default::default();
 }
 
 #[cfg(not(target_family = "wasm"))]

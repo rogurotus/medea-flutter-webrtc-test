@@ -35,6 +35,13 @@ abstract class FlutterWebrtcNative {
 
   FlutterRustBridgeTaskConstMeta get kSetOnDeviceChangedConstMeta;
 
+  /// Creates a [`MediaStream`] with tracks according to provided
+  /// [`MediaStreamConstraints`].
+  Future<GetMediaResult> getMedia(
+      {required MediaStreamConstraints constraints, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kGetMediaConstMeta;
+
   /// Configures media acquisition to use fake devices instead of actual camera
   /// and microphone.
   Future<void> enableFakeMedia({dynamic hint});
@@ -202,13 +209,6 @@ abstract class FlutterWebrtcNative {
   Future<void> disposePeerConnection({required int peerId, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kDisposePeerConnectionConstMeta;
-
-  /// Creates a [`MediaStream`] with tracks according to provided
-  /// [`MediaStreamConstraints`].
-  Future<GetMediaResult> getMedia(
-      {required MediaStreamConstraints constraints, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kGetMediaConstMeta;
 
   /// Sets the specified `audio playout` device.
   Future<void> setAudioPlayoutDevice({required String deviceId, dynamic hint});
@@ -1781,6 +1781,25 @@ class FlutterWebrtcNativeImpl implements FlutterWebrtcNative {
         argNames: [],
       );
 
+  Future<GetMediaResult> getMedia(
+          {required MediaStreamConstraints constraints, dynamic hint}) =>
+      _platform.executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => _platform.inner.wire_get_media(
+            port_,
+            _platform
+                .api2wire_box_autoadd_media_stream_constraints(constraints)),
+        parseSuccessData: _wire2api_get_media_result,
+        constMeta: kGetMediaConstMeta,
+        argValues: [constraints],
+        hint: hint,
+      ));
+
+  FlutterRustBridgeTaskConstMeta get kGetMediaConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "get_media",
+        argNames: ["constraints"],
+      );
+
   Future<void> enableFakeMedia({dynamic hint}) =>
       _platform.executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) => _platform.inner.wire_enable_fake_media(port_),
@@ -2203,25 +2222,6 @@ class FlutterWebrtcNativeImpl implements FlutterWebrtcNative {
       const FlutterRustBridgeTaskConstMeta(
         debugName: "dispose_peer_connection",
         argNames: ["peerId"],
-      );
-
-  Future<GetMediaResult> getMedia(
-          {required MediaStreamConstraints constraints, dynamic hint}) =>
-      _platform.executeNormal(FlutterRustBridgeTask(
-        callFfi: (port_) => _platform.inner.wire_get_media(
-            port_,
-            _platform
-                .api2wire_box_autoadd_media_stream_constraints(constraints)),
-        parseSuccessData: _wire2api_get_media_result,
-        constMeta: kGetMediaConstMeta,
-        argValues: [constraints],
-        hint: hint,
-      ));
-
-  FlutterRustBridgeTaskConstMeta get kGetMediaConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "get_media",
-        argNames: ["constraints"],
       );
 
   Future<void> setAudioPlayoutDevice(
@@ -3244,6 +3244,23 @@ class FlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
   late final _wire_set_on_device_changed =
       _wire_set_on_device_changedPtr.asFunction<void Function(int)>();
 
+  void wire_get_media(
+    int port_,
+    ffi.Pointer<wire_MediaStreamConstraints> constraints,
+  ) {
+    return _wire_get_media(
+      port_,
+      constraints,
+    );
+  }
+
+  late final _wire_get_mediaPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64,
+              ffi.Pointer<wire_MediaStreamConstraints>)>>('wire_get_media');
+  late final _wire_get_media = _wire_get_mediaPtr.asFunction<
+      void Function(int, ffi.Pointer<wire_MediaStreamConstraints>)>();
+
   void wire_enable_fake_media(
     int port_,
   ) {
@@ -3646,23 +3663,6 @@ class FlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
           'wire_dispose_peer_connection');
   late final _wire_dispose_peer_connection =
       _wire_dispose_peer_connectionPtr.asFunction<void Function(int, int)>();
-
-  void wire_get_media(
-    int port_,
-    ffi.Pointer<wire_MediaStreamConstraints> constraints,
-  ) {
-    return _wire_get_media(
-      port_,
-      constraints,
-    );
-  }
-
-  late final _wire_get_mediaPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64,
-              ffi.Pointer<wire_MediaStreamConstraints>)>>('wire_get_media');
-  late final _wire_get_media = _wire_get_mediaPtr.asFunction<
-      void Function(int, ffi.Pointer<wire_MediaStreamConstraints>)>();
 
   void wire_set_audio_playout_device(
     int port_,

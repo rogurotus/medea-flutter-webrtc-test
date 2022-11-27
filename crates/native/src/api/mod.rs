@@ -17,7 +17,8 @@ mod rust;
 
 #[cfg(feature = "rust_api")]
 pub use rust::{
-    create_peer_connection, register_track_observer, set_on_device_changed,
+    create_peer_connection, get_media, register_track_observer,
+    set_on_device_changed,
 };
 
 #[cfg(feature = "rust_api")]
@@ -25,7 +26,7 @@ pub use dart::{
     add_ice_candidate, add_transceiver, clone_track, create_answer,
     create_offer, create_video_sink, dispose_peer_connection, dispose_track,
     dispose_video_sink, enable_fake_media, enumerate_devices,
-    enumerate_displays, get_media, get_peer_stats, get_transceiver_direction,
+    enumerate_displays, get_peer_stats, get_transceiver_direction,
     get_transceiver_mid, get_transceivers, microphone_volume,
     microphone_volume_is_available, restart_ice, sender_replace_track,
     set_audio_playout_device, set_local_description, set_microphone_volume,
@@ -1844,16 +1845,8 @@ impl From<BundlePolicy> for sys::BundlePolicy {
     }
 }
 
-/// [`get_media()`] function result.
-pub enum GetMediaResult {
-    /// Requested media tracks.
-    Ok(Vec<MediaStreamTrack>),
-
-    /// Failed to get requested media.
-    Err(GetMediaError),
-}
-
 /// Media acquisition error.
+#[derive(Debug)]
 pub enum GetMediaError {
     /// Could not acquire audio track.
     Audio(String),

@@ -1,6 +1,6 @@
 use std::{
     mem,
-    sync::{mpsc, Arc, Mutex},
+    sync::{mpsc, Arc, Mutex, Weak},
     time::Duration,
 };
 
@@ -651,7 +651,7 @@ impl Webrtc {
     /// If the mutex guarding the [`sys::PeerConnectionInterface`] is poisoned.
     pub fn dispose_peer_connection(&mut self, peer_id: u64) {
         let peer_id = PeerConnectionId::from(peer_id);
-        if let Some(peer) = self.peer_connections.get(&peer_id) {
+        if let Some(peer) = self.peer_connections.remove(&peer_id) {
             // Remove all tracks from this `Peer`'s senders.
             for mut track in self.video_tracks.iter_mut() {
                 track.senders.remove(&peer_id);
@@ -730,7 +730,7 @@ impl PeerConnection {
             PeerConnectionObserver {
                 peer_id: id,
                 observer: Arc::new(Mutex::new(observer)),
-                peer: Arc::clone(&obs_peer),
+                peer: Arc::downgrade(&obs_peer),
                 video_tracks,
                 audio_tracks,
                 pool,
@@ -891,7 +891,7 @@ struct PeerConnectionObserver {
     ///
     /// Tasks with [`InnerPeer`] must be offloaded to a separate [`ThreadPool`],
     /// so the signalling thread wouldn't be blocked.
-    peer: Arc<OnceCell<Arc<Mutex<sys::PeerConnectionInterface>>>>,
+    peer: Weak<OnceCell<Arc<Mutex<sys::PeerConnectionInterface>>>>,
 
     /// Map of the remote [`VideoTrack`]s shared with the [`crate::Webrtc`].
     video_tracks: Arc<DashMap<VideoTrackId, VideoTrack>>,
@@ -1021,33 +1021,35 @@ impl sys::PeerConnectionEventsHandler for PeerConnectionObserver {
             let mid = transceiver.mid().unwrap();
             let direction = transceiver.direction();
             let observer = Arc::clone(&self.observer);
-            let peer = Arc::clone(&self.peer);
+            let peer = Weak::clone(&self.peer);
             let peer_id = self.peer_id;
 
             move || {
-                let peer = peer.get().unwrap().lock().unwrap();
-                let index = peer
-                    .get_transceivers()
-                    .iter()
-                    .enumerate()
-                    .find(|(_, t)| t.mid().as_ref() == Some(&mid))
-                    .map(|(id, _)| id)
-                    .unwrap();
+                if let Some(peer) = peer.upgrade() {
+                    let peer = peer.get().unwrap().lock().unwrap();
+                    let index = peer
+                        .get_transceivers()
+                        .iter()
+                        .enumerate()
+                        .find(|(_, t)| t.mid().as_ref() == Some(&mid))
+                        .map(|(id, _)| id)
+                        .unwrap();
 
-                let result = api::RtcTrackEvent {
-                    track,
-                    transceiver: api::RtcRtpTransceiver {
-                        index: index as u64,
-                        mid: Some(mid),
-                        direction: direction.into(),
-                        peer_id: peer_id.into(),
-                    },
-                };
+                    let result = api::RtcTrackEvent {
+                        track,
+                        transceiver: api::RtcRtpTransceiver {
+                            index: index as u64,
+                            mid: Some(mid),
+                            direction: direction.into(),
+                            peer_id: peer_id.into(),
+                        },
+                    };
 
-                observer
-                    .lock()
-                    .unwrap()
-                    .send(api::PeerConnectionEvent::Track(result));
+                    observer
+                        .lock()
+                        .unwrap()
+                        .send(api::PeerConnectionEvent::Track(result));
+                }
             }
         });
     }

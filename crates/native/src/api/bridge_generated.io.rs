@@ -24,6 +24,14 @@ pub extern "C" fn wire_set_on_device_changed(port_: i64) {
 }
 
 #[no_mangle]
+pub extern "C" fn wire_get_media(
+    port_: i64,
+    constraints: *mut wire_MediaStreamConstraints,
+) {
+    wire_get_media_impl(port_, constraints)
+}
+
+#[no_mangle]
 pub extern "C" fn wire_enable_fake_media(port_: i64) {
     wire_enable_fake_media_impl(port_)
 }
@@ -214,14 +222,6 @@ pub extern "C" fn wire_restart_ice(port_: i64, peer_id: u64) {
 #[no_mangle]
 pub extern "C" fn wire_dispose_peer_connection(port_: i64, peer_id: u64) {
     wire_dispose_peer_connection_impl(port_, peer_id)
-}
-
-#[no_mangle]
-pub extern "C" fn wire_get_media(
-    port_: i64,
-    constraints: *mut wire_MediaStreamConstraints,
-) {
-    wire_get_media_impl(port_, constraints)
 }
 
 #[no_mangle]

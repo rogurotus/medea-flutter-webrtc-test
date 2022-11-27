@@ -2,16 +2,15 @@ use std::sync::mpsc;
 
 pub use super::{
     AudioConstraints, BundlePolicy, CandidateType, GetMediaError,
-    GetMediaResult, IceCandidateStats, IceConnectionState, IceGatheringState,
-    IceRole, IceTransportsType, MediaDeviceInfo, MediaDeviceKind,
-    MediaDisplayInfo, MediaStreamConstraints, MediaStreamTrack, MediaType,
-    PeerConnectionEvent, PeerConnectionState, Protocol, RtcConfiguration,
-    RtcIceCandidateStats, RtcIceServer, RtcInboundRtpStreamMediaType,
-    RtcMediaSourceStatsMediaType, RtcOutboundRtpStreamStatsMediaType,
-    RtcRtpTransceiver, RtcSessionDescription, RtcStats,
-    RtcStatsIceCandidatePairState, RtcStatsType, RtcTrackEvent,
-    RtpTransceiverDirection, SdpType, SignalingState, TrackEvent, TrackKind,
-    TrackState, VideoConstraints,
+    IceCandidateStats, IceConnectionState, IceGatheringState, IceRole,
+    IceTransportsType, MediaDeviceInfo, MediaDeviceKind, MediaDisplayInfo,
+    MediaStreamConstraints, MediaStreamTrack, MediaType, PeerConnectionEvent,
+    PeerConnectionState, Protocol, RtcConfiguration, RtcIceCandidateStats,
+    RtcIceServer, RtcInboundRtpStreamMediaType, RtcMediaSourceStatsMediaType,
+    RtcOutboundRtpStreamStatsMediaType, RtcRtpTransceiver,
+    RtcSessionDescription, RtcStats, RtcStatsIceCandidatePairState,
+    RtcStatsType, RtcTrackEvent, RtpTransceiverDirection, SdpType,
+    SignalingState, TrackEvent, TrackKind, TrackState, VideoConstraints,
 };
 
 use crate::{stream_sink::Sink, WEBRTC};
@@ -45,4 +44,12 @@ pub fn create_peer_connection(
         .lock()
         .unwrap()
         .create_peer_connection(&Sink::from(cb), configuration)
+}
+
+/// Creates a [`MediaStream`] with tracks according to provided
+/// [`MediaStreamConstraints`].
+pub fn get_media(
+    constraints: MediaStreamConstraints,
+) -> Result<Vec<MediaStreamTrack>, GetMediaError> {
+    WEBRTC.lock().unwrap().get_media(constraints)
 }
