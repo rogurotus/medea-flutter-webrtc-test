@@ -256,7 +256,6 @@ fn get_files_from_dir<P: AsRef<Path>>(dir: P) -> Vec<PathBuf> {
 
 /// Emits all the required `rustc-link-lib` instructions.
 fn link_libs() -> anyhow::Result<()> {
-    let target = get_target()?;
     let link_path = libwebrtc_base_path()?;
     #[cfg(target_os = "linux")]
     {
@@ -351,13 +350,14 @@ fn link_libs() -> anyhow::Result<()> {
         );
         Ok(())
     }
-    Ok(())
 }
 
 /// Returns path to `libwebrtc` lib.
 fn libwebrtc_base_path() -> anyhow::Result<PathBuf> {
     let manifest_path = std::env::var("CARGO_MANIFEST_DIR")?;
-    Ok(PathBuf::from(&manifest_path).join("lib"))
+    let target = get_target()?;
+
+    Ok(PathBuf::from(&manifest_path).join("lib").join(target))
 }
 
 #[cfg(target_os = "macos")]
