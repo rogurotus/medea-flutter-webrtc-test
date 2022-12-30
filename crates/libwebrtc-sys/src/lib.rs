@@ -1612,6 +1612,7 @@ impl VideoTrackSourceInterface {
             height,
             fps,
         );
+        println!("PTR {}", ptr.is_null());
 
         if ptr.is_null() {
             bail!(

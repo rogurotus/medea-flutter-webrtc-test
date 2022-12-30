@@ -40,24 +40,42 @@ class _GetDisplayMediaSampleState extends State<GetDisplayMediaSample> {
 
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> _makeCall() async {
-    var displays = await enumerateDisplays();
+    var displays = (await enumerateDevices()).where((element) => element.kind == MediaDeviceKind.videoinput).toList();
+    var display = displays[0];
+    
+    var caps = DeviceConstraints();
+    caps.audio.mandatory = AudioConstraints();
+    caps.video.mandatory = DeviceVideoConstraints();
+    caps.video.mandatory!.width = 1920;
+    caps.video.mandatory!.height = 1080;
+    caps.video.mandatory!.fps = 10;
+    caps.video.mandatory!.deviceId = display.deviceId;
+    var track = (await getUserMedia(caps))[0];
+    _tracks.add(track);
 
-    for (var display in displays) {
-      var caps = DisplayConstraints();
-      caps.audio.mandatory = AudioConstraints();
-      caps.video.mandatory = DeviceVideoConstraints();
-      caps.video.mandatory!.width = 1920;
-      caps.video.mandatory!.height = 1080;
-      caps.video.mandatory!.fps = 30;
-      caps.video.mandatory!.deviceId = display.deviceId;
-      var track = (await getDisplayMedia(caps))[0];
-      _tracks.add(track);
+    var renderer = createVideoRenderer();
+    await renderer.initialize();
+    await renderer.setSrcObject(track);
+    _renderers.add(renderer);
 
-      var renderer = createVideoRenderer();
-      await renderer.initialize();
-      await renderer.setSrcObject(track);
-      _renderers.add(renderer);
-    }
+    // await Future.delayed(Duration(milliseconds: 200));
+    // await _tracks[0].stop();
+    // await _tracks[0].dispose();
+
+    var caps2 = DeviceConstraints();
+    caps2.audio.mandatory = AudioConstraints();
+    caps2.video.mandatory = DeviceVideoConstraints();
+    caps2.video.mandatory!.width = 1920;
+    caps2.video.mandatory!.height = 1080;
+    caps2.video.mandatory!.fps = 60;
+    caps2.video.mandatory!.deviceId = display.deviceId;
+    var track2 = (await getUserMedia(caps2))[0];
+    _tracks.add(track);
+
+    var renderer2 = createVideoRenderer();
+    await renderer2.initialize();
+    await renderer2.setSrcObject(track2);
+    _renderers.add(renderer2);
 
     if (!mounted) return;
 

@@ -170,10 +170,11 @@ impl Webrtc {
 
                 VideoDeviceId(displays[0].device_id.clone())
             };
-            if let Some(src) = self.video_sources.get(&device_id) {
-                return Ok(Arc::clone(src));
-            }
+            // if let Some(src) = self.video_sources.get(&device_id) {
+            //     return Ok(Arc::clone(src));
+            // }
 
+            println!("NEW JEJ");
             (
                 VideoSource::new_display_source(
                     &mut self.worker_thread,
@@ -208,9 +209,10 @@ impl Webrtc {
                         VideoDeviceId(self.video_device_info.device_name(0)?.1);
                     (0, device_id)
                 };
-            if let Some(src) = self.video_sources.get(&device_id) {
-                return Ok(Arc::clone(src));
-            }
+
+            // if let Some(src) = self.video_sources.get(&device_id) {
+            //     return Ok(Arc::clone(src));
+            // }
 
             (
                 VideoSource::new_device_source(
@@ -1158,6 +1160,7 @@ impl VideoSource {
                 caps.frame_rate as usize,
             )?
         } else {
+            println!("NU FPS {}", caps.frame_rate as usize);
             sys::VideoTrackSourceInterface::create_proxy_from_display(
                 worker_thread,
                 signaling_thread,

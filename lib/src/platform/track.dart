@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '/src/model/track.dart';
 
 /// Representation of the `onEnded` callback.
@@ -53,4 +55,12 @@ abstract class MediaStreamTrack {
 
   /// Disposes this [MediaStreamTrack] instance.
   Future<void> dispose();
+
+  void stopCb() {
+    print('TEst');
+    stopCompl.complete();
+    print('TEst2');
+  }
+
+  Completer stopCompl = Completer();
 }
