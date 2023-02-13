@@ -1458,6 +1458,19 @@ impl PeerConnectionFactoryInterface {
         Ok(AudioSourceInterface(ptr))
     }
 
+    /// TODO
+    pub fn create_desktop_audio_source(&self) -> anyhow::Result<AudioSourceInterface> {
+        let ptr = webrtc::create_desktop_audio_source();
+
+        if ptr.is_null() {
+            bail!(
+                "`null` pointer returned from \
+                 `webrtc::PeerConnectionFactoryInterface::CreateAudioSource()`",
+            );
+        }
+        Ok(AudioSourceInterface(ptr))
+    }
+
     /// Creates a new [`VideoTrackInterface`] sourced by the provided
     /// [`VideoTrackSourceInterface`].
     pub fn create_video_track(

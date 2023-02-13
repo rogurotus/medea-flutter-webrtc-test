@@ -301,13 +301,15 @@ impl Webrtc {
         let src = if let Some(src) = self.audio_source.as_ref() {
             Arc::clone(src)
         } else {
+            println!("WTF");
             let src =
-                Arc::new(self.peer_connection_factory.create_audio_source()?);
+                Arc::new(self.peer_connection_factory.create_desktop_audio_source()?);
             self.audio_source.replace(Arc::clone(&src));
 
             src
         };
-
+        
+        println!("WTF2");
         Ok(src)
     }
 

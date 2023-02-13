@@ -892,4 +892,9 @@ std::unique_ptr<std::string> display_source_title(const DisplaySource& source) {
   return std::make_unique<std::string>(source.title);
 }
 
+// todo
+std::unique_ptr<AudioSourceInterface> create_desktop_audio_source() {
+  return std::make_unique<AudioSourceInterface>(new rtc::RefCountedObject<DesktopAudioSource>()); 
+}
+
 }  // namespace bridge

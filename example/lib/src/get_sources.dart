@@ -26,6 +26,7 @@ class _GetSourcesSampleState extends State<GetSourcesSample> {
     setState(() {
       var devicesInfo = '';
       for (var device in mediaDeviceInfos) {
+        print('Kind: ${device.kind}\nName: ${device.label}\nId: ${device.deviceId}\n\n');
         devicesInfo +=
             'Kind: ${device.kind}\nName: ${device.label}\nId: ${device.deviceId}\n\n';
       }

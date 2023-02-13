@@ -25,6 +25,7 @@
 #include "rust/cxx.h"
 #include "screen_video_capturer.h"
 #include "video_sink.h"
+#include "desktop_audio_source.h"
 
 #include "adm_proxy.h"
 
@@ -550,5 +551,8 @@ std::unique_ptr<webrtc::IceCandidateInterface> create_ice_candidate(
     int sdp_mline_index,
     rust::Str candidate,
     rust::String& error);
+
+// todo
+std::unique_ptr<AudioSourceInterface> create_desktop_audio_source();
 
 }  // namespace bridge
