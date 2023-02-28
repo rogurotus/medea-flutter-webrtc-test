@@ -54,9 +54,7 @@ class RtpSenderProxy(sender: RtpSender) : Proxy<RtpSender>(sender) {
       track = null
     } else {
       if (track == null) {
-        track =
-            MediaStreamTrackProxy(
-                newSenderTrack, MediaTrackSettings("remote", mapOf()))
+        track = MediaStreamTrackProxy(newSenderTrack, MediaTrackSettings("remote", mapOf()))
       } else {
         track!!.replace(newSenderTrack)
       }
