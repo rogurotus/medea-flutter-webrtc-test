@@ -62,9 +62,6 @@ class MediaStreamTrackController(
       "clone" -> {
         result.success(MediaStreamTrackController(messenger, track.fork()).asFlutterResult())
       }
-      "facingMode" -> {
-        result.success(track.facingMode?.value)
-      }
       "dispose" -> {
         chan.setMethodCallHandler(null)
         result.success(null)
@@ -88,9 +85,12 @@ class MediaStreamTrackController(
    * @return [Map] generated from this controller which can be returned to the Flutter side.
    */
   fun asFlutterResult(): Map<String, Any> =
-      mapOf(
-          "channelId" to channelId,
-          "id" to track.id,
-          "kind" to track.kind.value,
-          "deviceId" to track.deviceId)
+      listOf(
+              Pair("channelId", channelId),
+              Pair("id", track.id),
+              Pair("kind", track.kind.value),
+              Pair("deviceId", track.deviceId),
+              Pair("facingMode", track.facingMode?.value))
+          .mapNotNull { p -> p.second?.let { Pair(p.first, it) } }
+          .toMap()
 }

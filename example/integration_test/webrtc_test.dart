@@ -28,7 +28,7 @@ void main() {
     {
       caps.video.mandatory!.facingMode = FacingMode.environment;
       var tracks = await getUserMedia(caps);
-      var facingMode = await tracks
+      var facingMode = tracks
           .firstWhere((element) => element.kind() == MediaKind.video)
           .facingMode();
       expect(FacingMode.environment, facingMode);
@@ -40,7 +40,7 @@ void main() {
     {
       caps.video.mandatory!.facingMode = FacingMode.user;
       var tracks = await getUserMedia(caps);
-      var facingMode = await tracks
+      var facingMode = tracks
           .firstWhere((element) => element.kind() == MediaKind.video)
           .facingMode();
       expect(FacingMode.user, facingMode);

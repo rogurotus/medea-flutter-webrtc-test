@@ -70,7 +70,7 @@ class WebMediaStreamTrack extends MediaStreamTrack {
   }
 
   @override
-  Future<FacingMode?> facingMode() async {
+  FacingMode? facingMode() {
     var settings = jsTrack.getSettings();
     String? facingMode = settings['facingMode'];
     if (facingMode != null) {

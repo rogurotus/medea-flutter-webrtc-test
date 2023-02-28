@@ -55,5 +55,5 @@ abstract class MediaStreamTrack {
   Future<void> dispose();
 
   /// Returns [FacingMode] of the [MediaStreamTrack].
-  Future<FacingMode?> facingMode();
+  FacingMode? facingMode();
 }
