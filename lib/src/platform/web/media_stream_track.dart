@@ -67,4 +67,15 @@ class WebMediaStreamTrack extends MediaStreamTrack {
   Future<MediaStreamTrack> clone() async {
     return WebMediaStreamTrack(jsTrack.clone());
   }
+
+  @override
+  Future<MediaTrackSettings> getSettings() async {
+    var settings = jsTrack.getSettings();
+    settings['facingMode'] = FacingMode.values.indexOf(settings['facingMode']);
+    if (kind() == MediaKind.video) {
+      return VideoMediaTrackSettings.fromMap(settings);
+    } else {
+      return AudioMediaTrackSettings.fromMap(settings);
+    }
+  }
 }

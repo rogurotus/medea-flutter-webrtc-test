@@ -1,5 +1,6 @@
 package com.instrumentisto.medea_flutter_webrtc.proxy
 
+import com.instrumentisto.medea_flutter_webrtc.model.MediaTrackSettings
 import org.webrtc.RtpReceiver
 
 /**
@@ -9,7 +10,8 @@ import org.webrtc.RtpReceiver
  */
 class RtpReceiverProxy(receiver: RtpReceiver) : Proxy<RtpReceiver>(receiver) {
   /** [MediaStreamTrackProxy] of this [RtpReceiverProxy]. */
-  val track: MediaStreamTrackProxy = MediaStreamTrackProxy(obj.track()!!)
+  val track: MediaStreamTrackProxy =
+      MediaStreamTrackProxy(obj.track()!!, MediaTrackSettings("remote", mapOf()))
 
   /** Unique ID of the underlying [RtpReceiver]. */
   val id: String = obj.id()

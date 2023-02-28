@@ -53,4 +53,7 @@ abstract class MediaStreamTrack {
 
   /// Disposes this [MediaStreamTrack] instance.
   Future<void> dispose();
+
+  /// Returns current track settings [MediaTrackSettings].
+  Future<MediaTrackSettings> getSettings();
 }

@@ -1,3 +1,5 @@
+import 'package:medea_flutter_webrtc/src/model/track.dart';
+
 /// Device audio and video constraints data.
 class DisplayConstraints {
   /// Desired processing options to be applied to the video track rendition of
@@ -73,17 +75,6 @@ class AudioConstraints implements DeviceMediaConstraints {
     }
     return map;
   }
-}
-
-/// Directions in which a camera may produce a video.
-enum FacingMode {
-  /// Indicates that video source is facing toward the user (this includes, for
-  /// example, the front-facing camera on a smartphone).
-  user,
-
-  /// Indicates that video source is facing away from the user, thereby viewing
-  /// their environment (the back camera on a smartphone).
-  environment,
 }
 
 /// Device constraints related to a video.

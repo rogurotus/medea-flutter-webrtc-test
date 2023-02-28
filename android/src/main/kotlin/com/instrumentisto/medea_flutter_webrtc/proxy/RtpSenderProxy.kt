@@ -1,6 +1,7 @@
 package com.instrumentisto.medea_flutter_webrtc.proxy
 
 import com.instrumentisto.medea_flutter_webrtc.exception.ReplaceSenderTrackException
+import com.instrumentisto.medea_flutter_webrtc.model.MediaTrackSettings
 import org.webrtc.RtpSender
 
 /**
@@ -53,7 +54,9 @@ class RtpSenderProxy(sender: RtpSender) : Proxy<RtpSender>(sender) {
       track = null
     } else {
       if (track == null) {
-        track = MediaStreamTrackProxy(newSenderTrack)
+        track =
+            MediaStreamTrackProxy(
+                newSenderTrack, MediaTrackSettings("remote", mapOf()))
       } else {
         track!!.replace(newSenderTrack)
       }

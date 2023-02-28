@@ -147,6 +147,16 @@ class _NativeMediaStreamTrackChannel extends NativeMediaStreamTrack {
   Future<MediaStreamTrack> clone() async {
     return NativeMediaStreamTrack.from(await _chan.invokeMethod('clone'));
   }
+
+  @override
+  Future<MediaTrackSettings> getSettings() async {
+    var settings = await _chan.invokeMethod('getSettings');
+    if (_kind == MediaKind.video) {
+      return VideoMediaTrackSettings.fromMap(settings);
+    } else {
+      return AudioMediaTrackSettings.fromMap(settings);
+    }
+  }
 }
 
 /// FFI-based implementation of a [NativeMediaStreamTrack].
@@ -216,5 +226,10 @@ class _NativeMediaStreamTrackFFI extends NativeMediaStreamTrack {
           .disposeTrack(trackId: _id, kind: ffi.MediaType.values[_kind.index]);
     }
     _stopped = true;
+  }
+
+  @override
+  Future<MediaTrackSettings> getSettings() async {
+    return VideoMediaTrackSettings.fromFFI();
   }
 }
