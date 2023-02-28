@@ -62,8 +62,8 @@ class MediaStreamTrackController(
       "clone" -> {
         result.success(MediaStreamTrackController(messenger, track.fork()).asFlutterResult())
       }
-      "getSettings" -> {
-        result.success(track.settings.asFlutterResult())
+      "facingMode" -> {
+        result.success(track.facingMode?.value)
       }
       "dispose" -> {
         chan.setMethodCallHandler(null)

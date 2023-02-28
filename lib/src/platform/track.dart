@@ -1,4 +1,4 @@
-import '/src/model/track.dart';
+import 'package:medea_flutter_webrtc/medea_flutter_webrtc.dart';
 
 /// Representation of the `onEnded` callback.
 typedef OnEndedCallback = void Function();
@@ -54,6 +54,6 @@ abstract class MediaStreamTrack {
   /// Disposes this [MediaStreamTrack] instance.
   Future<void> dispose();
 
-  /// Returns current track settings [MediaTrackSettings].
-  Future<MediaTrackSettings> getSettings();
+  /// Returns [FacingMode] of the [MediaStreamTrack].
+  Future<FacingMode?> facingMode();
 }

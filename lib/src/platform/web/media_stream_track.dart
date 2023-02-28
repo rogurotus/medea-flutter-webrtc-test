@@ -70,13 +70,13 @@ class WebMediaStreamTrack extends MediaStreamTrack {
   }
 
   @override
-  Future<MediaTrackSettings> getSettings() async {
+  Future<FacingMode?> facingMode() async {
     var settings = jsTrack.getSettings();
-    settings['facingMode'] = FacingMode.values.indexOf(settings['facingMode']);
-    if (kind() == MediaKind.video) {
-      return VideoMediaTrackSettings.fromMap(settings);
-    } else {
-      return AudioMediaTrackSettings.fromMap(settings);
+    String? facingMode = settings['facingMode'];
+    if (facingMode != null) {
+      return FacingMode.values.firstWhere(
+          (element) => element.toString().toLowerCase() == facingMode);
     }
+    return null;
   }
 }

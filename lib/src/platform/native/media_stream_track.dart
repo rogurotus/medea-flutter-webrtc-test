@@ -149,13 +149,12 @@ class _NativeMediaStreamTrackChannel extends NativeMediaStreamTrack {
   }
 
   @override
-  Future<MediaTrackSettings> getSettings() async {
-    var settings = await _chan.invokeMethod('getSettings');
-    if (_kind == MediaKind.video) {
-      return VideoMediaTrackSettings.fromMap(settings);
-    } else {
-      return AudioMediaTrackSettings.fromMap(settings);
+  Future<FacingMode?> facingMode() async {
+    int? facingMode = await _chan.invokeMethod('facingMode');
+    if (facingMode != null) {
+      return FacingMode.values[facingMode];
     }
+    return null;
   }
 }
 
@@ -229,7 +228,7 @@ class _NativeMediaStreamTrackFFI extends NativeMediaStreamTrack {
   }
 
   @override
-  Future<MediaTrackSettings> getSettings() async {
-    return VideoMediaTrackSettings.fromFFI();
+  Future<FacingMode?> facingMode() async {
+    return null;
   }
 }

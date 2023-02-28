@@ -1,6 +1,5 @@
 package com.instrumentisto.medea_flutter_webrtc.proxy
 
-import com.instrumentisto.medea_flutter_webrtc.model.MediaTrackSettings
 import com.instrumentisto.medea_flutter_webrtc.utils.LocalTrackIdGenerator
 import org.webrtc.AudioSource
 import org.webrtc.PeerConnectionFactory
@@ -35,7 +34,7 @@ class AudioMediaTrackSource(
     val track =
         MediaStreamTrackProxy(
             peerConnectionFactory.createAudioTrack(LocalTrackIdGenerator.nextId(), source),
-            MediaTrackSettings("audio-1", mapOf()),
+            null,
             "audio-1",
             this)
     track.onStop { trackStopped() }

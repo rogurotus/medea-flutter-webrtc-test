@@ -2,8 +2,8 @@ package com.instrumentisto.medea_flutter_webrtc.proxy
 
 import android.util.Log
 import com.instrumentisto.medea_flutter_webrtc.TrackRepository
+import com.instrumentisto.medea_flutter_webrtc.model.FacingMode
 import com.instrumentisto.medea_flutter_webrtc.model.MediaStreamTrackState
-import com.instrumentisto.medea_flutter_webrtc.model.MediaTrackSettings
 import com.instrumentisto.medea_flutter_webrtc.model.MediaType
 import org.webrtc.MediaStreamTrack
 
@@ -17,7 +17,7 @@ import org.webrtc.MediaStreamTrack
  */
 class MediaStreamTrackProxy(
     track: MediaStreamTrack,
-    val settings: MediaTrackSettings,
+    val facingMode: FacingMode? = null,
     val deviceId: String = "remote",
     private val source: MediaTrackSource? = null
 ) : Proxy<MediaStreamTrack>(track) {
