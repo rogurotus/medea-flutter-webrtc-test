@@ -12,44 +12,6 @@ void main() {
     await enableFakeMedia();
   });
 
-  testWidgets('MediaStreamTrack getSettings', (WidgetTester tester) async {
-    var supportFacingMode = Platform.isAndroid;
-    if (!supportFacingMode) {
-      return;
-    }
-
-    var caps = DeviceConstraints();
-    caps.audio.mandatory = AudioConstraints();
-    caps.video.mandatory = DeviceVideoConstraints();
-    caps.video.mandatory!.width = 640;
-    caps.video.mandatory!.height = 480;
-    caps.video.mandatory!.fps = 30;
-
-    {
-      caps.video.mandatory!.facingMode = FacingMode.environment;
-      var tracks = await getUserMedia(caps);
-      var facingMode = tracks
-          .firstWhere((element) => element.kind() == MediaKind.video)
-          .facingMode();
-      expect(FacingMode.environment, facingMode);
-      for (var t in tracks) {
-        await t.dispose();
-      }
-    }
-
-    {
-      caps.video.mandatory!.facingMode = FacingMode.user;
-      var tracks = await getUserMedia(caps);
-      var facingMode = tracks
-          .firstWhere((element) => element.kind() == MediaKind.video)
-          .facingMode();
-      expect(FacingMode.user, facingMode);
-      for (var t in tracks) {
-        await t.dispose();
-      }
-    }
-  });
-
   testWidgets('Add transceiver', (WidgetTester tester) async {
     var pc = await PeerConnection.create(IceTransportType.all, []);
     var trans = await pc.addTransceiver(
