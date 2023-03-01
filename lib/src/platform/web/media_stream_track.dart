@@ -74,8 +74,8 @@ class WebMediaStreamTrack extends MediaStreamTrack {
     var settings = jsTrack.getSettings();
     String? facingMode = settings['facingMode'];
     if (facingMode != null) {
-      return FacingMode.values.firstWhere(
-          (element) => element.toString().toLowerCase() == facingMode);
+      return FacingMode.values
+          .firstWhere((element) => element.name.toLowerCase() == facingMode);
     }
     return null;
   }

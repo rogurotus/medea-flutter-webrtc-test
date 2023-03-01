@@ -1,4 +1,5 @@
-import 'package:medea_flutter_webrtc/medea_flutter_webrtc.dart';
+import 'package:medea_flutter_webrtc/src/model/constraints.dart';
+import '/src/model/track.dart';
 
 /// Representation of the `onEnded` callback.
 typedef OnEndedCallback = void Function();
