@@ -13,7 +13,7 @@ void main() {
   });
 
   testWidgets('MediaStreamTrack getSettings', (WidgetTester tester) async {
-    var supportFacingMode = Platform.isAndroid; // TODO Ios
+    var supportFacingMode = Platform.isAndroid;
     if (!supportFacingMode) {
       return;
     }
