@@ -1,7 +1,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
-
+#include <iostream>
 #include <chrono>
 #include <thread>
 
@@ -325,6 +325,46 @@ std::unique_ptr<VideoTrackSourceInterface> create_display_video_source(
   return std::make_unique<VideoTrackSourceInterface>(src);
 }
 
+  class B : public rtc::RefCountedObject<webrtc::AudioSourceInterface> {
+    public:
+    B() {
+      std::cout << "RAZ" << std::endl;
+        auto th = std::thread([=] {
+    while (true) {
+      if (da != nullptr) {
+        int16_t t[8] = {-5, -6, -4, -1, 1, -1, 0, 1};
+        da->OnData(t, 16, 48000, 1, 480);
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+  });
+  th.detach();
+      std::cout << "RAZ" << std::endl;
+
+    }
+  void SetVolume(double volume) {}
+  void RegisterObserver(webrtc::ObserverInterface* observer) {};
+  void UnregisterObserver(webrtc::ObserverInterface* observer) {};
+  // Registers/unregisters observers to the audio source.
+  void RegisterAudioObserver(AudioObserver* observer) {}
+  void UnregisterAudioObserver(AudioObserver* observer) {}
+  SourceState state() const {return SourceState::kLive;};
+
+  bool remote() const {return false;};
+
+  webrtc::AudioTrackSinkInterface* da = nullptr;
+  // TODO(tommi): Make pure virtual.
+  void AddSink(webrtc::AudioTrackSinkInterface* sink) {
+    da = sink;
+  }
+  void RemoveSink(webrtc::AudioTrackSinkInterface* sink) {}
+
+  // Returns options for the AudioSource.
+  // (for some of the settings this approach is broken, e.g. setting
+  // audio network adaptation on the source is the wrong layer of abstraction).
+  const cricket::AudioOptions options() const {return cricket::AudioOptions();};
+  };
+
 // Calls `PeerConnectionFactoryInterface->CreateAudioSource()` with empty
 // `AudioOptions`.
 std::unique_ptr<AudioSourceInterface> create_audio_source(
@@ -335,8 +375,8 @@ std::unique_ptr<AudioSourceInterface> create_audio_source(
   if (src == nullptr) {
     return nullptr;
   }
-
-  return std::make_unique<AudioSourceInterface>(src);
+  rtc::scoped_refptr<webrtc::AudioSourceInterface> d (new B());
+  return std::make_unique<AudioSourceInterface>(d);
 }
 
 // Calls `PeerConnectionFactoryInterface->CreateVideoTrack`.
@@ -482,9 +522,13 @@ std::unique_ptr<PeerConnectionFactoryInterface> create_peer_connection_factory(
     const std::unique_ptr<Thread>& signaling_thread,
     const std::unique_ptr<AudioDeviceModule>& default_adm,
     const std::unique_ptr<AudioProcessing>& ap) {
+  rtc::scoped_refptr<blink::temp> b(
+      new rtc::RefCountedObject<blink::temp>());
+      // auto a = blink::temp();
+      // auto aa = *default_adm;
   auto factory = webrtc::CreatePeerConnectionFactory(
       network_thread.get(), worker_thread.get(), signaling_thread.get(),
-      default_adm ? *default_adm : nullptr,
+      b,
       webrtc::CreateBuiltinAudioEncoderFactory(),
       webrtc::CreateBuiltinAudioDecoderFactory(),
       webrtc::CreateBuiltinVideoEncoderFactory(),

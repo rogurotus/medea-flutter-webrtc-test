@@ -1,5 +1,5 @@
 #include "libwebrtc-sys/src/bridge.rs.h"
-
+#include <iostream>
 namespace bridge {
 
 // Creates a new `PeerConnectionObserver` backed by the provided
@@ -77,6 +77,27 @@ void PeerConnectionObserver::OnIceSelectedCandidatePairChanged(
 // Propagates the received `RtpTransceiverInterface` to the Rust side.
 void PeerConnectionObserver::OnTrack(
     rtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver) {
+      std::cout << "DWA" << std::endl;
+      auto rec = transceiver->receiver();
+      auto tr = rec->track();
+      if (tr->kind() == "audio") {
+      std::cout << "DWA2" << std::endl;
+        webrtc::AudioTrackInterface* a = (webrtc::AudioTrackInterface*)tr.get();
+        class temp : public webrtc::AudioTrackSinkInterface {
+  void OnData(const void* audio_data,
+                      int bits_per_sample,
+                      int sample_rate,
+                      size_t number_of_channels,
+                      size_t number_of_frames) {
+        int16_t* d = (int16_t*) audio_data;
+        for (int i = 0; i < sizeof(d); ++i) {
+          std::cout << d[i] << " ";
+        }
+        std::cout << std::endl << number_of_frames << std::endl;
+  }
+        };
+        a->GetSource()->AddSink(new temp());
+      }
   bridge::on_track(
       *cb_, std::make_unique<bridge::RtpTransceiverInterface>(transceiver));
 }
