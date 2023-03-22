@@ -15,6 +15,7 @@
 #include "modules/audio_device/linux/latebindingsymboltable_linux.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
+#include "api/make_ref_counted.h"
 #include "rtc_base/platform_thread.h"
 
 WebRTCPulseSymbolTable* GetPulseSymbolTable() {
@@ -111,13 +112,18 @@ AudioDeviceLinuxPulse::~AudioDeviceLinuxPulse() {
 }
 
 rtc::scoped_refptr<webrtc::AudioSourceInterface> AudioDeviceLinuxPulse::CreateAudioSource() {
-  class AudioSourceInterface : public webrtc::AudioSourceInterface 
+  class A: public rtc::RefCountedObject<webrtc::AudioSourceInterface>
   {
+    public:
+    A();
   void SetVolume(double volume) {}
 
   // Registers/unregisters observers to the audio source.
   void RegisterAudioObserver(AudioObserver* observer) {}
   void UnregisterAudioObserver(AudioObserver* observer) {}
+
+  void RegisterObserver(ObserverInterface* observer) {};
+  void UnregisterObserver(ObserverInterface* observer) {};
 
   // TODO(tommi): Make pure virtual.
   void AddSink(AudioTrackSinkInterface* sink) {}
@@ -133,6 +139,9 @@ rtc::scoped_refptr<webrtc::AudioSourceInterface> AudioDeviceLinuxPulse::CreateAu
   bool remote() const {return false;};
 
   };
+  // auto a = new A();
+  return rtc::make_ref_counted<A>();
+  return nullptr;
 }
 
 
