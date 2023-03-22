@@ -113,7 +113,7 @@ std::unique_ptr<AudioDeviceModule> create_audio_device_module(
     TaskQueueFactory& task_queue_factory) {
   AudioDeviceModule adm = worker_thread.Invoke<AudioDeviceModule>(
       RTC_FROM_HERE, [audio_layer, &task_queue_factory] {
-        return webrtc::AudioDeviceModule::Create(audio_layer,
+        return webrtc::AudioDeviceModuleImplMy::Create(audio_layer,
                                                  &task_queue_factory);
       });
 
