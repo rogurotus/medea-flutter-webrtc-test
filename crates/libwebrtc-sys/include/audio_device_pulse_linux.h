@@ -25,6 +25,9 @@
 #include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/thread_annotations.h"
 #include "api/media_stream_interface.h"
+#include "audio_device_impl.h"
+#include <iostream>
+#include "adm_proxy.h"
 
 #if defined(WEBRTC_USE_X11)
 #include <X11/Xlib.h>
@@ -101,15 +104,56 @@ const int32_t WEBRTC_PA_NO_LATENCY_REQUIREMENTS = -1;
 // calculation
 const uint32_t WEBRTC_PA_CAPTURE_BUFFER_LATENCY_ADJUSTMENT = 0;
 
+
 typedef webrtc::adm_linux_pulse::PulseAudioSymbolTable WebRTCPulseSymbolTable;
 WebRTCPulseSymbolTable* GetPulseSymbolTable();
 
+
+  class AB : public rtc::RefCountedObject<webrtc::AudioSourceInterface>
+  {
+    public:
+  AB() {};
+  void SetVolume(double volume) {}
+
+  // Registers/unregisters observers to the audio source.
+  void RegisterAudioObserver(AudioObserver* observer) {}
+  void UnregisterAudioObserver(AudioObserver* observer) {}
+
+  void RegisterObserver(webrtc::ObserverInterface* observer) {};
+  void UnregisterObserver(webrtc::ObserverInterface* observer) {};
+
+  // TODO(tommi): Make pure virtual.
+  void AddSink(webrtc::AudioTrackSinkInterface* sink) {
+    vec.push_back(sink);
+  }
+  void RemoveSink(webrtc::AudioTrackSinkInterface* sink) {
+    for (int i = 0; i < vec.size(); ++i) {
+      if (vec[i] == sink) {
+        vec.erase(vec.begin() + i);
+        break;
+      }
+    }
+    std::cout << "CALL DELETE" << std::endl;
+  }
+
+  // Returns options for the AudioSource.
+  // (for some of the settings this approach is broken, e.g. setting
+  // audio network adaptation on the source is the wrong layer of abstraction).
+  const cricket::AudioOptions options() const {return cricket::AudioOptions();}
+
+  SourceState state() const {return SourceState::kLive;};
+
+  bool remote() const {return false;};
+  std::vector<webrtc::AudioTrackSinkInterface*> vec; 
+  };
+
 namespace webrtc {
 
-class AudioDeviceLinuxPulse : public AudioDeviceGeneric {
+class AudioDeviceLinuxPulseMY : public AudioDeviceGeneric {
  public:
-  AudioDeviceLinuxPulse();
-  virtual ~AudioDeviceLinuxPulse();
+  webrtc::AudioProcessing** da;
+  AudioDeviceLinuxPulseMY();
+  virtual ~AudioDeviceLinuxPulseMY();
 
   // Retrieve the currently utilized audio layer
   int32_t ActiveAudioLayer(

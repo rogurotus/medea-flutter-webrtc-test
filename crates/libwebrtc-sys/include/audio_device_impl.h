@@ -23,6 +23,7 @@
 #include "modules/audio_device/audio_device_buffer.h"
 #include "modules/audio_device/include/audio_device.h"
 #include "api/media_stream_interface.h"
+#include "modules/audio_processing/include/audio_processing.h"
 
 namespace webrtc {
 
@@ -163,6 +164,7 @@ class AudioDeviceModuleImplMy : public AudioDeviceModuleForTest {
   int SetPlayoutSampleRate(uint32_t sample_rate) override { return -1; }
   int SetRecordingSampleRate(uint32_t sample_rate) override { return -1; }
 
+  AudioProcessing* da = (AudioProcessing*)42;
  private:
   PlatformType Platform() const;
   AudioLayer PlatformAudioLayer() const;
@@ -177,6 +179,9 @@ class AudioDeviceModuleImplMy : public AudioDeviceModuleForTest {
   AudioDeviceBuffer audio_device_buffer_;
   std::unique_ptr<AudioDeviceGeneric> audio_device_;
 };
+
+// static AudioDeviceModuleImplMy* temp;
+
 
 }  // namespace webrtc
 

@@ -18,6 +18,7 @@
 #include "modules/audio_device/audio_device_generic.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
+#include <iostream>
 #include "system_wrappers/include/metrics.h"
 
 #define WEBRTC_LINUX true
@@ -125,7 +126,7 @@ AudioDeviceModuleImplMy::AudioDeviceModuleImplMy(
 }
 
   rtc::scoped_refptr<AudioSourceInterface> AudioDeviceModuleImplMy::CreateAudioSource() {
-    auto a = (AudioDeviceLinuxPulse*) audio_device_.get();
+    auto a = (AudioDeviceLinuxPulseMY*) audio_device_.get();
     return a->CreateAudioSource();
   }
 
@@ -276,7 +277,10 @@ int32_t AudioDeviceModuleImplMy::CreatePlatformSpecificObjects() {
   if ((audio_layer == kLinuxPulseAudio) ||
       (audio_layer == kPlatformDefaultAudio)) {
     // Linux PulseAudio implementation is default.
-    audio_device_.reset(new AudioDeviceLinuxPulse());
+    auto a = new AudioDeviceLinuxPulseMY();
+    std::cout << "WTF-" << this << std::endl;
+    a->da = &(this->da);
+    audio_device_.reset(a);
     RTC_LOG(LS_INFO) << "Linux PulseAudio APIs will be utilized";
   } else if (audio_layer == kLinuxAlsaAudio) {
     // audio_device_.reset(new AudioDeviceLinuxALSA());
