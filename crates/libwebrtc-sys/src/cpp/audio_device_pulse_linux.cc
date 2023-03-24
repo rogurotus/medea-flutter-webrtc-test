@@ -1998,6 +1998,10 @@ int32_t AudioDeviceLinuxPulseMY::ProcessRecordedData(int8_t* bufferData,
     RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
   _ptrAudioBuffer->SetRecordedBuffer(bufferData, bufferSizeInSamples);
 
+  rtc::BufferT<int16_t> rec_buffer_;
+    rec_buffer_.SetData((const int16_t*)(bufferData),
+                      _ptrAudioBuffer->RecordingChannels() * bufferSizeInSamples);
+
     // std::cout << sizeof(bufferData) << " " << bufferSizeInSamples << " " << sizeof(((int16_t*)bufferData))<< std::endl;
 
   // TODO(andrew): this is a temporary hack, to avoid non-causal far- and
@@ -2030,15 +2034,24 @@ int32_t AudioDeviceLinuxPulseMY::ProcessRecordedData(int8_t* bufferData,
   //     rec_sample_rate_, total_delay_ms, 0, 0, typing_status_,
   //     new_mic_level_dummy, capture_timestamp_ns_);
 
-  int min_processing_rate_hz = 8000;
-  for (int native_rate_hz : AudioProcessing::kNativeSampleRatesHz) {
-    audio_frame->sample_rate_hz_ = native_rate_hz;
-    if (audio_frame->sample_rate_hz_ >= min_processing_rate_hz) {
-      break;
-    }
-  }
+  // int min_processing_rate_hz = 8000;
+  // for (int native_rate_hz : AudioProcessing::kNativeSampleRatesHz) {
+
+  //   audio_frame->sample_rate_hz_ = native_rate_hz;
+  //   if (audio_frame->sample_rate_hz_ >= min_processing_rate_hz) {
+  //     std::cout << "AAA: " << audio_frame->sample_rate_hz_ << std::endl;
+  //     break;
+  //   }
+  // }
+
+  audio_frame->sample_rate_hz_ = 48000;
+    //   kSampleRate8kHz = 8000,
+    // kSampleRate16kHz = 16000,
+    // kSampleRate32kHz = 32000,
+    // kSampleRate48kHz = 48000
   audio_frame->num_channels_ = 1;
-  std::cout << "AAA: " << total_delay_ms << std::endl;
+  std::cout << "AAA: " << rec_buffer_.size() << std::endl;
+  std::cout << "AAA: " << recDelay << std::endl;
   std::cout << "AAA2: " << audio_frame->sample_rate_hz_ << std::endl;
   std::cout << "AAA3: " << bufferSizeInSamples << std::endl;
   std::cout << "AAA3-2: " << frames << std::endl;
@@ -2047,7 +2060,7 @@ int32_t AudioDeviceLinuxPulseMY::ProcessRecordedData(int8_t* bufferData,
 
   PushResampler<int16_t> capture_resampler_;
   voe::RemixAndResample((const int16_t*)(bufferData),
-                        bufferSizeInSamples, 1, rate,
+                        rec_buffer_.size(), 1, rate,
                         &capture_resampler_, audio_frame.get());
 
   std::cout << "AAA5: ";
@@ -2057,9 +2070,12 @@ int32_t AudioDeviceLinuxPulseMY::ProcessRecordedData(int8_t* bufferData,
   }
   std::cout << std::endl;
 
+  // auto* b = (webrtc::webrtcc::AudioTransportImpl*)(*da2);
+  // std::cout << "AAA4: " << *b->async_audio_processing_ << " - " << (*da) << std::endl;
+
     (*da)->set_stream_delay_ms(total_delay_ms);
     (*da)->set_stream_key_pressed(KeyPressed());
-    ProcessAudioFrame((*da), audio_frame.get());
+    ProcessAudioFrame(*da, audio_frame.get());
 
   for (int i = 0;i<all.size();++i) {
     for (int j = 0; j<all[i]->vec.size(); ++j) {

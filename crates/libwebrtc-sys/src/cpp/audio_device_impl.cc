@@ -280,6 +280,7 @@ int32_t AudioDeviceModuleImplMy::CreatePlatformSpecificObjects() {
     auto a = new AudioDeviceLinuxPulseMY();
     std::cout << "WTF-" << this << std::endl;
     a->da = &(this->da);
+    a->da2 = &(this->da2);
     audio_device_.reset(a);
     RTC_LOG(LS_INFO) << "Linux PulseAudio APIs will be utilized";
   } else if (audio_layer == kLinuxAlsaAudio) {
@@ -862,6 +863,7 @@ bool AudioDeviceModuleImplMy::Recording() const {
 int32_t AudioDeviceModuleImplMy::RegisterAudioCallback(
     AudioTransport* audioCallback) {
   RTC_LOG(LS_INFO) << __FUNCTION__;
+  da2 = audioCallback;
   return audio_device_buffer_.RegisterAudioCallback(audioCallback);
 }
 

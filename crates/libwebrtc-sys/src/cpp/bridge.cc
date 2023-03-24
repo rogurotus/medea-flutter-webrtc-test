@@ -638,11 +638,11 @@ create_set_local_description_observer(
 }
 
 // Creates a new `SetRemoteDescriptionObserverInterface` from the provided
-// `bridge::DynSetDescriptionCallback`.
+// `bridge::DynSetDescriptionCallback`. 
 std::unique_ptr<SetRemoteDescriptionObserver>
 create_set_remote_description_observer(
     rust::Box<bridge::DynSetDescriptionCallback> cb) {
-  return std::make_unique<SetRemoteDescriptionObserver>(std::move(cb));
+  return std::make_unique<SetRemoteDescriptionObserver>(std::move(cb)); 
 }
 
 // Returns the `RtpExtension.uri` field value.

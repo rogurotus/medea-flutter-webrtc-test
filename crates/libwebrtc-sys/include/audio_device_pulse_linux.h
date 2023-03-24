@@ -28,6 +28,7 @@
 #include "audio_device_impl.h"
 #include <iostream>
 #include "adm_proxy.h"
+#include "hack.h"
 
 #if defined(WEBRTC_USE_X11)
 #include <X11/Xlib.h>
@@ -152,6 +153,7 @@ namespace webrtc {
 class AudioDeviceLinuxPulseMY : public AudioDeviceGeneric {
  public:
   webrtc::AudioProcessing** da;
+  webrtc::AudioTransport** da2;
   AudioDeviceLinuxPulseMY();
   virtual ~AudioDeviceLinuxPulseMY();
 

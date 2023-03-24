@@ -165,6 +165,7 @@ class AudioDeviceModuleImplMy : public AudioDeviceModuleForTest {
   int SetRecordingSampleRate(uint32_t sample_rate) override { return -1; }
 
   AudioProcessing* da = (AudioProcessing*)42;
+  AudioTransport* da2 = (AudioTransport*)42;
  private:
   PlatformType Platform() const;
   AudioLayer PlatformAudioLayer() const;
