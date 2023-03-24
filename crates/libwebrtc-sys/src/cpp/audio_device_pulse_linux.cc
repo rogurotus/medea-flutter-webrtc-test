@@ -2025,8 +2025,8 @@ int32_t AudioDeviceLinuxPulseMY::ProcessRecordedData(int8_t* bufferData,
   std::unique_ptr<AudioFrame> audio_frame(new AudioFrame());
 
 
-  const size_t frames = sizeof(bufferData) / 1; // channel
-  const size_t bytes_per_frame = 1 * sizeof(int16_t);
+  // const size_t frames = sizeof(bufferData) / 1; // channel
+  // const size_t bytes_per_frame = 1 * sizeof(int16_t);
   uint32_t new_mic_level_dummy = 0;
   uint32_t total_delay_ms = _sndCardPlayDelay + recDelay;
   // int32_t res = audio_transport_cb_->RecordedDataIsAvailable(
@@ -2060,7 +2060,7 @@ int32_t AudioDeviceLinuxPulseMY::ProcessRecordedData(int8_t* bufferData,
 
   PushResampler<int16_t> capture_resampler_;
   voe::RemixAndResample((const int16_t*)(bufferData),
-                        rec_buffer_.size(), 2, rate,
+                        rec_buffer_.size() / 2, 2, rate,
                         &capture_resampler_, audio_frame.get());
 
   std::cout << "AAA5: ";
@@ -2079,7 +2079,7 @@ int32_t AudioDeviceLinuxPulseMY::ProcessRecordedData(int8_t* bufferData,
 
   for (int i = 0;i<all.size();++i) {
     for (int j = 0; j<all[i]->vec.size(); ++j) {
-    all[i]->vec[j]->OnData(audio_frame->data(), 16, audio_frame->sample_rate_hz_, 2, audio_frame->sample_rate_hz_/100 * 2); }
+    all[i]->vec[j]->OnData(audio_frame->data(), 16, audio_frame->sample_rate_hz_, 2, (audio_frame->sample_rate_hz_/100) * 2); }
   }
   Lock();
 
