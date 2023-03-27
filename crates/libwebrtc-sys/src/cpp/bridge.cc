@@ -335,14 +335,14 @@ std::unique_ptr<AudioSourceInterface> create_audio_source(
     const PeerConnectionFactoryInterface& peer_connection_factory) {
   bridge::AudioSourceInterface src;
   std::cout << "C" << std::endl;
-  if (temp) {
+  // if (temp) {
     
-  src =
-    temp->CreateAudioSource(); 
-  } else {
+  // src =
+    // temp->CreateAudioSource(); 
+  // } else {
     src =  peer_connection_factory->CreateAudioSource(cricket::AudioOptions());
-  }
-  std::cout << "C" << std::endl;
+  // }
+  // std::cout << "C" << std::endl;
 
   if (src == nullptr) {
     return nullptr;

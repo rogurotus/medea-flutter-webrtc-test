@@ -127,7 +127,8 @@ AudioDeviceModuleImplMy::AudioDeviceModuleImplMy(
 
   rtc::scoped_refptr<AudioSourceInterface> AudioDeviceModuleImplMy::CreateAudioSource() {
     auto a = (AudioDeviceLinuxPulseMY*) audio_device_.get();
-    return a->CreateAudioSource();
+    // return a->CreateAudioSource();
+    return nullptr;
   }
 
 

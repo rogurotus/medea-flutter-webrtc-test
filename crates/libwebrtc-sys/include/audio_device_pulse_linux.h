@@ -150,7 +150,7 @@ WebRTCPulseSymbolTable* GetPulseSymbolTable();
 
 namespace webrtc {
 
-class AudioDeviceLinuxPulseMY : public AudioDeviceGeneric {
+class AudioDeviceLinuxPulseMY : public AudioDeviceGeneric, public AudioMixer::Source {
  public:
   webrtc::AudioProcessing** da;
   webrtc::AudioTransport** da2;
@@ -165,6 +165,16 @@ class AudioDeviceLinuxPulseMY : public AudioDeviceGeneric {
   InitStatus Init() override;
   int32_t Terminate() RTC_LOCKS_EXCLUDED(mutex_) override;
   bool Initialized() const override;
+
+  AudioMixer::Source::AudioFrameInfo GetAudioFrameWithInfo(int sample_rate_hz,
+                                                AudioFrame* audio_frame) override;
+
+  // A way for a mixer implementation to distinguish participants.
+  int Ssrc() const override;
+
+  // A way for this source to say that GetAudioFrameWithInfo called
+  // with this sample rate or higher will not cause quality loss.
+  int PreferredSampleRate() const override;
 
   // Device enumeration
   int16_t PlayoutDevices() override;
@@ -237,7 +247,7 @@ class AudioDeviceLinuxPulseMY : public AudioDeviceGeneric {
   int32_t StereoRecordingIsAvailable(bool& available) override;
   int32_t SetStereoRecording(bool enable) override;
   int32_t StereoRecording(bool& enabled) const override;
-  rtc::scoped_refptr<AudioSourceInterface> CreateAudioSource();
+  // rtc::scoped_refptr<AudioSourceInterface> CreateAudioSource();
 
 
   // Delay information and control

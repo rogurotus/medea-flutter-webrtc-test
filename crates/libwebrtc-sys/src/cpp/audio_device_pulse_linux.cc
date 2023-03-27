@@ -23,6 +23,7 @@
 #include "modules/audio_processing/include/audio_frame_proxies.h"
 #include "rtc_base/platform_thread.h"
 #include "common_audio/resampler/include/push_resampler.h"
+#include "modules/audio_mixer/audio_mixer_impl.h"
 
 WebRTCPulseSymbolTable* GetPulseSymbolTable() {
   static WebRTCPulseSymbolTable* pulse_symbol_table =
@@ -38,6 +39,11 @@ WebRTCPulseSymbolTable* GetPulseSymbolTable() {
               GetPulseSymbolTable(), sym)
 
 namespace webrtc {
+
+
+auto nado4 = AudioMixerImpl::Create();
+AudioFrame mixed_frame_;
+PushResampler<int16_t> render_resampler_;
 
 AudioDeviceLinuxPulseMY::AudioDeviceLinuxPulseMY()
     : _ptrAudioBuffer(NULL),
@@ -86,6 +92,7 @@ AudioDeviceLinuxPulseMY::AudioDeviceLinuxPulseMY()
       _playStream(NULL),
       _recStreamFlags(0),
       _playStreamFlags(0) {
+  nado4->AddSource(this);
   RTC_DLOG(LS_INFO) << __FUNCTION__ << " created";
 
   memset(_paServerVersion, 0, sizeof(_paServerVersion));
@@ -116,46 +123,6 @@ AudioDeviceLinuxPulseMY::~AudioDeviceLinuxPulseMY() {
     _recDeviceName = NULL;
   }
 }
-
-
-  // AB::AB() {};
-  // void AB::etVolume(double volume) {}
-
-  // // Registers/unregisters observers to the audio source.
-  // void AB::RegisterAudioObserver(AudioObserver* observer) {}
-  // void AB::UnregisterAudioObserver(AudioObserver* observer) {}
-
-  // void AB::RegisterObserver(ObserverInterface* observer) {};
-  // void AB::UnregisterObserver(ObserverInterface* observer) {};
-
-  // // TODO(tommi): Make pure virtual.
-  // void AB::AddSink(AudioTrackSinkInterface* sink) {
-  //   vec.push_back(sink);
-  // }
-  // void AB::RemoveSink(AudioTrackSinkInterface* sink) {}
-
-  // // Returns options for the AudioSource.
-  // // (for some of the settings this approach is broken, e.g. setting
-  // // audio network adaptation on the source is the wrong layer of abstraction).
-  // const cricket::AudioOptions AB::options() const {return cricket::AudioOptions();}
-
-  // SourceState AB::state() const {return SourceState::kLive;};
-
-  // bool AB::remote() const {return false;};
-  
-std::vector<AB*> all;
-
-rtc::scoped_refptr<webrtc::AudioSourceInterface> AudioDeviceLinuxPulseMY::CreateAudioSource() {
-
-  std::cout << "A" << std::endl;
-  auto a = new AB();
-    rtc::scoped_refptr<webrtc::AudioSourceInterface> d (a);
-    all.push_back(a);
-  std::cout << "A" << std::endl;
-
-  return d;
-}
-
 
 void AudioDeviceLinuxPulseMY::AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) {
   RTC_DCHECK(thread_checker_.IsCurrent());
@@ -995,6 +962,8 @@ int32_t AudioDeviceLinuxPulseMY::InitPlayout() {
   return 0;
 }
 
+int nado3 = 48000;
+
 int32_t AudioDeviceLinuxPulseMY::InitRecording() {
   RTC_DCHECK(thread_checker_.IsCurrent());
 
@@ -1035,6 +1004,7 @@ int32_t AudioDeviceLinuxPulseMY::InitRecording() {
 
   if (_ptrAudioBuffer) {
     // Update audio buffer with the selected parameters
+    nado3 = sample_rate_hz_;
     _ptrAudioBuffer->SetRecordingSampleRate(sample_rate_hz_);
     _ptrAudioBuffer->SetRecordingChannels((uint8_t)_recChannels);
   }
@@ -1924,7 +1894,7 @@ int32_t AudioDeviceLinuxPulseMY::LatencyUsecs(pa_stream* stream) {
     return (int32_t)latency;
   }
 }
-
+void* nado = nullptr;
 int32_t AudioDeviceLinuxPulseMY::ReadRecordedData(const void* bufferData,
                                                 size_t bufferSize)
     RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
@@ -1958,6 +1928,8 @@ int32_t AudioDeviceLinuxPulseMY::ReadRecordedData(const void* bufferData,
       return 0;
     }
 
+    nado=(void*)_recBuffer;
+
     // Provide data to VoiceEngine.
     if (ProcessRecordedData(_recBuffer, numRecSamples, recDelay) == -1) {
       // We have stopped recording.
@@ -1969,6 +1941,9 @@ int32_t AudioDeviceLinuxPulseMY::ReadRecordedData(const void* bufferData,
 
   // Now process full 10ms sample sets directly from the input.
   while (size >= _recordBufferSize) {
+
+    nado=(void*)bufferData;
+
     // Provide data to VoiceEngine.
     if (ProcessRecordedData(static_cast<int8_t*>(const_cast<void*>(bufferData)),
                             numRecSamples, recDelay) == -1) {
@@ -1992,17 +1967,13 @@ int32_t AudioDeviceLinuxPulseMY::ReadRecordedData(const void* bufferData,
   return 0;
 }
 
+uint32_t nado2 = 0;
 int32_t AudioDeviceLinuxPulseMY::ProcessRecordedData(int8_t* bufferData,
                                                    uint32_t bufferSizeInSamples,
                                                    uint32_t recDelay)
     RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
+      nado2 = bufferSizeInSamples;
   _ptrAudioBuffer->SetRecordedBuffer(bufferData, bufferSizeInSamples);
-
-  rtc::BufferT<int16_t> rec_buffer_;
-    rec_buffer_.SetData((const int16_t*)(bufferData),
-                      _ptrAudioBuffer->RecordingChannels() * bufferSizeInSamples);
-
-    // std::cout << sizeof(bufferData) << " " << bufferSizeInSamples << " " << sizeof(((int16_t*)bufferData))<< std::endl;
 
   // TODO(andrew): this is a temporary hack, to avoid non-causal far- and
   // near-end signals at the AEC for PulseAudio. I think the system delay is
@@ -2017,70 +1988,11 @@ int32_t AudioDeviceLinuxPulseMY::ProcessRecordedData(int8_t* bufferData,
   _ptrAudioBuffer->SetTypingStatus(KeyPressed());
   // Deliver recorded samples at specified sample rate,
   // mic level etc. to the observer using callback.
+  nado4->Mix(1, &mixed_frame_);
+  _ptrAudioBuffer->SetRecordingSampleRate(48000);
+  _ptrAudioBuffer->SetRecordedBuffer(mixed_frame_.data(), 480);
   UnLock();
-  auto rate = _ptrAudioBuffer->RecordingSampleRate();
-  // std::cout << "CA" << std::endl;
-
-
-  std::unique_ptr<AudioFrame> audio_frame(new AudioFrame());
-
-
-  // const size_t frames = sizeof(bufferData) / 1; // channel
-  // const size_t bytes_per_frame = 1 * sizeof(int16_t);
-  uint32_t new_mic_level_dummy = 0;
-  uint32_t total_delay_ms = _sndCardPlayDelay + recDelay;
-  // int32_t res = audio_transport_cb_->RecordedDataIsAvailable(
-  //     rec_buffer_.data(), frames, bytes_per_frame, rec_channels_,
-  //     rec_sample_rate_, total_delay_ms, 0, 0, typing_status_,
-  //     new_mic_level_dummy, capture_timestamp_ns_);
-
-  // int min_processing_rate_hz = 8000;
-  // for (int native_rate_hz : AudioProcessing::kNativeSampleRatesHz) {
-
-  //   audio_frame->sample_rate_hz_ = native_rate_hz;
-  //   if (audio_frame->sample_rate_hz_ >= min_processing_rate_hz) {
-  //     std::cout << "AAA: " << audio_frame->sample_rate_hz_ << std::endl;
-  //     break;
-  //   }
-  // }
-
-  audio_frame->sample_rate_hz_ = 48000;
-    //   kSampleRate8kHz = 8000,
-    // kSampleRate16kHz = 16000,
-    // kSampleRate32kHz = 32000,
-    // kSampleRate48kHz = 48000
-  audio_frame->num_channels_ = 2;
-  std::cout << "AAA: " << rec_buffer_.size() << std::endl;
-  std::cout << "AAA: " << recDelay << std::endl;
-  std::cout << "AAA2: " << audio_frame->sample_rate_hz_ << std::endl;
-  std::cout << "AAA3: " << bufferSizeInSamples << std::endl;
-  std::cout << "AAA3-2: " << frames << std::endl;
-  std::cout << "AAA4: " << rate << std::endl;
-  
-
-  PushResampler<int16_t> capture_resampler_;
-  voe::RemixAndResample((const int16_t*)(bufferData),
-                        rec_buffer_.size() / 2, 2, rate,
-                        &capture_resampler_, audio_frame.get());
-
-  std::cout << "AAA5: ";
-  for (int i = 0; i<8; ++i) {
-  std::cout << audio_frame->data()[i];
-
-  }
-  std::cout << std::endl;
-
-  // auto* b = (webrtc::webrtcc::AudioTransportImpl*)(*da2);
-  // std::cout << "AAA4: " << *b->async_audio_processing_ << " - " << (*da) << std::endl;
-
-    (*da)->set_stream_delay_ms(total_delay_ms);
-    (*da)->set_stream_key_pressed(KeyPressed());
-    ProcessAudioFrame(*da, audio_frame.get());
-
-  for (int i = 0;i<all.size();++i) {
-    for (int j = 0; j<all[i]->vec.size(); ++j) {
-    all[i]->vec[j]->OnData(audio_frame->data(), 16, audio_frame->sample_rate_hz_, 2, (audio_frame->sample_rate_hz_/100) * 2); }
-  }
+  _ptrAudioBuffer->DeliverRecordedData();
   Lock();
 
   // We have been unlocked - check the flag again.
@@ -2398,4 +2310,60 @@ bool AudioDeviceLinuxPulseMY::KeyPressed() const {
   return false;
 #endif
 }
+
+// Resample audio in `frame` to given sample rate preserving the
+// channel count and place the result in `destination`.
+int Resample(const AudioFrame& frame,
+             const int destination_sample_rate,
+             PushResampler<int16_t>* resampler,
+             int16_t* destination) {
+  // TRACE_EVENT2("webrtc", "Resample", "frame sample rate", frame.sample_rate_hz_,
+  //              "destination_sample_rate", destination_sample_rate);
+  const int number_of_channels = static_cast<int>(frame.num_channels_);
+  const int target_number_of_samples_per_channel =
+      destination_sample_rate / 100;
+  resampler->InitializeIfNeeded(frame.sample_rate_hz_, destination_sample_rate,
+                                number_of_channels);
+
+  // TODO(yujo): make resampler take an AudioFrame, and add special case
+  // handling of muted frames.
+  return resampler->Resample(
+      frame.data(), frame.samples_per_channel_ * number_of_channels,
+      destination, number_of_channels * target_number_of_samples_per_channel);
+}
+
+  // Overwrites `audio_frame`. The data_ field is overwritten with
+  // 10 ms of new audio (either 1 or 2 interleaved channels) at
+  // `sample_rate_hz`. All fields in `audio_frame` must be updated.
+  AudioMixer::Source::AudioFrameInfo AudioDeviceLinuxPulseMY::GetAudioFrameWithInfo(int sample_rate_hz,
+                                                AudioFrame* audio_frame) {
+                                                  std::cout << " CALL GetAudioFrameWithInfo " << sample_rate_hz << std::endl;
+
+                                                  AudioFrame a;
+                                                  a.UpdateFrame(42, (const int16_t*)nado, nado2, nado3, AudioFrame::SpeechType::kNormalSpeech, AudioFrame::VADActivity::kVadActive);
+
+                                                  int16_t* b = new int16_t[sample_rate_hz/100];
+
+                                                  Resample(a, sample_rate_hz, &render_resampler_, b);
+                                                  std::cout << " CALL GetAudioFrameWithInfo " << sizeof(nado) << std::endl;
+
+
+                                                  // возможно нужен ресампле
+                                                  audio_frame->UpdateFrame(42, (const int16_t*)b, sample_rate_hz/100, sample_rate_hz, AudioFrame::SpeechType::kNormalSpeech, AudioFrame::VADActivity::kVadActive);
+
+                                                  return AudioMixer::Source::AudioFrameInfo::kNormal;
+                                                };
+
+  // A way for a mixer implementation to distinguish participants.
+  int AudioDeviceLinuxPulseMY::Ssrc() const {
+    std::cout << " CALL SSRC " << std::endl;
+    return 42;
+  };
+
+  // A way for this source to say that GetAudioFrameWithInfo called
+  // with this sample rate or higher will not cause quality loss.
+  int AudioDeviceLinuxPulseMY::PreferredSampleRate() const {
+    std::cout << " CALL PreferredSampleRate " << nado3 << std::endl;
+    return nado3;
+  };
 }  // namespace webrtc
