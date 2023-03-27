@@ -1973,6 +1973,7 @@ int32_t AudioDeviceLinuxPulseMY::ProcessRecordedData(int8_t* bufferData,
                                                    uint32_t recDelay)
     RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
       nado2 = bufferSizeInSamples;
+  std::cout << "bufferSizeInSamples" << _sndCardPlayDelay << std::endl;
   _ptrAudioBuffer->SetRecordedBuffer(bufferData, bufferSizeInSamples);
 
   // TODO(andrew): this is a temporary hack, to avoid non-causal far- and
@@ -1984,13 +1985,13 @@ int32_t AudioDeviceLinuxPulseMY::ProcessRecordedData(int8_t* bufferData,
     recDelay -= 10;
   else
     recDelay = 0;
-  _ptrAudioBuffer->SetVQEData(_sndCardPlayDelay, recDelay);
-  _ptrAudioBuffer->SetTypingStatus(KeyPressed());
   // Deliver recorded samples at specified sample rate,
   // mic level etc. to the observer using callback.
   nado4->Mix(1, &mixed_frame_);
   _ptrAudioBuffer->SetRecordingSampleRate(48000);
-  _ptrAudioBuffer->SetRecordedBuffer(mixed_frame_.data(), 480);
+  _ptrAudioBuffer->SetRecordedBuffer(mixed_frame_.mutable_data(), 480);
+  _ptrAudioBuffer->SetVQEData(_sndCardPlayDelay, recDelay);
+  _ptrAudioBuffer->SetTypingStatus(KeyPressed());
   UnLock();
   _ptrAudioBuffer->DeliverRecordedData();
   Lock();
