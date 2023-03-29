@@ -147,7 +147,7 @@ rtc::scoped_refptr<AudioMixerMy> AudioMixerMy::Create(
       //           throw 42;
   return Create(std::unique_ptr<DefaultOutputRateCalculator>(
                     new DefaultOutputRateCalculator()),
-                /*use_limiter=*/false, 5);
+                /*use_limiter=*/false, 2);
 }
 
 rtc::scoped_refptr<AudioMixerMy> AudioMixerMy::Create(
