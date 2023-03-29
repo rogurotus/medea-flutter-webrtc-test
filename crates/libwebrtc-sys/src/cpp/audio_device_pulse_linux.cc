@@ -41,7 +41,7 @@ WebRTCPulseSymbolTable* GetPulseSymbolTable() {
 namespace webrtc {
 
 
-auto nado4 = AudioMixerImpl::Create();
+auto nado4 = AudioMixerMy::Create();
 AudioFrame mixed_frame_;
 PushResampler<int16_t> render_resampler_;
 
@@ -1005,6 +1005,7 @@ int32_t AudioDeviceLinuxPulseMY::InitRecording() {
   if (_ptrAudioBuffer) {
     // Update audio buffer with the selected parameters
     nado3 = sample_rate_hz_;
+    std::cout << " WTF WTF " << sample_rate_hz_ << std::endl;
     _ptrAudioBuffer->SetRecordingSampleRate(sample_rate_hz_);
     _ptrAudioBuffer->SetRecordingChannels((uint8_t)_recChannels);
   }
@@ -1044,7 +1045,9 @@ int32_t AudioDeviceLinuxPulseMY::InitRecording() {
     _configuredLatencyRec = latency;
   }
 
+  // std::cout << " WTF2 " << sample_rate_hz_ << std::endl;
   _recordBufferSize = sample_rate_hz_ / 100 * 2 * _recChannels;
+  // std::cout << " WTF2 " << _recordBufferSize << std::endl;
   _recordBufferUsed = 0;
   _recBuffer = new int8_t[_recordBufferSize];
 
@@ -1406,6 +1409,7 @@ void AudioDeviceLinuxPulseMY::PaServerInfoCallbackHandler(
     const pa_server_info* i) {
   // Use PA native sampling rate
   sample_rate_hz_ = i->sample_spec.rate;
+  // sample_rate_hz_ = 48000;
 
   // Copy the PA server version
   strncpy(_paServerVersion, i->server_version, 31);
@@ -1900,11 +1904,13 @@ int32_t AudioDeviceLinuxPulseMY::ReadRecordedData(const void* bufferData,
     RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
   size_t size = bufferSize;
   uint32_t numRecSamples = _recordBufferSize / (2 * _recChannels);
+  std::cout << " WTF3 " << numRecSamples << std::endl;
 
   // Account for the peeked data and the used data.
   uint32_t recDelay =
       (uint32_t)((LatencyUsecs(_recStream) / 1000) +
                  10 * ((size + _recordBufferUsed) / _recordBufferSize));
+  std::cout << " WTF3 " << recDelay << std::endl;
 
   if (_playStream) {
     // Get the playout delay.
@@ -1914,6 +1920,7 @@ int32_t AudioDeviceLinuxPulseMY::ReadRecordedData(const void* bufferData,
   if (_recordBufferUsed > 0) {
     // Have to copy to the buffer until it is full.
     size_t copy = _recordBufferSize - _recordBufferUsed;
+    std::cout << " WTF3 " << copy << std::endl;
     if (size < copy) {
       copy = size;
     }
@@ -1985,14 +1992,27 @@ int32_t AudioDeviceLinuxPulseMY::ProcessRecordedData(int8_t* bufferData,
     recDelay -= 10;
   else
     recDelay = 0;
-  // Deliver recorded samples at specified sample rate,
-  // mic level etc. to the observer using callback.
-  nado4->Mix(1, &mixed_frame_);
-  _ptrAudioBuffer->SetRecordingSampleRate(48000);
-  _ptrAudioBuffer->SetRecordedBuffer(mixed_frame_.mutable_data(), 480);
   _ptrAudioBuffer->SetVQEData(_sndCardPlayDelay, recDelay);
   _ptrAudioBuffer->SetTypingStatus(KeyPressed());
+  // Deliver recorded samples at specified sample rate,
+  // mic level etc. to the observer using callback.
   UnLock();
+
+  // const int number_of_channels = static_cast<int>(1);
+  // const int target_number_of_samples_per_channel = 48000 / 100;
+  // render_resampler_.InitializeIfNeeded(44100, 48000, 1);
+
+  // // TODO(yujo): make resampler take an AudioFrame, and add special case
+  // // handling of muted frames.
+  // // return resampler->Resample(
+  // //     frame.data(), frame.samples_per_channel_ * number_of_channels,
+  // //     destination, number_of_channels * target_number_of_samples_per_channel);
+  // int16_t* b = new int16_t[480];
+  // render_resampler_.Resample((const short int*)bufferData, 441, b,
+  //                         AudioFrame::kMaxDataSizeSamples);
+  nado4->Mix(1, &mixed_frame_);
+  _ptrAudioBuffer->SetRecordingSampleRate(48000);
+  _ptrAudioBuffer->SetRecordedBuffer(mixed_frame_.data(), 480);
   _ptrAudioBuffer->DeliverRecordedData();
   Lock();
 
@@ -2269,6 +2289,7 @@ bool AudioDeviceLinuxPulseMY::RecThreadProcess() {
         break;
       }
 
+      std::cout << " WTF " << (int)sampleDataSize << std::endl;
       // Drop lock for sigslot dispatch, which could take a while.
       PaUnLock();
       // Read data and provide it to VoiceEngine
@@ -2328,9 +2349,12 @@ int Resample(const AudioFrame& frame,
 
   // TODO(yujo): make resampler take an AudioFrame, and add special case
   // handling of muted frames.
-  return resampler->Resample(
-      frame.data(), frame.samples_per_channel_ * number_of_channels,
-      destination, number_of_channels * target_number_of_samples_per_channel);
+  // return resampler->Resample(
+  //     frame.data(), frame.samples_per_channel_ * number_of_channels,
+  //     destination, number_of_channels * target_number_of_samples_per_channel);
+
+    return  resampler->Resample(frame.data(), frame.samples_per_channel_ * number_of_channels, destination,
+                          AudioFrame::kMaxDataSizeSamples);
 }
 
   // Overwrites `audio_frame`. The data_ field is overwritten with
@@ -2345,6 +2369,7 @@ int Resample(const AudioFrame& frame,
 
                                                   int16_t* b = new int16_t[sample_rate_hz/100];
 
+                                                  std::cout << " CALL GetAudioFrameWithInfo " << nado2 << std::endl;
                                                   Resample(a, sample_rate_hz, &render_resampler_, b);
                                                   std::cout << " CALL GetAudioFrameWithInfo " << sizeof(nado) << std::endl;
 
@@ -2358,7 +2383,7 @@ int Resample(const AudioFrame& frame,
   // A way for a mixer implementation to distinguish participants.
   int AudioDeviceLinuxPulseMY::Ssrc() const {
     std::cout << " CALL SSRC " << std::endl;
-    return 42;
+    return 420;
   };
 
   // A way for this source to say that GetAudioFrameWithInfo called

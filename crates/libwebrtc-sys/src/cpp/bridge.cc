@@ -13,7 +13,7 @@
 #include "libwebrtc-sys/src/bridge.rs.h"
 
 namespace bridge {
-
+ 
 // Creates a new `TrackEventObserver`.
 TrackEventObserver::TrackEventObserver(
     rust::Box<bridge::DynTrackEventCallback> cb)

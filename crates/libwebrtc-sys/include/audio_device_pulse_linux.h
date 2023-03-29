@@ -29,6 +29,8 @@
 #include <iostream>
 #include "adm_proxy.h"
 #include "hack.h"
+#include "mixer.h"
+
 
 #if defined(WEBRTC_USE_X11)
 #include <X11/Xlib.h>
