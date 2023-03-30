@@ -8,7 +8,7 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include "mixer.h"
+#include "my_mixer.h"
 
 #include <stdint.h>
 
@@ -178,7 +178,7 @@ void AudioMixerMy::Mix(size_t number_of_channels,
       rtc::ArrayView<const int>(helper_containers_->preferred_rates.data(),
                                 number_of_streams));
 
-  std::cout << " DEBUG " << output_frequency << std::endl;
+  std::cout << " DEBUG " << number_of_streams << std::endl;
 
   frame_combiner_.Combine(GetAudioFromSources(output_frequency),
                           number_of_channels, output_frequency,

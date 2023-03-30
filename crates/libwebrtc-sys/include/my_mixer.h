@@ -11,6 +11,7 @@
 #ifndef MODULES_AUDIO_MIXER_AUDIO_MIXER_IMPL_H_
 #define MODULES_AUDIO_MIXER_AUDIO_MIXER_IMPL_H_
 
+
 #include <stddef.h>
 
 #include <memory>
@@ -20,7 +21,8 @@
 #include "api/audio/audio_frame.h"
 #include "api/audio/audio_mixer.h"
 #include "api/scoped_refptr.h"
-#include "modules/audio_mixer/frame_combiner.h"
+// #include "modules/audio_mixer/frame_combiner.h"
+#include "frame_combiner.h"
 #include "modules/audio_mixer/output_rate_calculator.h"
 #include "rtc_base/race_checker.h"
 #include "rtc_base/synchronization/mutex.h"
@@ -93,7 +95,7 @@ class AudioMixerMy : public AudioMixer {
       RTC_GUARDED_BY(mutex_);
 
   // Component that handles actual adding of audio frames.
-  FrameCombiner frame_combiner_;
+  FrameCombinerMy frame_combiner_;
 };
 }  // namespace webrtc
 

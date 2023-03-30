@@ -15,9 +15,9 @@
 namespace bridge {
  
 // Creates a new `TrackEventObserver`.
-TrackEventObserver::TrackEventObserver(
+TrackEventObserver::TrackEventObserver( 
     rust::Box<bridge::DynTrackEventCallback> cb)
-    : cb_(std::move(cb)){};
+    : cb_(std::move(cb)){}; 
 
 // Called when the `MediaStreamTrackInterface`, that this `TrackEventObserver`
 // is attached to, has its state changed.

@@ -29,7 +29,7 @@
 #include <iostream>
 #include "adm_proxy.h"
 #include "hack.h"
-#include "mixer.h"
+#include "my_mixer.h"
 
 
 #if defined(WEBRTC_USE_X11)
@@ -151,6 +151,20 @@ WebRTCPulseSymbolTable* GetPulseSymbolTable();
   };
 
 namespace webrtc {
+
+class temp : public AudioMixer::Source {
+  public:
+  temp();
+  AudioMixer::Source::AudioFrameInfo GetAudioFrameWithInfo(int sample_rate_hz,
+                                                AudioFrame* audio_frame) override;
+
+  // A way for a mixer implementation to distinguish participants.
+  int Ssrc() const override;
+
+  // A way for this source to say that GetAudioFrameWithInfo called
+  // with this sample rate or higher will not cause quality loss.
+  int PreferredSampleRate() const override;
+};
 
 class AudioDeviceLinuxPulseMY : public AudioDeviceGeneric, public AudioMixer::Source {
  public:

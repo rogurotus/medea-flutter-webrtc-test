@@ -41,7 +41,42 @@ WebRTCPulseSymbolTable* GetPulseSymbolTable() {
 namespace webrtc {
 
 
+  temp::temp() {}
+    // Overwrites `audio_frame`. The data_ field is overwritten with
+    // 10 ms of new audio (either 1 or 2 interleaved channels) at
+    // `sample_rate_hz`. All fields in `audio_frame` must be updated.
+    AudioMixer::Source::AudioFrameInfo  temp::GetAudioFrameWithInfo(int sample_rate_hz,
+                                                 AudioFrame* audio_frame) {
+                                                  int8_t* da = new int8_t[960];
+                                                  for (int i = 0; i < 960; ++i) {
+                                                    da[i] = 0;
+                                                  }
+                                                  for (int i = 0; i < 240; ++i) {
+                                                    da[i] = 16;
+                                                  }
+                                                  for (int i = 720; i >= 480; --i) {
+                                                    // da[i] = 16;
+                                                  }
+                                                  audio_frame->UpdateFrame(42, (const int16_t*)da, sample_rate_hz/100, sample_rate_hz, AudioFrame::SpeechType::kNormalSpeech, AudioFrame::VADActivity::kVadActive);
+                                                  return AudioMixer::Source::AudioFrameInfo::kNormal;
+                                                 }
+
+    // A way for a mixer implementation to distinguish participants.
+    int temp::Ssrc() const {
+      return 42;
+    }
+
+    // A way for this source to say that GetAudioFrameWithInfo called
+    // with this sample rate or higher will not cause quality loss.
+    int temp::PreferredSampleRate() const {
+      return 48000;
+    }
+
+
+
 auto nado4 = AudioMixerMy::Create();
+int wtf = 0;
+int sm = 0;
 AudioFrame mixed_frame_;
 PushResampler<int16_t> render_resampler_;
 
@@ -92,7 +127,16 @@ AudioDeviceLinuxPulseMY::AudioDeviceLinuxPulseMY()
       _playStream(NULL),
       _recStreamFlags(0),
       _playStreamFlags(0) {
+
+  std::cout << "WTFWTF " << this << " -" << wtf << std::endl;
+  wtf += 1;
+  if (wtf == 2) {
+  nado4->AddSource(new temp());
   nado4->AddSource(this);
+  // nado4->AddSource(this);
+  std::cout << "WTFWTF " << wtf << std::endl;
+    // throw "DEAD";
+  }
   RTC_DLOG(LS_INFO) << __FUNCTION__ << " created";
 
   memset(_paServerVersion, 0, sizeof(_paServerVersion));
@@ -102,6 +146,9 @@ AudioDeviceLinuxPulseMY::AudioDeviceLinuxPulseMY()
 }
 
 AudioDeviceLinuxPulseMY::~AudioDeviceLinuxPulseMY() {
+  std::cout << "DELETE " << this << std::endl;
+  throw "DEAD";
+  nado4->RemoveSource(this);
   RTC_DLOG(LS_INFO) << __FUNCTION__ << " destroyed";
   RTC_DCHECK(thread_checker_.IsCurrent());
   Terminate();
@@ -1898,7 +1945,7 @@ int32_t AudioDeviceLinuxPulseMY::LatencyUsecs(pa_stream* stream) {
     return (int32_t)latency;
   }
 }
-void* nado = nullptr;
+int8_t* nado = nullptr;
 int32_t AudioDeviceLinuxPulseMY::ReadRecordedData(const void* bufferData,
                                                 size_t bufferSize)
     RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
@@ -1935,7 +1982,7 @@ int32_t AudioDeviceLinuxPulseMY::ReadRecordedData(const void* bufferData,
       return 0;
     }
 
-    nado=(void*)_recBuffer;
+    nado=_recBuffer;
 
     // Provide data to VoiceEngine.
     if (ProcessRecordedData(_recBuffer, numRecSamples, recDelay) == -1) {
@@ -1949,7 +1996,7 @@ int32_t AudioDeviceLinuxPulseMY::ReadRecordedData(const void* bufferData,
   // Now process full 10ms sample sets directly from the input.
   while (size >= _recordBufferSize) {
 
-    nado=(void*)bufferData;
+    nado=(int8_t*)bufferData;
 
     // Provide data to VoiceEngine.
     if (ProcessRecordedData(static_cast<int8_t*>(const_cast<void*>(bufferData)),
@@ -2010,6 +2057,8 @@ int32_t AudioDeviceLinuxPulseMY::ProcessRecordedData(int8_t* bufferData,
   // int16_t* b = new int16_t[480];
   // render_resampler_.Resample((const short int*)bufferData, 441, b,
   //                         AudioFrame::kMaxDataSizeSamples);
+  std::cout << "WTFWTFWTF - " << this << std::endl;
+
   nado4->Mix(1, &mixed_frame_);
   _ptrAudioBuffer->SetRecordingSampleRate(48000);
   _ptrAudioBuffer->SetRecordedBuffer(mixed_frame_.data(), 480);
@@ -2362,10 +2411,19 @@ int Resample(const AudioFrame& frame,
   // `sample_rate_hz`. All fields in `audio_frame` must be updated.
   AudioMixer::Source::AudioFrameInfo AudioDeviceLinuxPulseMY::GetAudioFrameWithInfo(int sample_rate_hz,
                                                 AudioFrame* audio_frame) {
-                                                  std::cout << " CALL GetAudioFrameWithInfo " << sample_rate_hz << std::endl;
+                                                  std::cout << " CALL GetAudioFrameWithInfo " << sm << std::endl;
+                                                  
+                                                  int8_t* d = new int8_t[sm];
+                                                  for (int i = 0; i<sm; ++i) {
+                                                    d[i] = (nado)[i];
+                                                    std::cout << (int)nado[i] << " - " << (int)d[i];
+                                                  }
+                                                    std::cout << std::endl;
+
+
 
                                                   AudioFrame a;
-                                                  a.UpdateFrame(42, (const int16_t*)nado, nado2, nado3, AudioFrame::SpeechType::kNormalSpeech, AudioFrame::VADActivity::kVadActive);
+                                                  a.UpdateFrame(42, (const int16_t*)d, nado2, nado3, AudioFrame::SpeechType::kNormalSpeech, AudioFrame::VADActivity::kVadActive);
 
                                                   int16_t* b = new int16_t[sample_rate_hz/100];
 
@@ -2374,7 +2432,6 @@ int Resample(const AudioFrame& frame,
                                                   std::cout << " CALL GetAudioFrameWithInfo " << sizeof(nado) << std::endl;
 
 
-                                                  // возможно нужен ресампле
                                                   audio_frame->UpdateFrame(42, (const int16_t*)b, sample_rate_hz/100, sample_rate_hz, AudioFrame::SpeechType::kNormalSpeech, AudioFrame::VADActivity::kVadActive);
 
                                                   return AudioMixer::Source::AudioFrameInfo::kNormal;
