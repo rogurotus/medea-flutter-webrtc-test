@@ -106,33 +106,36 @@ std::unique_ptr<VideoTrackSourceInterface> create_device_video_source(
   return std::make_unique<VideoTrackSourceInterface>(src);
 }
 
-webrtc::AudioDeviceModuleImplMy* temp;
+// webrtc::AudioDeviceModuleImplMy* temp;
 // Creates a new `AudioDeviceModuleProxy`.
 std::unique_ptr<AudioDeviceModule> create_audio_device_module(
     Thread& worker_thread,
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory) {
+      
   AudioDeviceModule adm = worker_thread.Invoke<AudioDeviceModule>(
       RTC_FROM_HERE, [audio_layer, &task_queue_factory] {
-        return webrtc::AudioDeviceModuleImplMy::Create(audio_layer,
-                                                 &task_queue_factory);
+        return webrtc::ADM::Create(audio_layer, &task_queue_factory);
       });
-  temp = (webrtc::AudioDeviceModuleImplMy*)(adm.get());
+  // temp = (webrtc::AudioDeviceModuleImplMy*)(adm.get());
   if (adm == nullptr) {
     return nullptr;
   }
 
-  auto* aa = (webrtc::AudioDeviceModuleImplMy*)adm.get();
+  // auto* aa = (webrtc::AudioDeviceModuleImplMy*)adm.get();
   AudioDeviceModule proxied =
       webrtc::AudioDeviceModuleProxy::Create(&worker_thread, adm);
-  auto* bb = (webrtc::AudioDeviceModuleProxy*)proxied.get();
-  bb->da = &(aa->da);
+  // auto* bb = (webrtc::AudioDeviceModuleProxy*)proxied.get();
+  // bb->da = &(aa->da);
 
+  std::cout << "CREATE" << std::endl;
   return std::make_unique<AudioDeviceModule>(proxied);
+
 }
 
 // Calls `AudioDeviceModule->Init()`.
 int32_t init_audio_device_module(const AudioDeviceModule& audio_device_module) {
+  std::cout << "INIT" << std::endl;
   return audio_device_module->Init();
 }
 
@@ -340,6 +343,7 @@ std::unique_ptr<AudioSourceInterface> create_audio_source(
   // src =
     // temp->CreateAudioSource(); 
   // } else {
+  std::cout << "CREATE A" << std::endl;
     src =  peer_connection_factory->CreateAudioSource(cricket::AudioOptions());
   // }
   // std::cout << "C" << std::endl;
@@ -495,14 +499,14 @@ std::unique_ptr<PeerConnectionFactoryInterface> create_peer_connection_factory(
     const std::unique_ptr<AudioDeviceModule>& default_adm,
     const std::unique_ptr<AudioProcessing>& ap) {
 
-  std::cout << "C" << std::endl;
-      auto a = default_adm.get()->get();
-      auto b = static_cast<webrtc::AudioDeviceModuleProxy*>(a);
-  std::cout << b << std::endl;
+  // std::cout << "C" << std::endl;
+      // auto a = default_adm.get()->get();
+      // auto b = static_cast<webrtc::AudioDeviceModuleProxy*>(a);
+  // std::cout << b << std::endl;
 
-  std::cout << "C" << *(b->da) << std::endl;
-  *(b->da) = ap->get();
-  std::cout << "C" << *(b->da) << std::endl;
+  // std::cout << "C" << *(b->da) << std::endl;
+  // *(b->da) = ap->get();
+  // std::cout << "C" << *(b->da) << std::endl;
   // throw 42;
 
   
@@ -515,15 +519,15 @@ try {
       webrtc::CreateBuiltinAudioDecoderFactory(),
       webrtc::CreateBuiltinVideoEncoderFactory(),
       webrtc::CreateBuiltinVideoDecoderFactory(), nullptr, ap ? *ap : nullptr); 
-  std::cout << "C" << b->da << std::endl;
+  // std::cout << "C" << b->da << std::endl;
 
   if (factory == nullptr) {
     return nullptr;
   }
-  std::cout << "C" << b->da << std::endl;
+  // std::cout << "C" << b->da << std::endl;
   return std::make_unique<PeerConnectionFactoryInterface>(factory);
       } catch (...) {
-  std::cout << "C" << b->da << std::endl;
+  // std::cout << "C" << b->da << std::endl;
   return nullptr;
       }
 }

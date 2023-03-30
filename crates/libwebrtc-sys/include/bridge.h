@@ -6,6 +6,7 @@
 #include "api/create_peerconnection_factory.h"
 #include "api/peer_connection_interface.h"
 #include "api/task_queue/default_task_queue_factory.h"
+#include "adm.h"
 #include "api/video_codecs/builtin_video_decoder_factory.h"
 #include "api/video_codecs/builtin_video_encoder_factory.h"
 #include "api/video_track_source_proxy_factory.h"
@@ -31,7 +32,7 @@
 #include "media/base/fake_frame_source.h"
 #include "pc/test/fake_video_track_source.h"
 #include "modules/audio_device/include/test_audio_device.h"
-#include "audio_device_impl.h"
+// #include "audio_device_impl.h"
 namespace bridge {
 
 struct DynTrackEventCallback;
