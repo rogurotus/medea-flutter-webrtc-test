@@ -29,6 +29,7 @@
 #include <iostream>
 #include "adm_proxy.h"
 #include "hack.h"
+#include "modules/audio_device/linux/audio_device_pulse_linux.h"
 #include "my_mixer.h"
 
 
@@ -39,78 +40,6 @@
 #include <pulse/pulseaudio.h>
 #include <stddef.h>
 #include <stdint.h>
-
-// We define this flag if it's missing from our headers, because we want to be
-// able to compile against old headers but still use PA_STREAM_ADJUST_LATENCY
-// if run against a recent version of the library.
-#ifndef PA_STREAM_ADJUST_LATENCY
-#define PA_STREAM_ADJUST_LATENCY 0x2000U
-#endif
-#ifndef PA_STREAM_START_MUTED
-#define PA_STREAM_START_MUTED 0x1000U
-#endif
-
-// Set this constant to 0 to disable latency reading
-const uint32_t WEBRTC_PA_REPORT_LATENCY = 1;
-
-// Constants from implementation by Tristan Schmelcher [tschmelcher@google.com]
-
-// First PulseAudio protocol version that supports PA_STREAM_ADJUST_LATENCY.
-const uint32_t WEBRTC_PA_ADJUST_LATENCY_PROTOCOL_VERSION = 13;
-
-// Some timing constants for optimal operation. See
-// https://tango.0pointer.de/pipermail/pulseaudio-discuss/2008-January/001170.html
-// for a good explanation of some of the factors that go into this.
-
-// Playback.
-
-// For playback, there is a round-trip delay to fill the server-side playback
-// buffer, so setting too low of a latency is a buffer underflow risk. We will
-// automatically increase the latency if a buffer underflow does occur, but we
-// also enforce a sane minimum at start-up time. Anything lower would be
-// virtually guaranteed to underflow at least once, so there's no point in
-// allowing lower latencies.
-const uint32_t WEBRTC_PA_PLAYBACK_LATENCY_MINIMUM_MSECS = 20;
-
-// Every time a playback stream underflows, we will reconfigure it with target
-// latency that is greater by this amount.
-const uint32_t WEBRTC_PA_PLAYBACK_LATENCY_INCREMENT_MSECS = 20;
-
-// We also need to configure a suitable request size. Too small and we'd burn
-// CPU from the overhead of transfering small amounts of data at once. Too large
-// and the amount of data remaining in the buffer right before refilling it
-// would be a buffer underflow risk. We set it to half of the buffer size.
-const uint32_t WEBRTC_PA_PLAYBACK_REQUEST_FACTOR = 2;
-
-// Capture.
-
-// For capture, low latency is not a buffer overflow risk, but it makes us burn
-// CPU from the overhead of transfering small amounts of data at once, so we set
-// a recommended value that we use for the kLowLatency constant (but if the user
-// explicitly requests something lower then we will honour it).
-// 1ms takes about 6-7% CPU. 5ms takes about 5%. 10ms takes about 4.x%.
-const uint32_t WEBRTC_PA_LOW_CAPTURE_LATENCY_MSECS = 10;
-
-// There is a round-trip delay to ack the data to the server, so the
-// server-side buffer needs extra space to prevent buffer overflow. 20ms is
-// sufficient, but there is no penalty to making it bigger, so we make it huge.
-// (750ms is libpulse's default value for the _total_ buffer size in the
-// kNoLatencyRequirements case.)
-const uint32_t WEBRTC_PA_CAPTURE_BUFFER_EXTRA_MSECS = 750;
-
-const uint32_t WEBRTC_PA_MSECS_PER_SEC = 1000;
-
-// Init _configuredLatencyRec/Play to this value to disable latency requirements
-const int32_t WEBRTC_PA_NO_LATENCY_REQUIREMENTS = -1;
-
-// Set this const to 1 to account for peeked and used data in latency
-// calculation
-const uint32_t WEBRTC_PA_CAPTURE_BUFFER_LATENCY_ADJUSTMENT = 0;
-
-
-typedef webrtc::adm_linux_pulse::PulseAudioSymbolTable WebRTCPulseSymbolTable;
-WebRTCPulseSymbolTable* GetPulseSymbolTable();
-
 
   class AB : public rtc::RefCountedObject<webrtc::AudioSourceInterface>
   {
@@ -152,19 +81,7 @@ WebRTCPulseSymbolTable* GetPulseSymbolTable();
 
 namespace webrtc {
 
-class temp : public AudioMixer::Source {
-  public:
-  temp();
-  AudioMixer::Source::AudioFrameInfo GetAudioFrameWithInfo(int sample_rate_hz,
-                                                AudioFrame* audio_frame) override;
 
-  // A way for a mixer implementation to distinguish participants.
-  int Ssrc() const override;
-
-  // A way for this source to say that GetAudioFrameWithInfo called
-  // with this sample rate or higher will not cause quality loss.
-  int PreferredSampleRate() const override;
-};
 
 class AudioDeviceLinuxPulseMY : public AudioDeviceGeneric, public AudioMixer::Source {
  public:

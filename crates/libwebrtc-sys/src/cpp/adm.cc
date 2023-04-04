@@ -8,98 +8,176 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-
-#define WEBRTC_LINUX true
-#define WEBRTC_ENABLE_LINUX_PULSE true
 #include <iostream>
 
+#include <chrono>
+#include <thread>
 #include "adm.h"
-
-#include <stddef.h>
-
 #include "api/make_ref_counted.h"
-#include "api/scoped_refptr.h"
-#include "modules/audio_device/audio_device_config.h"  // IWYU pragma: keep
-#include "modules/audio_device/audio_device_generic.h"
+#include "common_audio/wav_file.h"
+#include "modules/audio_device/include/test_audio_device.h"
+#include "modules/audio_device/linux/latebindingsymboltable_linux.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
-#include "system_wrappers/include/metrics.h"
+#include "rtc_base/platform_thread.h"
 
-#if defined(_WIN32)
-#if defined(WEBRTC_WINDOWS_CORE_AUDIO_BUILD)
-#include "modules/audio_device/win/audio_device_core_win.h"
-#endif
-#elif defined(WEBRTC_ANDROID)
-#include <stdlib.h>
-#if defined(WEBRTC_AUDIO_DEVICE_INCLUDE_ANDROID_AAUDIO)
-#include "modules/audio_device/android/aaudio_player.h"
-#include "modules/audio_device/android/aaudio_recorder.h"
-#endif
-#include "modules/audio_device/android/audio_device_template.h"
-#include "modules/audio_device/android/audio_manager.h"
-#include "modules/audio_device/android/audio_record_jni.h"
-#include "modules/audio_device/android/audio_track_jni.h"
-#include "modules/audio_device/android/opensles_player.h"
-#include "modules/audio_device/android/opensles_recorder.h"
-#elif defined(WEBRTC_LINUX)
-#if defined(WEBRTC_ENABLE_LINUX_ALSA)
-#include "modules/audio_device/linux/audio_device_alsa_linux.h"
-#endif
-#if defined(WEBRTC_ENABLE_LINUX_PULSE)
-#include "modules/audio_device/linux/audio_device_pulse_linux.h"
-#endif
-#elif defined(WEBRTC_IOS)
-#include "sdk/objc/native/src/audio/audio_device_ios.h"
-#elif defined(WEBRTC_MAC)
-#include "modules/audio_device/mac/audio_device_mac.h"
-#endif
-#if defined(WEBRTC_DUMMY_FILE_DEVICES)
-#include "modules/audio_device/dummy/file_audio_device.h"
-#include "modules/audio_device/dummy/file_audio_device_factory.h"
-#endif
-#include "modules/audio_device/dummy/audio_device_dummy.h"
+WebRTCPulseSymbolTable* GetPulseSymbolTable2() {
+  static WebRTCPulseSymbolTable* pulse_symbol_table =
+      new WebRTCPulseSymbolTable();
+  return pulse_symbol_table;
+}
 
-#define CHECKinitialized_() \
-  {                         \
-    if (!initialized_) {    \
-      return -1;            \
-    }                       \
-  }
+// Accesses Pulse functions through our late-binding symbol table instead of
+// directly. This way we don't have to link to libpulse, which means our binary
+// will work on systems that don't have it.
+#define LATE(sym)                                             \
+  LATESYM_GET(webrtc::adm_linux_pulse::PulseAudioSymbolTable, \
+              GetPulseSymbolTable2(), sym)
 
-#define CHECKinitialized__BOOL() \
-  {                              \
-    if (!initialized_) {         \
-      return false;              \
-    }                            \
-  }
-
-namespace webrtc {
-
-rtc::scoped_refptr<AudioDeviceModule> AudioDeviceModule::Create(
+rtc::scoped_refptr<webrtc::AudioDeviceModule> ADM::Create(
     AudioLayer audio_layer,
-    TaskQueueFactory* task_queue_factory) {
-  RTC_DLOG(LS_INFO) << __FUNCTION__;
-  std::cout << "DADA" << std::endl;
-  return AudioDeviceModule::CreateForTest(audio_layer, task_queue_factory);
+    webrtc::TaskQueueFactory* task_queue_factory) {
+  return ADM::CreateForTest(audio_layer, task_queue_factory);
+}
+
+constexpr int kFrameLengthUs = 10000;
+class WavFileReader final : public webrtc::TestAudioDeviceModule::Capturer,
+                            public webrtc::AudioMixer::Source {
+ public:
+  WavFileReader(absl::string_view filename,
+                int sampling_frequency_in_hz,
+                int num_channels,
+                bool repeat)
+      : WavFileReader(std::make_unique<webrtc::WavReader>(filename),
+                      sampling_frequency_in_hz,
+                      num_channels,
+                      repeat) {}
+
+  webrtc::AudioFrame frame;
+  rtc::BufferT<int16_t> bufffer;
+  webrtc::Mutex mutex_;
+  webrtc::PushResampler<int16_t> render_resampler_;
+
+  webrtc::AudioMixer::Source::AudioFrameInfo GetAudioFrameWithInfo(
+      int sample_rate_hz,
+      webrtc::AudioFrame* audio_frame) {
+    mutex_.Lock();
+    auto* b = new int16_t[sample_rate_hz * 2 / 100];
+    if (frame.sample_rate_hz() != sample_rate_hz) {
+      // std::cout << frame.sample_rate_hz() << " DA "  <<sample_rate_hz << " "
+      // << frame.num_channels_  << " C" << frame.samples_per_channel_ <<
+      // std::endl;
+
+      render_resampler_.InitializeIfNeeded(frame.sample_rate_hz(),
+                                           sample_rate_hz, frame.num_channels_);
+      render_resampler_.Resample(
+          frame.data(), frame.samples_per_channel_ * frame.num_channels_, b,
+          webrtc::AudioFrame::kMaxDataSizeSamples);
+    }
+    audio_frame->UpdateFrame(0, (const int16_t*)b, sample_rate_hz / 100,
+                             sample_rate_hz,
+                             webrtc::AudioFrame::SpeechType::kNormalSpeech,
+                             webrtc::AudioFrame::VADActivity::kVadActive, 2);
+    return webrtc::AudioMixer::Source::AudioFrameInfo::kNormal;
+  };
+
+  // A way for a mixer implementation to distinguish participants.
+  int Ssrc() const override { return -1; };
+
+  // A way for this source to say that GetAudioFrameWithInfo called
+  // with this sample rate or higher will not cause quality loss.
+  int PreferredSampleRate() const override { return 44100; };
+
+  int SamplingFrequency() const override { return sampling_frequency_in_hz_; }
+
+  int NumChannels() const override { return num_channels_; }
+
+  bool Capture(rtc::BufferT<int16_t>* buffer) override {
+    buffer->SetData(
+        webrtc::TestAudioDeviceModule::SamplesPerFrame(
+            sampling_frequency_in_hz_) *
+            num_channels_,
+        [&](rtc::ArrayView<int16_t> data) {
+          size_t read = wav_reader_->ReadSamples(data.size(), data.data());
+          if (read < data.size() && repeat_) {
+            do {
+              wav_reader_->Reset();
+              size_t delta = wav_reader_->ReadSamples(
+                  data.size() - read, data.subview(read).data());
+              RTC_CHECK_GT(delta, 0) << "No new data read from file";
+              read += delta;
+            } while (read < data.size());
+          }
+          return read;
+        });
+    std::cout << buffer->size() << " DA " << std::endl;
+    frame.UpdateFrame(0, (const int16_t*)buffer->data(), 441, 44100,
+                      webrtc::AudioFrame::SpeechType::kNormalSpeech,
+                      webrtc::AudioFrame::VADActivity::kVadActive, 2);
+    mutex_.Unlock();
+    return buffer->size() > 0;
+  }
+
+ private:
+  WavFileReader(std::unique_ptr<webrtc::WavReader> wav_reader,
+                int sampling_frequency_in_hz,
+                int num_channels,
+                bool repeat)
+      : sampling_frequency_in_hz_(sampling_frequency_in_hz),
+        num_channels_(num_channels),
+        wav_reader_(std::move(wav_reader)),
+        repeat_(repeat) {
+    RTC_CHECK_EQ(wav_reader_->sample_rate(), sampling_frequency_in_hz);
+    RTC_CHECK_EQ(wav_reader_->num_channels(), num_channels);
+  }
+
+  const int sampling_frequency_in_hz_;
+  const int num_channels_;
+  std::unique_ptr<webrtc::WavReader> wav_reader_;
+  const bool repeat_;
+};
+
+rtc::PlatformThread th2;
+
+CustomAudioSource* ADM::createSource() {
+  da->Init();
+  da->SetRecordingDevice(0);
+  da->InitMicrophone();
+  da->InitRecording();
+  da->StartRecording();
+
+  auto a = da->createSource();
+  auto aaa = new WavFileReader("./test2.wav", 44100, 2, true);
+
+  const auto attributes =
+      rtc::ThreadAttributes().SetPriority(rtc::ThreadPriority::kRealtime);
+  th2 = rtc::PlatformThread::SpawnJoinable(
+      [this, aaa] {
+        while (true) {
+          aaa->Capture(&(aaa->bufffer));
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+      },
+      "webrtc_audio_module_rec_thread22", attributes);
+
+  // mixer->AddSource(a);
+  mixer->AddSource(aaa);
+  return a;
 }
 
 // static
-rtc::scoped_refptr<AudioDeviceModuleForTest> AudioDeviceModule::CreateForTest(
+rtc::scoped_refptr<webrtc::AudioDeviceModuleForTest> ADM::CreateForTest(
     AudioLayer audio_layer,
-    TaskQueueFactory* task_queue_factory) {
-  RTC_DLOG(LS_INFO) << __FUNCTION__;
-
+    webrtc::TaskQueueFactory* task_queue_factory) {
   // The "AudioDeviceModule::kWindowsCoreAudio2" audio layer has its own
   // dedicated factory method which should be used instead.
   if (audio_layer == AudioDeviceModule::kWindowsCoreAudio2) {
-    RTC_LOG(LS_ERROR) << "Use the CreateWindowsCoreAudioAudioDeviceModule() "
-                         "factory method instead for this option.";
     return nullptr;
   }
 
   // Create the generic reference counted (platform independent) implementation.
-  auto audio_device = rtc::make_ref_counted<ADM>(
-      audio_layer, task_queue_factory);
+  auto audio_device =
+      rtc::make_ref_counted<ADM>(audio_layer, task_queue_factory);
 
   // Ensure that the current platform is supported.
   if (audio_device->CheckPlatform() == -1) {
@@ -117,842 +195,1105 @@ rtc::scoped_refptr<AudioDeviceModuleForTest> AudioDeviceModule::CreateForTest(
     return nullptr;
   }
 
+  audio_device->Process();
   return audio_device;
 }
 
-ADM::ADM(
-    AudioLayer audio_layer,
-    TaskQueueFactory* task_queue_factory)
-    : audio_layer_(audio_layer), audio_device_buffer_(task_queue_factory) {
-  RTC_DLOG(LS_INFO) << __FUNCTION__;
+ADM::ADM(AudioLayer audio_layer, webrtc::TaskQueueFactory* task_queue_factory)
+    : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory) {
+  da->adm = this;
+  da->cb = GetAudioDeviceBuffer();
 }
 
-int32_t ADM::CheckPlatform() {
-  RTC_DLOG(LS_INFO) << __FUNCTION__;
-  // Ensure that the current platform is supported
-  PlatformType platform(kPlatformNotSupported);
-#if defined(_WIN32)
-  platform = kPlatformWin32;
-  RTC_LOG(LS_INFO) << "current platform is Win32";
-#elif defined(WEBRTC_ANDROID)
-  platform = kPlatformAndroid;
-  RTC_LOG(LS_INFO) << "current platform is Android";
-#elif defined(WEBRTC_LINUX)
-  platform = kPlatformLinux;
-  RTC_LOG(LS_INFO) << "current platform is Linux";
-#elif defined(WEBRTC_IOS)
-  platform = kPlatformIOS;
-  RTC_LOG(LS_INFO) << "current platform is IOS";
-#elif defined(WEBRTC_MAC)
-  platform = kPlatformMac;
-  RTC_LOG(LS_INFO) << "current platform is Mac";
-#endif
-  if (platform == kPlatformNotSupported) {
-    RTC_LOG(LS_ERROR)
-        << "current platform is not supported => this module will self "
-           "destruct!";
-    return -1;
+void ADM::Process() {
+  const auto attributes =
+      rtc::ThreadAttributes().SetPriority(rtc::ThreadPriority::kRealtime);
+  th = rtc::PlatformThread::SpawnJoinable(
+      [this] {
+        while (true) {
+          webrtc::AudioFrame fr;
+          mixer->Mix(1, &fr);
+          auto cb = GetAudioDeviceBuffer();
+          cb->SetRecordingChannels(fr.num_channels());
+          cb->SetRecordingSampleRate(fr.sample_rate_hz());
+          cb->SetRecordedBuffer(fr.data(), fr.sample_rate_hz() / 100);
+          // cb->SetTypingStatus(da->KeyPressed());
+          cb->DeliverRecordedData();
+        }
+      },
+      "webrtc_audio_module_rec_thread", attributes);
+}
+
+void temp::PaServerInfoCallback(pa_context* c,
+                                const pa_server_info* i,
+                                void* pThis) {
+  static_cast<temp*>(pThis)->PaServerInfoCallbackHandler(i);
+}
+
+void temp::PaServerInfoCallbackHandler(const pa_server_info* i) {
+  // Use PA native sampling rate
+  sample_rate_hz_ = i->sample_spec.rate;
+
+  if (source != nullptr) {
+    source->sample_rate = sample_rate_hz_;
   }
-  platform_type_ = platform;
+
+  // Copy the PA server version
+  strncpy(_paServerVersion, i->server_version, 31);
+  _paServerVersion[31] = '\0';
+
+  if (_recDisplayDeviceName) {
+    // Copy the source name
+    strncpy(_recDisplayDeviceName, i->default_source_name,
+            webrtc::kAdmMaxDeviceNameSize);
+    _recDisplayDeviceName[webrtc::kAdmMaxDeviceNameSize - 1] = '\0';
+  }
+
+  if (_playDisplayDeviceName) {
+    // Copy the sink name
+    strncpy(_playDisplayDeviceName, i->default_sink_name,
+            webrtc::kAdmMaxDeviceNameSize);
+    _playDisplayDeviceName[webrtc::kAdmMaxDeviceNameSize - 1] = '\0';
+  }
+
+  LATE(pa_threaded_mainloop_signal)(_paMainloop, 0);
+}
+
+void temp::WaitForOperationCompletion(pa_operation* paOperation) const {
+  if (!paOperation) {
+    return;
+  }
+
+  while (LATE(pa_operation_get_state)(paOperation) == PA_OPERATION_RUNNING) {
+    LATE(pa_threaded_mainloop_wait)(_paMainloop);
+  }
+
+  LATE(pa_operation_unref)(paOperation);
+}
+
+int32_t temp::CheckPulseAudioVersion() {
+  PaLock();
+
+  pa_operation* paOperation = NULL;
+
+  // get the server info and update deviceName
+  paOperation =
+      LATE(pa_context_get_server_info)(_paContext, PaServerInfoCallback, this);
+
+  WaitForOperationCompletion(paOperation);
+
+  PaUnLock();
+
+  // RTC_LOG(LS_VERBOSE) << "checking PulseAudio version: " << _paServerVersion;
+
   return 0;
 }
 
-int32_t ADM::CreatePlatformSpecificObjects() {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-// Dummy ADM implementations if build flags are set.
-#if defined(WEBRTC_DUMMY_AUDIO_BUILD)
-  audio_device_.reset(new AudioDeviceDummy());
-  RTC_LOG(LS_INFO) << "Dummy Audio APIs will be utilized";
-#elif defined(WEBRTC_DUMMY_FILE_DEVICES)
-  audio_device_.reset(FileAudioDeviceFactory::CreateFileAudioDevice());
-  if (audio_device_) {
-    RTC_LOG(LS_INFO) << "Will use file-playing dummy device.";
-  } else {
-    // Create a dummy device instead.
-    audio_device_.reset(new AudioDeviceDummy());
-    RTC_LOG(LS_INFO) << "Dummy Audio APIs will be utilized";
+int32_t temp::InitPulseAudio() {
+  int retVal = 0;
+
+  // Load libpulse
+  if (!GetPulseSymbolTable2()->Load()) {
+    // Most likely the Pulse library and sound server are not installed on
+    // this system
+    return -1;
   }
 
-// Real (non-dummy) ADM implementations.
-#else
-  AudioLayer audio_layer(PlatformAudioLayer());
-// Windows ADM implementation.
-#if defined(WEBRTC_WINDOWS_CORE_AUDIO_BUILD)
-  if ((audio_layer == kWindowsCoreAudio) ||
-      (audio_layer == kPlatformDefaultAudio)) {
-    RTC_LOG(LS_INFO) << "Attempting to use the Windows Core Audio APIs...";
-    if (AudioDeviceWindowsCore::CoreAudioIsSupported()) {
-      audio_device_.reset(new AudioDeviceWindowsCore());
-      RTC_LOG(LS_INFO) << "Windows Core Audio APIs will be utilized";
-    }
+  // Create a mainloop API and connection to the default server
+  // the mainloop is the internal asynchronous API event loop
+  if (_paMainloop) {
+    return -1;
   }
-#endif  // defined(WEBRTC_WINDOWS_CORE_AUDIO_BUILD)
+  _paMainloop = LATE(pa_threaded_mainloop_new)();
+  if (!_paMainloop) {
+    return -1;
+  }
 
-#if defined(WEBRTC_ANDROID)
-  // Create an Android audio manager.
-  audio_manager_android_.reset(new AudioManager());
-  // Select best possible combination of audio layers.
-  if (audio_layer == kPlatformDefaultAudio) {
-    if (audio_manager_android_->IsAAudioSupported()) {
-      // Use of AAudio for both playout and recording has highest priority.
-      audio_layer = kAndroidAAudioAudio;
-    } else if (audio_manager_android_->IsLowLatencyPlayoutSupported() &&
-               audio_manager_android_->IsLowLatencyRecordSupported()) {
-      // Use OpenSL ES for both playout and recording.
-      audio_layer = kAndroidOpenSLESAudio;
-    } else if (audio_manager_android_->IsLowLatencyPlayoutSupported() &&
-               !audio_manager_android_->IsLowLatencyRecordSupported()) {
-      // Use OpenSL ES for output on devices that only supports the
-      // low-latency output audio path.
-      audio_layer = kAndroidJavaInputAndOpenSLESOutputAudio;
+  // Start the threaded main loop
+  retVal = LATE(pa_threaded_mainloop_start)(_paMainloop);
+  if (retVal != PA_OK) {
+    return -1;
+  }
+
+  PaLock();
+
+  _paMainloopApi = LATE(pa_threaded_mainloop_get_api)(_paMainloop);
+  if (!_paMainloopApi) {
+    PaUnLock();
+    return -1;
+  }
+
+  // Create a new PulseAudio context
+  if (_paContext) {
+    PaUnLock();
+    return -1;
+  }
+  _paContext = LATE(pa_context_new)(_paMainloopApi, "WEBRTC VoiceEngine");
+
+  if (!_paContext) {
+    PaUnLock();
+    return -1;
+  }
+
+  // Set state callback function
+  LATE(pa_context_set_state_callback)(_paContext, PaContextStateCallback, this);
+
+  // Connect the context to a server (default)
+  _paStateChanged = false;
+  retVal =
+      LATE(pa_context_connect)(_paContext, NULL, PA_CONTEXT_NOAUTOSPAWN, NULL);
+
+  if (retVal != PA_OK) {
+    PaUnLock();
+    return -1;
+  }
+
+  // Wait for state change
+  while (!_paStateChanged) {
+    LATE(pa_threaded_mainloop_wait)(_paMainloop);
+  }
+
+  // Now check to see what final state we reached.
+  pa_context_state_t state = LATE(pa_context_get_state)(_paContext);
+
+  if (state != PA_CONTEXT_READY) {
+    if (state == PA_CONTEXT_FAILED) {
+    } else if (state == PA_CONTEXT_TERMINATED) {
     } else {
-      // Use Java-based audio in both directions when low-latency output is
-      // not supported.
-      audio_layer = kAndroidJavaAudio;
+      // Shouldn't happen, because we only signal on one of those three
+      // states
+    }
+    PaUnLock();
+    return -1;
+  }
+
+  PaUnLock();
+
+  // Give the objects to the mixer manager
+  _mixerManager.SetPulseAudioObjects(_paMainloop, _paContext);
+
+  // Check the version
+  if (CheckPulseAudioVersion() < 0) {
+    return -1;
+  }
+
+  // Initialize sampling frequency
+  if (InitSamplingFrequency() < 0 || sample_rate_hz_ == 0) {
+    return -1;
+  }
+
+  return 0;
+}
+
+int32_t temp::InitSamplingFrequency() {
+  PaLock();
+
+  pa_operation* paOperation = NULL;
+
+  // Get the server info and update sample_rate_hz_
+  paOperation =
+      LATE(pa_context_get_server_info)(_paContext, PaServerInfoCallback, this);
+
+  WaitForOperationCompletion(paOperation);
+
+  PaUnLock();
+
+  return 0;
+}
+
+void temp::PaContextStateCallback(pa_context* c, void* pThis) {
+  static_cast<temp*>(pThis)->PaContextStateCallbackHandler(c);
+}
+
+void temp::PaContextStateCallbackHandler(pa_context* c) {
+  pa_context_state_t state = LATE(pa_context_get_state)(c);
+  switch (state) {
+    case PA_CONTEXT_UNCONNECTED:
+      break;
+    case PA_CONTEXT_CONNECTING:
+    case PA_CONTEXT_AUTHORIZING:
+    case PA_CONTEXT_SETTING_NAME:
+      break;
+    case PA_CONTEXT_FAILED:
+    case PA_CONTEXT_TERMINATED:
+      _paStateChanged = true;
+      LATE(pa_threaded_mainloop_signal)(_paMainloop, 0);
+      break;
+    case PA_CONTEXT_READY:
+      _paStateChanged = true;
+      LATE(pa_threaded_mainloop_signal)(_paMainloop, 0);
+      break;
+  }
+}
+
+int32_t temp::TerminatePulseAudio() {
+  // Do nothing if the instance doesn't exist
+  // likely GetPulseSymbolTable.Load() fails
+  if (!_paMainloop) {
+    return 0;
+  }
+
+  PaLock();
+
+  // Disconnect the context
+  if (_paContext) {
+    LATE(pa_context_disconnect)(_paContext);
+  }
+
+  // Unreference the context
+  if (_paContext) {
+    LATE(pa_context_unref)(_paContext);
+  }
+
+  PaUnLock();
+  _paContext = NULL;
+
+  // Stop the threaded main loop
+  if (_paMainloop) {
+    LATE(pa_threaded_mainloop_stop)(_paMainloop);
+  }
+
+  // Free the mainloop
+  if (_paMainloop) {
+    LATE(pa_threaded_mainloop_free)(_paMainloop);
+  }
+
+  _paMainloop = NULL;
+
+  return 0;
+}
+
+int temp::Init() {
+  // RTC_DCHECK(thread_checker_.IsCurrent());
+  if (_initialized) {
+    return 0;
+  }
+
+  // Initialize PulseAudio
+  if (InitPulseAudio() < 0) {
+    // RTC_LOG(LS_ERROR) << "failed to initialize PulseAudio";
+    if (TerminatePulseAudio() < 0) {
+      // RTC_LOG(LS_ERROR) << "failed to terminate PulseAudio";
+    }
+    return -1;
+  }
+
+#if defined(WEBRTC_USE_X11)
+  // Get X display handle for typing detection
+  _XDisplay = XOpenDisplay(NULL);
+  if (!_XDisplay) {
+    // RTC_LOG(LS_WARNING)
+    // << "failed to open X display, typing detection will not work";
+  }
+#endif
+
+  // RECORDING
+  const auto attributes =
+      rtc::ThreadAttributes().SetPriority(rtc::ThreadPriority::kRealtime);
+  _ptrThreadRec = rtc::PlatformThread::SpawnJoinable(
+      [this] {
+        while (RecThreadProcess()) {
+        }
+      },
+      "webrtc_audio_module_rec_thread", attributes);
+
+  _initialized = true;
+
+  return 0;
+}
+
+temp::temp() {
+#if defined(WEBRTC_USE_X11)
+  memset(_oldKeyState, 0, sizeof(_oldKeyState));
+#endif
+}
+
+void temp::PaSourceInfoCallback(pa_context* c,
+                                const pa_source_info* i,
+                                int eol,
+                                void* pThis) {
+  static_cast<temp*>(pThis)->PaSourceInfoCallbackHandler(i, eol);
+}
+
+void temp::PaSourceInfoCallbackHandler(const pa_source_info* i, int eol) {
+  if (eol) {
+    // Signal that we are done
+    LATE(pa_threaded_mainloop_signal)(_paMainloop, 0);
+    return;
+  }
+
+  // We don't want to list output devices
+  if (i->monitor_of_sink == PA_INVALID_INDEX) {
+    if (_numRecDevices == _deviceIndex) {
+      // Convert the device index to the one of the source
+      _paDeviceIndex = i->index;
+
+      if (_recDeviceName) {
+        // copy the source name
+        strncpy(_recDeviceName, i->name, webrtc::kAdmMaxDeviceNameSize);
+        _recDeviceName[webrtc::kAdmMaxDeviceNameSize - 1] = '\0';
+      }
+      if (_recDisplayDeviceName) {
+        // Copy the source display name
+        strncpy(_recDisplayDeviceName, i->description,
+                webrtc::kAdmMaxDeviceNameSize);
+        _recDisplayDeviceName[webrtc::kAdmMaxDeviceNameSize - 1] = '\0';
+      }
+    }
+
+    _numRecDevices++;
+  }
+}
+
+void temp::PaLock() {
+  LATE(pa_threaded_mainloop_lock)(_paMainloop);
+}
+
+int16_t temp::RecordingDevices() {
+  PaLock();
+
+  pa_operation* paOperation = NULL;
+  _numRecDevices = 1;  // Init to 1 to account for "default"
+
+  // Get the whole list of devices and update _numRecDevices
+  paOperation = LATE(pa_context_get_source_info_list)(
+      _paContext, PaSourceInfoCallback, this);
+
+  WaitForOperationCompletion(paOperation);
+
+  PaUnLock();
+
+  return _numRecDevices;
+}
+
+void temp::PaUnLock() {
+  LATE(pa_threaded_mainloop_unlock)(_paMainloop);
+}
+
+CustomAudioSource* temp::createSource() {
+  source = new CustomAudioSource();
+  return source;
+}
+
+int32_t temp::StopRecording() {
+  // RTC_DCHECK(thread_checker_.IsCurrent());
+  webrtc::MutexLock lock(&mutex_);
+
+  if (!_recIsInitialized) {
+    return 0;
+  }
+
+  if (_recStream == NULL) {
+    return -1;
+  }
+
+  _recIsInitialized = false;
+  _recording = false;
+
+  // RTC_LOG(LS_VERBOSE) << "stopping recording";
+
+  // Stop Recording
+  PaLock();
+
+  DisableReadCallback();
+  LATE(pa_stream_set_overflow_callback)(_recStream, NULL, NULL);
+
+  // Unset this here so that we don't get a TERMINATED callback
+  LATE(pa_stream_set_state_callback)(_recStream, NULL, NULL);
+
+  if (LATE(pa_stream_get_state)(_recStream) != PA_STREAM_UNCONNECTED) {
+    // Disconnect the stream
+    if (LATE(pa_stream_disconnect)(_recStream) != PA_OK) {
+      // RTC_LOG(LS_ERROR) << "failed to disconnect rec stream, err="
+      // << LATE(pa_context_errno)(_paContext);
+      PaUnLock();
+      return -1;
+    }
+
+    RTC_LOG(LS_VERBOSE) << "disconnected recording";
+  }
+
+  LATE(pa_stream_unref)(_recStream);
+  _recStream = NULL;
+
+  PaUnLock();
+
+  // Provide the recStream to the mixer
+  _mixerManager.SetRecStream(_recStream);
+
+  if (_recBuffer) {
+    delete[] _recBuffer;
+    _recBuffer = NULL;
+  }
+
+  if (source != nullptr) {
+    source->_state = webrtc::MediaSourceInterface::SourceState::kMuted;
+  }
+  return 0;
+}
+
+int32_t temp::StartRecording() {
+  // RTC_DCHECK(thread_checker_.IsCurrent());
+
+  if (!_recIsInitialized) {
+    return -1;
+  }
+
+  if (_recording) {
+    return 0;
+  }
+
+  // Set state to ensure that the recording starts from the audio thread.
+  _startRec = true;
+
+  // The audio thread will signal when recording has started.
+  _timeEventRec.Set();
+  if (!_recStartEvent.Wait(10000)) {
+    {
+      webrtc::MutexLock lock(&mutex_);
+      _startRec = false;
+    }
+    StopRecording();
+    RTC_LOG(LS_ERROR) << "failed to activate recording";
+    return -1;
+  }
+
+  {
+    webrtc::MutexLock lock(&mutex_);
+    if (_recording) {
+      // The recording state is set by the audio thread after recording
+      // has started.
+    } else {
+      RTC_LOG(LS_ERROR) << "failed to activate recording";
+      return -1;
     }
   }
-  AudioManager* audio_manager = audio_manager_android_.get();
-  if (audio_layer == kAndroidJavaAudio) {
-    // Java audio for both input and output audio.
-    audio_device_.reset(new AudioDeviceTemplate<AudioRecordJni, AudioTrackJni>(
-        audio_layer, audio_manager));
-  } else if (audio_layer == kAndroidOpenSLESAudio) {
-    // OpenSL ES based audio for both input and output audio.
-    audio_device_.reset(
-        new AudioDeviceTemplate<OpenSLESRecorder, OpenSLESPlayer>(
-            audio_layer, audio_manager));
-  } else if (audio_layer == kAndroidJavaInputAndOpenSLESOutputAudio) {
-    // Java audio for input and OpenSL ES for output audio (i.e. mixed APIs).
-    // This combination provides low-latency output audio and at the same
-    // time support for HW AEC using the AudioRecord Java API.
-    audio_device_.reset(new AudioDeviceTemplate<AudioRecordJni, OpenSLESPlayer>(
-        audio_layer, audio_manager));
-  } else if (audio_layer == kAndroidAAudioAudio) {
-#if defined(WEBRTC_AUDIO_DEVICE_INCLUDE_ANDROID_AAUDIO)
-    // AAudio based audio for both input and output.
-    audio_device_.reset(new AudioDeviceTemplate<AAudioRecorder, AAudioPlayer>(
-        audio_layer, audio_manager));
-#endif
-  } else if (audio_layer == kAndroidJavaInputAndAAudioOutputAudio) {
-#if defined(WEBRTC_AUDIO_DEVICE_INCLUDE_ANDROID_AAUDIO)
-    // Java audio for input and AAudio for output audio (i.e. mixed APIs).
-    audio_device_.reset(new AudioDeviceTemplate<AudioRecordJni, AAudioPlayer>(
-        audio_layer, audio_manager));
-#endif
+
+  if (source != nullptr) {
+    source->_state = webrtc::MediaSourceInterface::SourceState::kLive;
+  }
+
+  return 0;
+}
+
+int32_t temp::GetDefaultDeviceInfo(bool recDevice,
+                                   char* name,
+                                   uint16_t& index) {
+  char tmpName[webrtc::kAdmMaxDeviceNameSize] = {0};
+  // subtract length of "default: "
+  uint16_t nameLen = webrtc::kAdmMaxDeviceNameSize - 9;
+  char* pName = NULL;
+
+  if (name) {
+    // Add "default: "
+    strcpy(name, "default: ");
+    pName = &name[9];
+  }
+
+  // Tell the callback that we want
+  // the name for this device
+  if (recDevice) {
+    _recDisplayDeviceName = tmpName;
   } else {
-    RTC_LOG(LS_ERROR) << "The requested audio layer is not supported";
-    audio_device_.reset(nullptr);
+    _playDisplayDeviceName = tmpName;
   }
-// END #if defined(WEBRTC_ANDROID)
 
-// Linux ADM implementation.
-// Note that, WEBRTC_ENABLE_LINUX_ALSA is always defined by default when
-// WEBRTC_LINUX is defined. WEBRTC_ENABLE_LINUX_PULSE depends on the
-// 'rtc_include_pulse_audio' build flag.
-// TODO(bugs.webrtc.org/9127): improve support and make it more clear that
-// PulseAudio is the default selection.
-#elif defined(WEBRTC_LINUX)
-#if !defined(WEBRTC_ENABLE_LINUX_PULSE)
-  // Build flag 'rtc_include_pulse_audio' is set to false. In this mode:
-  // - kPlatformDefaultAudio => ALSA, and
-  // - kLinuxAlsaAudio => ALSA, and
-  // - kLinuxPulseAudio => Invalid selection.
-  RTC_LOG(LS_WARNING) << "PulseAudio is disabled using build flag.";
-  if ((audio_layer == kLinuxAlsaAudio) ||
-      (audio_layer == kPlatformDefaultAudio)) {
-    audio_device_.reset(new AudioDeviceLinuxALSA());
-    RTC_LOG(LS_INFO) << "Linux ALSA APIs will be utilized.";
-  }
-#else
-  // Build flag 'rtc_include_pulse_audio' is set to true (default). In this
-  // mode:
-  // - kPlatformDefaultAudio => PulseAudio, and
-  // - kLinuxPulseAudio => PulseAudio, and
-  // - kLinuxAlsaAudio => ALSA (supported but not default).
-  RTC_LOG(LS_INFO) << "PulseAudio support is enabled.";
-  if ((audio_layer == kLinuxPulseAudio) ||
-      (audio_layer == kPlatformDefaultAudio)) {
-    // Linux PulseAudio implementation is default.
-    audio_device_.reset(new AudioDeviceLinuxPulse());
-    std::cout << "WTF" << std::endl;
-    RTC_LOG(LS_INFO) << "Linux PulseAudio APIs will be utilized";
-  } else if (audio_layer == kLinuxAlsaAudio) {
-    // audio_device_.reset(new AudioDeviceLinuxALSA()); // todo
-    RTC_LOG(LS_WARNING) << "Linux ALSA APIs will be utilized.";
-  }
-#endif  // #if !defined(WEBRTC_ENABLE_LINUX_PULSE)
-#endif  // #if defined(WEBRTC_LINUX)
+  // Set members
+  _paDeviceIndex = -1;
+  _deviceIndex = 0;
+  _numPlayDevices = 0;
+  _numRecDevices = 0;
 
-// iOS ADM implementation.
-#if defined(WEBRTC_IOS)
-  if (audio_layer == kPlatformDefaultAudio) {
-    audio_device_.reset(
-        new ios_adm::AudioDeviceIOS(/*bypass_voice_processing=*/false));
-    RTC_LOG(LS_INFO) << "iPhone Audio APIs will be utilized.";
-  }
-// END #if defined(WEBRTC_IOS)
+  PaLock();
 
-// Mac OS X ADM implementation.
-#elif defined(WEBRTC_MAC)
-  if (audio_layer == kPlatformDefaultAudio) {
-    audio_device_.reset(new AudioDeviceMac());
-    RTC_LOG(LS_INFO) << "Mac OS X Audio APIs will be utilized.";
-  }
-#endif  // WEBRTC_MAC
+  pa_operation* paOperation = NULL;
 
-  // Dummy ADM implementation.
-  if (audio_layer == kDummyAudio) {
-    audio_device_.reset(new AudioDeviceDummy());
-    RTC_LOG(LS_INFO) << "Dummy Audio APIs will be utilized.";
-  }
-#endif  // if defined(WEBRTC_DUMMY_AUDIO_BUILD)
+  // Get the server info and update deviceName
+  paOperation =
+      LATE(pa_context_get_server_info)(_paContext, PaServerInfoCallback, this);
 
-  if (!audio_device_) {
-    RTC_LOG(LS_ERROR)
-        << "Failed to create the platform specific ADM implementation.";
+  WaitForOperationCompletion(paOperation);
+
+  // Get the device index
+  if (recDevice) {
+    paOperation = LATE(pa_context_get_source_info_by_name)(
+        _paContext, (char*)tmpName, PaSourceInfoCallback, this);
+  } else {
+    // paOperation = LATE(pa_context_get_sink_info_by_name)(
+    //     _paContext, (char*)tmpName, PaSinkInfoCallback, this);
+  }
+
+  WaitForOperationCompletion(paOperation);
+
+  PaUnLock();
+
+  // Set the index
+  index = _paDeviceIndex;
+
+  if (name) {
+    // Copy to name string
+    strncpy(pName, tmpName, nameLen);
+  }
+
+  // Clear members
+  _playDisplayDeviceName = NULL;
+  _recDisplayDeviceName = NULL;
+  _paDeviceIndex = -1;
+  _deviceIndex = -1;
+  _numPlayDevices = 0;
+  _numRecDevices = 0;
+
+  return 0;
+}
+
+int32_t temp::InitMicrophone() {
+  // _inputDeviceIndex = 0;
+  // _inputDeviceIsSpecified = true;
+
+  if (_recording) {
     return -1;
   }
-  return 0;
-}
 
-int32_t ADM::AttachAudioBuffer() {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  audio_device_->AttachAudioBuffer(&audio_device_buffer_);
-  return 0;
-}
-
-ADM::~ADM() {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-}
-
-int32_t ADM::ActiveAudioLayer(AudioLayer* audioLayer) const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  AudioLayer activeAudio;
-  if (audio_device_->ActiveAudioLayer(activeAudio) == -1) {
+  if (!_inputDeviceIsSpecified) {
     return -1;
   }
-  *audioLayer = activeAudio;
+
+  // Check if default device
+  if (_inputDeviceIndex == 0) {
+    uint16_t deviceIndex = 0;
+    GetDefaultDeviceInfo(true, NULL, deviceIndex);
+    _paDeviceIndex = deviceIndex;
+  } else {
+    // Get the PA device index from
+    // the callback
+    _deviceIndex = _inputDeviceIndex;
+
+    // get recording devices
+    RecordingDevices();
+  }
+
+  // The callback has now set the _paDeviceIndex to
+  // the PulseAudio index of the device
+  if (_mixerManager.OpenMicrophone(_paDeviceIndex) == -1) {
+    return -1;
+  }
+
+  // Clear _deviceIndex
+  _deviceIndex = -1;
+  _paDeviceIndex = -1;
+
   return 0;
 }
 
-int32_t ADM::Init() {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  if (initialized_)
+int32_t temp::InitRecording() {
+  // RTC_DCHECK(thread_checker_.IsCurrent());
+
+  if (_recording) {
+    return -1;
+  }
+
+  if (!_inputDeviceIsSpecified) {
+    return -1;
+  }
+
+  if (_recIsInitialized) {
     return 0;
-  RTC_CHECK(audio_device_);
-  AudioDeviceGeneric::InitStatus status = audio_device_->Init();
-  RTC_HISTOGRAM_ENUMERATION(
-      "WebRTC.Audio.InitializationResult", static_cast<int>(status),
-      static_cast<int>(AudioDeviceGeneric::InitStatus::NUM_STATUSES));
-  if (status != AudioDeviceGeneric::InitStatus::OK) {
-    RTC_LOG(LS_ERROR) << "Audio device initialization failed.";
+  }
+
+  // Initialize the microphone (devices might have been added or removed)
+  if (InitMicrophone() == -1) {
+  }
+
+  // Set the rec sample specification
+  pa_sample_spec recSampleSpec;
+  recSampleSpec.channels = _recChannels;
+  recSampleSpec.format = PA_SAMPLE_S16LE;
+  recSampleSpec.rate = sample_rate_hz_;
+
+  // Create a new rec stream
+  _recStream =
+      LATE(pa_stream_new)(_paContext, "recStream", &recSampleSpec, NULL);
+  if (!_recStream) {
     return -1;
   }
-  initialized_ = true;
-  return 0;
-}
 
-int32_t ADM::Terminate() {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  if (!initialized_)
-    return 0;
-  if (audio_device_->Terminate() == -1) {
-    return -1;
+  // Provide the recStream to the mixer
+  _mixerManager.SetRecStream(_recStream);
+
+  if (cb) {
+    // Update audio buffer with the selected parameters
+    cb->SetRecordingSampleRate(sample_rate_hz_);
+    cb->SetRecordingChannels((uint8_t)_recChannels);
   }
-  initialized_ = false;
-  return 0;
-}
 
-bool ADM::Initialized() const {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << ": " << initialized_;
-  return initialized_;
-}
+  if (_configuredLatencyRec != WEBRTC_PA_NO_LATENCY_REQUIREMENTS) {
+    _recStreamFlags = (pa_stream_flags_t)(PA_STREAM_AUTO_TIMING_UPDATE |
+                                          PA_STREAM_INTERPOLATE_TIMING);
 
-int32_t ADM::InitSpeaker() {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  return audio_device_->InitSpeaker();
-}
-
-int32_t ADM::InitMicrophone() {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  return audio_device_->InitMicrophone();
-}
-
-int32_t ADM::SpeakerVolumeIsAvailable(bool* available) {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  bool isAvailable = false;
-  if (audio_device_->SpeakerVolumeIsAvailable(isAvailable) == -1) {
-    return -1;
-  }
-  *available = isAvailable;
-  RTC_LOG(LS_INFO) << "output: " << isAvailable;
-  return 0;
-}
-
-int32_t ADM::SetSpeakerVolume(uint32_t volume) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << volume << ")";
-  CHECKinitialized_();
-  return audio_device_->SetSpeakerVolume(volume);
-}
-
-int32_t ADM::SpeakerVolume(uint32_t* volume) const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  uint32_t level = 0;
-  if (audio_device_->SpeakerVolume(level) == -1) {
-    return -1;
-  }
-  *volume = level;
-  RTC_LOG(LS_INFO) << "output: " << *volume;
-  return 0;
-}
-
-bool ADM::SpeakerIsInitialized() const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized__BOOL();
-  bool isInitialized = audio_device_->SpeakerIsInitialized();
-  RTC_LOG(LS_INFO) << "output: " << isInitialized;
-  return isInitialized;
-}
-
-bool ADM::MicrophoneIsInitialized() const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized__BOOL();
-  bool isInitialized = audio_device_->MicrophoneIsInitialized();
-  RTC_LOG(LS_INFO) << "output: " << isInitialized;
-  return isInitialized;
-}
-
-int32_t ADM::MaxSpeakerVolume(uint32_t* maxVolume) const {
-  CHECKinitialized_();
-  uint32_t maxVol = 0;
-  if (audio_device_->MaxSpeakerVolume(maxVol) == -1) {
-    return -1;
-  }
-  *maxVolume = maxVol;
-  return 0;
-}
-
-int32_t ADM::MinSpeakerVolume(uint32_t* minVolume) const {
-  CHECKinitialized_();
-  uint32_t minVol = 0;
-  if (audio_device_->MinSpeakerVolume(minVol) == -1) {
-    return -1;
-  }
-  *minVolume = minVol;
-  return 0;
-}
-
-int32_t ADM::SpeakerMuteIsAvailable(bool* available) {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  bool isAvailable = false;
-  if (audio_device_->SpeakerMuteIsAvailable(isAvailable) == -1) {
-    return -1;
-  }
-  *available = isAvailable;
-  RTC_LOG(LS_INFO) << "output: " << isAvailable;
-  return 0;
-}
-
-int32_t ADM::SetSpeakerMute(bool enable) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")";
-  CHECKinitialized_();
-  return audio_device_->SetSpeakerMute(enable);
-}
-
-int32_t ADM::SpeakerMute(bool* enabled) const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  bool muted = false;
-  if (audio_device_->SpeakerMute(muted) == -1) {
-    return -1;
-  }
-  *enabled = muted;
-  RTC_LOG(LS_INFO) << "output: " << muted;
-  return 0;
-}
-
-int32_t ADM::MicrophoneMuteIsAvailable(bool* available) {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  bool isAvailable = false;
-  if (audio_device_->MicrophoneMuteIsAvailable(isAvailable) == -1) {
-    return -1;
-  }
-  *available = isAvailable;
-  RTC_LOG(LS_INFO) << "output: " << isAvailable;
-  return 0;
-}
-
-int32_t ADM::SetMicrophoneMute(bool enable) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")";
-  CHECKinitialized_();
-  return (audio_device_->SetMicrophoneMute(enable));
-}
-
-int32_t ADM::MicrophoneMute(bool* enabled) const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  bool muted = false;
-  if (audio_device_->MicrophoneMute(muted) == -1) {
-    return -1;
-  }
-  *enabled = muted;
-  RTC_LOG(LS_INFO) << "output: " << muted;
-  return 0;
-}
-
-int32_t ADM::MicrophoneVolumeIsAvailable(bool* available) {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  bool isAvailable = false;
-  if (audio_device_->MicrophoneVolumeIsAvailable(isAvailable) == -1) {
-    return -1;
-  }
-  *available = isAvailable;
-  RTC_LOG(LS_INFO) << "output: " << isAvailable;
-  return 0;
-}
-
-int32_t ADM::SetMicrophoneVolume(uint32_t volume) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << volume << ")";
-  CHECKinitialized_();
-  return (audio_device_->SetMicrophoneVolume(volume));
-}
-
-int32_t ADM::MicrophoneVolume(uint32_t* volume) const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  uint32_t level = 0;
-  if (audio_device_->MicrophoneVolume(level) == -1) {
-    return -1;
-  }
-  *volume = level;
-  RTC_LOG(LS_INFO) << "output: " << *volume;
-  return 0;
-}
-
-int32_t ADM::StereoRecordingIsAvailable(
-    bool* available) const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  bool isAvailable = false;
-  if (audio_device_->StereoRecordingIsAvailable(isAvailable) == -1) {
-    return -1;
-  }
-  *available = isAvailable;
-  RTC_LOG(LS_INFO) << "output: " << isAvailable;
-  return 0;
-}
-
-int32_t ADM::SetStereoRecording(bool enable) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")";
-  CHECKinitialized_();
-  if (audio_device_->RecordingIsInitialized()) {
-    RTC_LOG(LS_ERROR)
-        << "unable to set stereo mode after recording is initialized";
-    return -1;
-  }
-  if (audio_device_->SetStereoRecording(enable) == -1) {
-    if (enable) {
-      RTC_LOG(LS_WARNING) << "failed to enable stereo recording";
+    // If configuring a specific latency then we want to specify
+    // PA_STREAM_ADJUST_LATENCY to make the server adjust parameters
+    // automatically to reach that target latency. However, that flag
+    // doesn't exist in Ubuntu 8.04 and many people still use that,
+    //  so we have to check the protocol version of libpulse.
+    if (LATE(pa_context_get_protocol_version)(_paContext) >=
+        WEBRTC_PA_ADJUST_LATENCY_PROTOCOL_VERSION) {
+      _recStreamFlags |= PA_STREAM_ADJUST_LATENCY;
     }
-    return -1;
+
+    const pa_sample_spec* spec = LATE(pa_stream_get_sample_spec)(_recStream);
+    if (!spec) {
+      RTC_LOG(LS_ERROR) << "pa_stream_get_sample_spec(rec)";
+      return -1;
+    }
+
+    size_t bytesPerSec = LATE(pa_bytes_per_second)(spec);
+    uint32_t latency = bytesPerSec * WEBRTC_PA_LOW_CAPTURE_LATENCY_MSECS /
+                       WEBRTC_PA_MSECS_PER_SEC;
+
+    // Set the rec buffer attributes
+    // Note: fragsize specifies a maximum transfer size, not a minimum, so
+    // it is not possible to force a high latency setting, only a low one.
+    _recBufferAttr.fragsize = latency;  // size of fragment
+    _recBufferAttr.maxlength =
+        latency + bytesPerSec * WEBRTC_PA_CAPTURE_BUFFER_EXTRA_MSECS /
+                      WEBRTC_PA_MSECS_PER_SEC;
+
+    _configuredLatencyRec = latency;
   }
-  int8_t nChannels(1);
-  if (enable) {
-    nChannels = 2;
-  }
-  audio_device_buffer_.SetRecordingChannels(nChannels);
+
+  _recordBufferSize = sample_rate_hz_ / 100 * 2 * _recChannels;
+  _recordBufferUsed = 0;
+  _recBuffer = new int8_t[_recordBufferSize];
+
+  // Enable overflow callback
+  LATE(pa_stream_set_overflow_callback)
+  (_recStream, PaStreamOverflowCallback, this);
+
+  // Set the state callback function for the stream
+  LATE(pa_stream_set_state_callback)(_recStream, PaStreamStateCallback, this);
+
+  // Mark recording side as initialized
+  _recIsInitialized = true;
+
   return 0;
 }
 
-int32_t ADM::StereoRecording(bool* enabled) const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  bool stereo = false;
-  if (audio_device_->StereoRecording(stereo) == -1) {
-    return -1;
-  }
-  *enabled = stereo;
-  RTC_LOG(LS_INFO) << "output: " << stereo;
-  return 0;
+void temp::PaStreamOverflowCallback(pa_stream* /*unused*/, void* pThis) {
+  static_cast<temp*>(pThis)->PaStreamOverflowCallbackHandler();
 }
 
-int32_t ADM::StereoPlayoutIsAvailable(bool* available) const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  bool isAvailable = false;
-  if (audio_device_->StereoPlayoutIsAvailable(isAvailable) == -1) {
-    return -1;
-  }
-  *available = isAvailable;
-  RTC_LOG(LS_INFO) << "output: " << isAvailable;
-  return 0;
+void temp::PaStreamOverflowCallbackHandler() {
+  // RTC_LOG(LS_WARNING) << "Recording overflow";
 }
 
-int32_t ADM::SetStereoPlayout(bool enable) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")";
-  CHECKinitialized_();
-  if (audio_device_->PlayoutIsInitialized()) {
-    RTC_LOG(LS_ERROR)
-        << "unable to set stereo mode while playing side is initialized";
-    return -1;
+void temp::PaStreamStateCallbackHandler(pa_stream* p) {
+  // RTC_LOG(LS_VERBOSE) << "stream state cb";
+
+  pa_stream_state_t state = LATE(pa_stream_get_state)(p);
+  switch (state) {
+    case PA_STREAM_UNCONNECTED:
+      // RTC_LOG(LS_VERBOSE) << "unconnected";
+      break;
+    case PA_STREAM_CREATING:
+      // RTC_LOG(LS_VERBOSE) << "creating";
+      break;
+    case PA_STREAM_FAILED:
+    case PA_STREAM_TERMINATED:
+      // RTC_LOG(LS_VERBOSE) << "failed";
+      break;
+    case PA_STREAM_READY:
+      // RTC_LOG(LS_VERBOSE) << "ready";
+      break;
   }
-  if (audio_device_->SetStereoPlayout(enable)) {
-    RTC_LOG(LS_WARNING) << "stereo playout is not supported";
-    return -1;
-  }
-  int8_t nChannels(1);
-  if (enable) {
-    nChannels = 2;
-  }
-  audio_device_buffer_.SetPlayoutChannels(nChannels);
-  return 0;
+
+  LATE(pa_threaded_mainloop_signal)(_paMainloop, 0);
 }
 
-int32_t ADM::StereoPlayout(bool* enabled) const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  bool stereo = false;
-  if (audio_device_->StereoPlayout(stereo) == -1) {
-    return -1;
-  }
-  *enabled = stereo;
-  RTC_LOG(LS_INFO) << "output: " << stereo;
-  return 0;
+void temp::PaStreamStateCallback(pa_stream* p, void* pThis) {
+  static_cast<temp*>(pThis)->PaStreamStateCallbackHandler(p);
 }
 
-int32_t ADM::PlayoutIsAvailable(bool* available) {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  bool isAvailable = false;
-  if (audio_device_->PlayoutIsAvailable(isAvailable) == -1) {
-    return -1;
+bool temp::RecThreadProcess() {
+  if (!_timeEventRec.Wait(1000)) {
+    return true;
   }
-  *available = isAvailable;
-  RTC_LOG(LS_INFO) << "output: " << isAvailable;
-  return 0;
+
+  webrtc::MutexLock lock(&mutex_);
+  if (quit_) {
+    return false;
+  }
+  if (_startRec) {
+    // RTC_LOG(LS_VERBOSE) << "_startRec true, performing initial actions";
+
+    _recDeviceName = NULL;
+
+    // Set if not default device
+    if (_inputDeviceIndex > 0) {
+      // Get the recording device name
+      _recDeviceName = new char[webrtc::kAdmMaxDeviceNameSize];
+      _deviceIndex = _inputDeviceIndex;
+      RecordingDevices();
+    }
+
+    PaLock();
+
+    // RTC_LOG(LS_VERBOSE) << "connecting stream";
+
+    // Connect the stream to a source
+    if (LATE(pa_stream_connect_record)(
+            _recStream, _recDeviceName, &_recBufferAttr,
+            (pa_stream_flags_t)_recStreamFlags) != PA_OK) {
+      // RTC_LOG(LS_ERROR) << "failed to connect rec stream, err="
+      // << LATE(pa_context_errno)(_paContext);
+    }
+
+    // RTC_LOG(LS_VERBOSE) << "connected";
+
+    // Wait for state change
+    while (LATE(pa_stream_get_state)(_recStream) != PA_STREAM_READY) {
+      LATE(pa_threaded_mainloop_wait)(_paMainloop);
+    }
+
+    // RTC_LOG(LS_VERBOSE) << "done";
+
+    // We can now handle read callbacks
+    EnableReadCallback();
+
+    PaUnLock();
+
+    // Clear device name
+    if (_recDeviceName) {
+      delete[] _recDeviceName;
+      _recDeviceName = NULL;
+    }
+
+    _startRec = false;
+    _recording = true;
+    _recStartEvent.Set();
+
+    return true;
+  }
+
+  if (_recording) {
+    // Read data and provide it to VoiceEngine
+    if (ReadRecordedData(_tempSampleData, _tempSampleDataSize) == -1) {
+      return true;
+    }
+
+    _tempSampleData = NULL;
+    _tempSampleDataSize = 0;
+
+    PaLock();
+    while (true) {
+      // Ack the last thing we read
+      if (LATE(pa_stream_drop)(_recStream) != 0) {
+        // RTC_LOG(LS_WARNING)
+        // << "failed to drop, err=" << LATE(pa_context_errno)(_paContext);
+      }
+
+      if (LATE(pa_stream_readable_size)(_recStream) <= 0) {
+        // Then that was all the data
+        break;
+      }
+
+      // Else more data.
+      const void* sampleData;
+      size_t sampleDataSize;
+
+      if (LATE(pa_stream_peek)(_recStream, &sampleData, &sampleDataSize) != 0) {
+        // RTC_LOG(LS_ERROR) << "RECORD_ERROR, error = "
+        // << LATE(pa_context_errno)(_paContext);
+        break;
+      }
+
+      // Drop lock for sigslot dispatch, which could take a while.
+      PaUnLock();
+      // Read data and provide it to VoiceEngine
+      if (ReadRecordedData(sampleData, sampleDataSize) == -1) {
+        return true;
+      }
+      PaLock();
+
+      // Return to top of loop for the ack and the check for more data.
+    }
+
+    EnableReadCallback();
+    PaUnLock();
+
+  }  // _recording
+
+  return true;
 }
 
-int32_t ADM::RecordingIsAvailable(bool* available) {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  bool isAvailable = false;
-  if (audio_device_->RecordingIsAvailable(isAvailable) == -1) {
-    return -1;
-  }
-  *available = isAvailable;
-  RTC_LOG(LS_INFO) << "output: " << isAvailable;
-  return 0;
-}
-
-int32_t ADM::MaxMicrophoneVolume(uint32_t* maxVolume) const {
-  CHECKinitialized_();
-  uint32_t maxVol(0);
-  if (audio_device_->MaxMicrophoneVolume(maxVol) == -1) {
-    return -1;
-  }
-  *maxVolume = maxVol;
-  return 0;
-}
-
-int32_t ADM::MinMicrophoneVolume(uint32_t* minVolume) const {
-  CHECKinitialized_();
-  uint32_t minVol(0);
-  if (audio_device_->MinMicrophoneVolume(minVol) == -1) {
-    return -1;
-  }
-  *minVolume = minVol;
-  return 0;
-}
-
-int16_t ADM::PlayoutDevices() {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  uint16_t nPlayoutDevices = audio_device_->PlayoutDevices();
-  RTC_LOG(LS_INFO) << "output: " << nPlayoutDevices;
-  return (int16_t)(nPlayoutDevices);
-}
-
-int32_t ADM::SetPlayoutDevice(uint16_t index) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << index << ")";
-  CHECKinitialized_();
-  return audio_device_->SetPlayoutDevice(index);
-}
-
-int32_t ADM::SetPlayoutDevice(WindowsDeviceType device) {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  return audio_device_->SetPlayoutDevice(device);
-}
-
-int32_t ADM::PlayoutDeviceName(
-    uint16_t index,
-    char name[kAdmMaxDeviceNameSize],
-    char guid[kAdmMaxGuidSize]) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << index << ", ...)";
-  CHECKinitialized_();
-  if (name == NULL) {
-    return -1;
-  }
-  if (audio_device_->PlayoutDeviceName(index, name, guid) == -1) {
-    return -1;
-  }
-  if (name != NULL) {
-    RTC_LOG(LS_INFO) << "output: name = " << name;
-  }
-  if (guid != NULL) {
-    RTC_LOG(LS_INFO) << "output: guid = " << guid;
-  }
-  return 0;
-}
-
-int32_t ADM::RecordingDeviceName(
-    uint16_t index,
-    char name[kAdmMaxDeviceNameSize],
-    char guid[kAdmMaxGuidSize]) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << index << ", ...)";
-  CHECKinitialized_();
-  if (name == NULL) {
-    return -1;
-  }
-  if (audio_device_->RecordingDeviceName(index, name, guid) == -1) {
-    return -1;
-  }
-  if (name != NULL) {
-    RTC_LOG(LS_INFO) << "output: name = " << name;
-  }
-  if (guid != NULL) {
-    RTC_LOG(LS_INFO) << "output: guid = " << guid;
-  }
-  return 0;
-}
-
-int16_t ADM::RecordingDevices() {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  uint16_t nRecordingDevices = audio_device_->RecordingDevices();
-  RTC_LOG(LS_INFO) << "output: " << nRecordingDevices;
-  return (int16_t)nRecordingDevices;
-}
-
-int32_t ADM::SetRecordingDevice(uint16_t index) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << index << ")";
-  CHECKinitialized_();
-  return audio_device_->SetRecordingDevice(index);
-}
-
-int32_t ADM::SetRecordingDevice(WindowsDeviceType device) {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  return audio_device_->SetRecordingDevice(device);
-}
-
-int32_t ADM::InitPlayout() {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  if (PlayoutIsInitialized()) {
+int32_t temp::LatencyUsecs(pa_stream* stream) {
+  if (!WEBRTC_PA_REPORT_LATENCY) {
     return 0;
   }
-  int32_t result = audio_device_->InitPlayout();
-  RTC_LOG(LS_INFO) << "output: " << result;
-  RTC_HISTOGRAM_BOOLEAN("WebRTC.Audio.InitPlayoutSuccess",
-                        static_cast<int>(result == 0));
-  return result;
-}
 
-int32_t ADM::InitRecording() {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  if (RecordingIsInitialized()) {
+  if (!stream) {
     return 0;
   }
-  int32_t result = audio_device_->InitRecording();
-  RTC_LOG(LS_INFO) << "output: " << result;
-  RTC_HISTOGRAM_BOOLEAN("WebRTC.Audio.InitRecordingSuccess",
-                        static_cast<int>(result == 0));
-  return result;
-}
 
-bool ADM::PlayoutIsInitialized() const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized__BOOL();
-  return audio_device_->PlayoutIsInitialized();
-}
-
-bool ADM::RecordingIsInitialized() const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized__BOOL();
-  return audio_device_->RecordingIsInitialized();
-}
-
-int32_t ADM::StartPlayout() {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  if (Playing()) {
+  pa_usec_t latency;
+  int negative;
+  if (LATE(pa_stream_get_latency)(stream, &latency, &negative) != 0) {
+    // RTC_LOG(LS_ERROR) << "Can't query latency";
+    // We'd rather continue playout/capture with an incorrect delay than
+    // stop it altogether, so return a valid value.
     return 0;
   }
-  audio_device_buffer_.StartPlayout();
-  int32_t result = audio_device_->StartPlayout();
-  RTC_LOG(LS_INFO) << "output: " << result;
-  RTC_HISTOGRAM_BOOLEAN("WebRTC.Audio.StartPlayoutSuccess",
-                        static_cast<int>(result == 0));
-  return result;
-}
 
-int32_t ADM::StopPlayout() {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  int32_t result = audio_device_->StopPlayout();
-  audio_device_buffer_.StopPlayout();
-  RTC_LOG(LS_INFO) << "output: " << result;
-  RTC_HISTOGRAM_BOOLEAN("WebRTC.Audio.StopPlayoutSuccess",
-                        static_cast<int>(result == 0));
-  return result;
-}
+  if (negative) {
+    // RTC_LOG(LS_VERBOSE)
+    // << "warning: pa_stream_get_latency reported negative delay";
 
-bool ADM::Playing() const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized__BOOL();
-  return audio_device_->Playing();
-}
+    // The delay can be negative for monitoring streams if the captured
+    // samples haven't been played yet. In such a case, "latency"
+    // contains the magnitude, so we must negate it to get the real value.
+    int32_t tmpLatency = (int32_t)-latency;
+    if (tmpLatency < 0) {
+      // Make sure that we don't use a negative delay.
+      tmpLatency = 0;
+    }
 
-int32_t ADM::StartRecording() {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  if (Recording()) {
-    return 0;
+    return tmpLatency;
+  } else {
+    return (int32_t)latency;
   }
-  audio_device_buffer_.StartRecording();
-  int32_t result = audio_device_->StartRecording();
-  RTC_LOG(LS_INFO) << "output: " << result;
-  RTC_HISTOGRAM_BOOLEAN("WebRTC.Audio.StartRecordingSuccess",
-                        static_cast<int>(result == 0));
-  return result;
 }
 
-int32_t ADM::StopRecording() {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  int32_t result = audio_device_->StopRecording();
-  audio_device_buffer_.StopRecording();
-  RTC_LOG(LS_INFO) << "output: " << result;
-  RTC_HISTOGRAM_BOOLEAN("WebRTC.Audio.StopRecordingSuccess",
-                        static_cast<int>(result == 0));
-  return result;
-}
+int32_t temp::ReadRecordedData(const void* bufferData, size_t bufferSize)
+    RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
+  size_t size = bufferSize;
+  uint32_t numRecSamples = _recordBufferSize / (2 * _recChannels);
 
-bool ADM::Recording() const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized__BOOL();
-  return audio_device_->Recording();
-}
+  // Account for the peeked data and the used data.
+  uint32_t recDelay =
+      (uint32_t)((LatencyUsecs(_recStream) / 1000) +
+                 10 * ((size + _recordBufferUsed) / _recordBufferSize));
 
-int32_t ADM::RegisterAudioCallback(
-    AudioTransport* audioCallback) {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  return audio_device_buffer_.RegisterAudioCallback(audioCallback);
-}
-
-int32_t ADM::PlayoutDelay(uint16_t* delayMS) const {
-  CHECKinitialized_();
-  uint16_t delay = 0;
-  if (audio_device_->PlayoutDelay(delay) == -1) {
-    RTC_LOG(LS_ERROR) << "failed to retrieve the playout delay";
-    return -1;
+  if (_playStream) {
+    // Get the playout delay.
+    _sndCardPlayDelay = (uint32_t)(LatencyUsecs(_playStream) / 1000);
   }
-  *delayMS = delay;
+
+  if (_recordBufferUsed > 0) {
+    // Have to copy to the buffer until it is full.
+    size_t copy = _recordBufferSize - _recordBufferUsed;
+    if (size < copy) {
+      copy = size;
+    }
+
+    memcpy(&_recBuffer[_recordBufferUsed], bufferData, copy);
+    _recordBufferUsed += copy;
+    bufferData = static_cast<const char*>(bufferData) + copy;
+    size -= copy;
+
+    if (_recordBufferUsed != _recordBufferSize) {
+      // Not enough data yet to pass to VoE.
+      return 0;
+    }
+
+    // nado=_recBuffer;
+
+    // Provide data to VoiceEngine.
+    if (ProcessRecordedData(_recBuffer, numRecSamples, recDelay) == -1) {
+      // We have stopped recording.
+      return -1;
+    }
+
+    _recordBufferUsed = 0;
+  }
+
+  // Now process full 10ms sample sets directly from the input.
+  while (size >= _recordBufferSize) {
+    // nado=(int8_t*)bufferData;
+
+    // Provide data to VoiceEngine.
+    if (ProcessRecordedData(static_cast<int8_t*>(const_cast<void*>(bufferData)),
+                            numRecSamples, recDelay) == -1) {
+      // We have stopped recording.
+      return -1;
+    }
+
+    bufferData = static_cast<const char*>(bufferData) + _recordBufferSize;
+    size -= _recordBufferSize;
+
+    // We have consumed 10ms of data.
+    recDelay -= 10;
+  }
+
+  // Now save any leftovers for later.
+  if (size > 0) {
+    memcpy(_recBuffer, bufferData, size);
+    _recordBufferUsed = size;
+  }
+
   return 0;
 }
 
-bool ADM::BuiltInAECIsAvailable() const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized__BOOL();
-  bool isAvailable = audio_device_->BuiltInAECIsAvailable();
-  RTC_LOG(LS_INFO) << "output: " << isAvailable;
-  return isAvailable;
+int32_t temp::StereoRecordingIsAvailable(bool& available) {
+  // RTC_DCHECK(thread_checker_.IsCurrent());
+  if (_recChannels == 2 && _recording) {
+    available = true;
+    return 0;
+  }
+
+  available = false;
+  bool wasInitialized = _mixerManager.MicrophoneIsInitialized();
+  int error = 0;
+
+  if (!wasInitialized && InitMicrophone() == -1) {
+    // Cannot open the specified device
+    available = false;
+    return 0;
+  }
+
+  // Check if the selected microphone can record stereo.
+  bool isAvailable(false);
+
+  error = _mixerManager.StereoRecordingIsAvailable(isAvailable);
+
+  if (!error)
+    available = isAvailable;
+
+  // Close the initialized input mixer
+  if (!wasInitialized) {
+    _mixerManager.CloseMicrophone();
+  }
+
+  return error;
 }
 
-int32_t ADM::EnableBuiltInAEC(bool enable) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")";
-  CHECKinitialized_();
-  int32_t ok = audio_device_->EnableBuiltInAEC(enable);
-  RTC_LOG(LS_INFO) << "output: " << ok;
-  return ok;
+int32_t temp::SetStereoRecording(bool enable) {
+  // RTC_DCHECK(thread_checker_.IsCurrent());
+  if (enable)
+    _recChannels = 2;
+  else
+    _recChannels = 1;
+
+  return 0;
 }
 
-bool ADM::BuiltInAGCIsAvailable() const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized__BOOL();
-  bool isAvailable = audio_device_->BuiltInAGCIsAvailable();
-  RTC_LOG(LS_INFO) << "output: " << isAvailable;
-  return isAvailable;
+int32_t temp::StereoRecording(bool& enabled) const {
+  // RTC_DCHECK(thread_checker_.IsCurrent());
+  if (_recChannels == 2)
+    enabled = true;
+  else
+    enabled = false;
+
+  return 0;
 }
 
-int32_t ADM::EnableBuiltInAGC(bool enable) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")";
-  CHECKinitialized_();
-  int32_t ok = audio_device_->EnableBuiltInAGC(enable);
-  RTC_LOG(LS_INFO) << "output: " << ok;
-  return ok;
+int32_t temp::SetRecordingDevice(uint16_t index) {
+  // RTC_DCHECK(thread_checker_.IsCurrent());
+  if (_recIsInitialized) {
+    return -1;
+  }
+
+  const uint16_t nDevices(RecordingDevices());
+
+  // RTC_LOG(LS_VERBOSE) << "number of availiable input devices is " <<
+  // nDevices;
+
+  if (index > (nDevices - 1)) {
+    // RTC_LOG(LS_ERROR) << "device index is out of range [0," << (nDevices - 1)
+    // << "]";
+    return -1;
+  }
+
+  _inputDeviceIndex = index;
+  _inputDeviceIsSpecified = true;
+
+  return 0;
 }
 
-bool ADM::BuiltInNSIsAvailable() const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized__BOOL();
-  bool isAvailable = audio_device_->BuiltInNSIsAvailable();
-  RTC_LOG(LS_INFO) << "output: " << isAvailable;
-  return isAvailable;
+int32_t temp::ProcessRecordedData(int8_t* bufferData,
+                                  uint32_t bufferSizeInSamples,
+                                  uint32_t recDelay)
+    RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
+  // TODO(andrew): this is a temporary hack, to avoid non-causal far- and
+  // near-end signals at the AEC for PulseAudio. I think the system delay is
+  // being correctly calculated here, but for legacy reasons we add +10 ms
+  // to the value in the AEC. The real fix will be part of a larger
+  // investigation into managing system delay in the AEC.
+  if (recDelay > 10)
+    recDelay -= 10;
+  else
+    recDelay = 0;
+  cb->SetTypingStatus(KeyPressed());
+  // Deliver recorded samples at specified sample rate,
+  // mic level etc. to the observer using callback.
+  cb->SetVQEData(_sndCardPlayDelay, recDelay);
+  mutex_.Unlock();
+  if (source != nullptr) {
+    source->frame.UpdateFrame(0, (const int16_t*)bufferData,
+                              bufferSizeInSamples, sample_rate_hz_,
+                              webrtc::AudioFrame::SpeechType::kNormalSpeech,
+                              webrtc::AudioFrame::VADActivity::kVadActive);
+    source->mutex_.Unlock();
+  }
+
+  mutex_.Lock();
+
+  // We have been unlocked - check the flag again.
+  if (!_recording) {
+    return -1;
+  }
+
+  return 0;
 }
 
-int32_t ADM::EnableBuiltInNS(bool enable) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")";
-  CHECKinitialized_();
-  int32_t ok = audio_device_->EnableBuiltInNS(enable);
-  RTC_LOG(LS_INFO) << "output: " << ok;
-  return ok;
+bool temp::KeyPressed() const {
+#if defined(WEBRTC_USE_X11)
+  char szKey[32];
+  unsigned int i = 0;
+  char state = 0;
+
+  if (!_XDisplay)
+    return false;
+
+  // Check key map status
+  XQueryKeymap(_XDisplay, szKey);
+
+  // A bit change in keymap means a key is pressed
+  for (i = 0; i < sizeof(szKey); i++)
+    state |= (szKey[i] ^ _oldKeyState[i]) & szKey[i];
+
+  // Save old state
+  memcpy((char*)_oldKeyState, (char*)szKey, sizeof(_oldKeyState));
+  return (state != 0);
+#else
+  return false;
+#endif
 }
 
-int32_t ADM::GetPlayoutUnderrunCount() const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  CHECKinitialized_();
-  int32_t underrunCount = audio_device_->GetPlayoutUnderrunCount();
-  RTC_LOG(LS_INFO) << "output: " << underrunCount;
-  return underrunCount;
+void temp::EnableReadCallback() {
+  LATE(pa_stream_set_read_callback)(_recStream, &PaStreamReadCallback, this);
 }
 
-#if defined(WEBRTC_IOS)
-int ADM::GetPlayoutAudioParameters(
-    AudioParameters* params) const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  int r = audio_device_->GetPlayoutAudioParameters(params);
-  RTC_LOG(LS_INFO) << "output: " << r;
-  return r;
+void temp::DisableReadCallback() {
+  LATE(pa_stream_set_read_callback)(_recStream, NULL, NULL);
 }
 
-int ADM::GetRecordAudioParameters(
-    AudioParameters* params) const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  int r = audio_device_->GetRecordAudioParameters(params);
-  RTC_LOG(LS_INFO) << "output: " << r;
-  return r;
-}
-#endif  // WEBRTC_IOS
-
-ADM::PlatformType ADM::Platform() const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  return platform_type_;
+void temp::PaStreamReadCallback(pa_stream* a /*unused1*/,
+                                size_t b /*unused2*/,
+                                void* pThis) {
+  static_cast<temp*>(pThis)->PaStreamReadCallbackHandler();
 }
 
-AudioDeviceModule::AudioLayer ADM::PlatformAudioLayer()
-    const {
-  RTC_LOG(LS_INFO) << __FUNCTION__;
-  return audio_layer_;
-}
+void temp::PaStreamReadCallbackHandler() {
+  // We get the data pointer and size now in order to save one Lock/Unlock
+  // in the worker thread.
+  if (LATE(pa_stream_peek)(_recStream, &_tempSampleData,
+                           &_tempSampleDataSize) != 0) {
+    // RTC_LOG(LS_ERROR) << "Can't read data!";
+    return;
+  }
 
-}  // namespace webrtc
+  // Since we consume the data asynchronously on a different thread, we have
+  // to temporarily disable the read callback or else Pulse will call it
+  // continuously until we consume the data. We re-enable it below.
+  DisableReadCallback();
+  _timeEventRec.Set();
+}
