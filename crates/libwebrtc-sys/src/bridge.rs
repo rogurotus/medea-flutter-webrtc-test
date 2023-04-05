@@ -1218,6 +1218,7 @@ pub(crate) mod webrtc {
 
     unsafe extern "C++" {
         pub type AudioDeviceModule;
+        pub type ADMm;
         pub type AudioLayer;
 
         /// Creates a new [`AudioDeviceModule`] for the given [`AudioLayer`].
@@ -1226,6 +1227,13 @@ pub(crate) mod webrtc {
             audio_layer: AudioLayer,
             task_queue_factory: Pin<&mut TaskQueueFactory>,
         ) -> UniquePtr<AudioDeviceModule>;
+
+        pub fn create_audio_device_module_custom(
+            worker_thread: Pin<&mut Thread>,
+            audio_layer: AudioLayer,
+            task_queue_factory: Pin<&mut TaskQueueFactory>,
+        ) -> UniquePtr<AudioDeviceModule>;
+
 
         /// Creates a new fake [`AudioDeviceModule`], that will not try to
         /// access real media devices, but will generate pulsed noise.

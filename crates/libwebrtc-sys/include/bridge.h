@@ -32,7 +32,8 @@
 #include "media/base/fake_frame_source.h"
 #include "pc/test/fake_video_track_source.h"
 #include "modules/audio_device/include/test_audio_device.h"
-// #include "audio_device_impl.h"
+#include "adm.h"
+
 namespace bridge {
 
 struct DynTrackEventCallback;
@@ -90,6 +91,7 @@ using RtpTransceiverDirection = webrtc::RtpTransceiverDirection;
 using TrackState = webrtc::MediaStreamTrackInterface::TrackState;
 
 using AudioDeviceModule = rtc::scoped_refptr<webrtc::AudioDeviceModule>;
+using ADMm = rtc::scoped_refptr<ADM>;
 using AudioProcessing = rtc::scoped_refptr<webrtc::AudioProcessing>;
 using AudioSourceInterface = rtc::scoped_refptr<webrtc::AudioSourceInterface>;
 using AudioTrackInterface = rtc::scoped_refptr<webrtc::AudioTrackInterface>;
@@ -106,6 +108,11 @@ using MediaStreamTrackInterface =
 
 // Creates a new proxied `AudioDeviceModule` for the given `AudioLayer`.
 std::unique_ptr<AudioDeviceModule> create_audio_device_module(
+    Thread& worker_thread,
+    AudioLayer audio_layer,
+    TaskQueueFactory& task_queue_factory);
+
+std::unique_ptr<AudioDeviceModule> create_audio_device_module_custom(
     Thread& worker_thread,
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory);

@@ -113,34 +113,66 @@ std::unique_ptr<AudioDeviceModule> create_audio_device_module(
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory) {
       
-  AudioDeviceModule adm = worker_thread.Invoke<AudioDeviceModule>(
+  ADMm adm = worker_thread.Invoke<ADMm>(
       RTC_FROM_HERE, [audio_layer, &task_queue_factory] {
         auto ab = ADM::Create(audio_layer, &task_queue_factory);        
-        auto* da = (ADM*)ab.get();
-
-        da->createSource();
-
+        // admm=da;
         return ab;
       });
-  // temp = (webrtc::AudioDeviceModuleImplMy*)(adm.get());
+
   if (adm == nullptr) {
     return nullptr;
   }
 
-  // auto* aa = (webrtc::AudioDeviceModuleImplMy*)adm.get();
+
+  std::unique_ptr<SourceManager> pproxied =
+      SourceManagerProxy::Create(&worker_thread, adm);
+
+  pproxied->CreateSystemSource();
+
   AudioDeviceModule proxied =
       webrtc::AudioDeviceModuleProxy::Create(&worker_thread, adm);
-  // auto* bb = (webrtc::AudioDeviceModuleProxy*)proxied.get();
-  // bb->da = &(aa->da);
 
-  std::cout << "CREATE" << std::endl;
+
   return std::make_unique<AudioDeviceModule>(proxied);
 
 }
 
+std::unique_ptr<AudioDeviceModule> create_audio_device_module_custom(
+    Thread& worker_thread,
+    AudioLayer audio_layer,
+    TaskQueueFactory& task_queue_factory) {
+      
+  ADMm adm = worker_thread.Invoke<ADMm>(
+      RTC_FROM_HERE, [audio_layer, &task_queue_factory] {
+        auto ab = ADM::Create(audio_layer, &task_queue_factory);        
+        // admm=da;
+        return ab;
+      });
+
+  if (adm == nullptr) {
+    return nullptr;
+  }
+
+
+  std::unique_ptr<SourceManager> pproxied =
+      SourceManagerProxy::Create(&worker_thread, adm);
+
+  std::cout << "WTF ADDD" << std::endl;
+  pproxied->CreateSystemSource();
+  std::cout << "WTF2 ADDD" << std::endl;
+
+  // AudioDeviceModule aaa = adm;
+
+  AudioDeviceModule proxied =
+      webrtc::AudioDeviceModuleProxy::Create(&worker_thread, adm);
+
+
+  return std::make_unique<AudioDeviceModule>(proxied);
+}
+
 // Calls `AudioDeviceModule->Init()`.
 int32_t init_audio_device_module(const AudioDeviceModule& audio_device_module) {
-  std::cout << "INIT" << std::endl;
   return audio_device_module->Init();
 }
 
@@ -341,18 +373,8 @@ std::unique_ptr<VideoTrackSourceInterface> create_display_video_source(
 // `AudioOptions`.
 std::unique_ptr<AudioSourceInterface> create_audio_source(
     const PeerConnectionFactoryInterface& peer_connection_factory) {
-  bridge::AudioSourceInterface src;
-  std::cout << "C" << std::endl;
-  // if (temp) {
-    
-  // src =
-    // temp->CreateAudioSource(); 
-  // } else {
-  std::cout << "CREATE A" << std::endl;
-    src =  peer_connection_factory->CreateAudioSource(cricket::AudioOptions());
-  // }
-  // std::cout << "C" << std::endl;
-
+      
+  auto src =  peer_connection_factory->CreateAudioSource(cricket::AudioOptions());
   if (src == nullptr) {
     return nullptr;
   }
@@ -504,19 +526,6 @@ std::unique_ptr<PeerConnectionFactoryInterface> create_peer_connection_factory(
     const std::unique_ptr<AudioDeviceModule>& default_adm,
     const std::unique_ptr<AudioProcessing>& ap) {
 
-  // std::cout << "C" << std::endl;
-      // auto a = default_adm.get()->get();
-      // auto b = static_cast<webrtc::AudioDeviceModuleProxy*>(a);
-  // std::cout << b << std::endl;
-
-  // std::cout << "C" << *(b->da) << std::endl;
-  // *(b->da) = ap->get();
-  // std::cout << "C" << *(b->da) << std::endl;
-  // throw 42;
-
-  
-
-try {
   auto factory = webrtc::CreatePeerConnectionFactory(
       network_thread.get(), worker_thread.get(), signaling_thread.get(),
       default_adm ? *default_adm : nullptr,
@@ -524,17 +533,11 @@ try {
       webrtc::CreateBuiltinAudioDecoderFactory(),
       webrtc::CreateBuiltinVideoEncoderFactory(),
       webrtc::CreateBuiltinVideoDecoderFactory(), nullptr, ap ? *ap : nullptr); 
-  // std::cout << "C" << b->da << std::endl;
 
   if (factory == nullptr) {
     return nullptr;
   }
-  // std::cout << "C" << b->da << std::endl;
   return std::make_unique<PeerConnectionFactoryInterface>(factory);
-      } catch (...) {
-  // std::cout << "C" << b->da << std::endl;
-  return nullptr;
-      }
 }
 
 // Calls `PeerConnectionFactoryInterface->CreatePeerConnectionOrError`.

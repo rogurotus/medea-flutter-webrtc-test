@@ -2,6 +2,8 @@
 
 #include "modules/audio_device/include/audio_device.h"
 #include "pc/proxy.h"
+#include "linux_micro.h"
+#include "adm.h"
 
 namespace webrtc {
 
@@ -9,7 +11,6 @@ using AudioDeviceModuleInterface = AudioDeviceModule;
 
 // Define proxy for `AudioDeviceModule`.
 BEGIN_PRIMARY_PROXY_MAP(AudioDeviceModule)
-AudioProcessing** da;
 PROXY_PRIMARY_THREAD_DESTRUCTOR()
 PROXY_CONSTMETHOD1(int32_t, ActiveAudioLayer, AudioDeviceModule::AudioLayer*)
 PROXY_METHOD1(int32_t, RegisterAudioCallback, AudioTransport*)
@@ -76,3 +77,42 @@ PROXY_CONSTMETHOD0(int32_t, GetPlayoutUnderrunCount)
 #endif  // WEBRTC_IOS
 END_PROXY_MAP(AudioDeviceModule)
 }  // namespace webrtc
+
+class SourceManagerProxy : SourceManager {
+  SourceManagerProxy(rtc::Thread* primary_thread, rtc::scoped_refptr<ADM> c) : adm(c), primary_thread_(primary_thread) {}
+  public:
+  static std::unique_ptr<SourceManager> Create( 
+      rtc::Thread* primary_thread, 
+      rtc::scoped_refptr<ADM> c) {
+         return std::unique_ptr<SourceManager>(new SourceManagerProxy(primary_thread, std::move(c)));
+      }
+
+  webrtc::AudioMixer::Source* CreateMicroSource() override {
+    TRACE_BOILERPLATE(CreateMicroSource);              
+    webrtc::MethodCall<SourceManager,  webrtc::AudioMixer::Source*> call(adm.get(), &SourceManager::CreateMicroSource); 
+    return call.Marshal(primary_thread_);
+  };
+
+  webrtc::AudioMixer::Source* CreateSystemSource() override {
+    std::cout << "P ADDD" << std::endl;
+    TRACE_BOILERPLATE(CreateSystemSource);      
+    webrtc::MethodCall<SourceManager,  webrtc::AudioMixer::Source*> call(adm.get(), &SourceManager::CreateSystemSource); 
+    return call.Marshal(primary_thread_);
+  }
+
+  void AddSource(webrtc::AudioMixer::Source* source) override {
+    TRACE_BOILERPLATE(AddSource);
+    webrtc::MethodCall<SourceManager, void, webrtc::AudioMixer::Source*> call(adm.get(), &SourceManager::AddSource, std::move(source));
+    return call.Marshal(primary_thread_);  
+  }
+
+  void RemoveSource(webrtc::AudioMixer::Source* source) override {
+    TRACE_BOILERPLATE(RemoveSource);
+    webrtc::MethodCall<SourceManager, void, webrtc::AudioMixer::Source*> call(adm.get(), &SourceManager::RemoveSource, std::move(source));
+    return call.Marshal(primary_thread_);  
+  }
+
+  private:              
+  mutable rtc::scoped_refptr<ADM> adm;                                               
+  mutable rtc::Thread* primary_thread_;
+};
