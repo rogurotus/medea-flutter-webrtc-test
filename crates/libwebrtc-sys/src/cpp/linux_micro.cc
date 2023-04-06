@@ -2,6 +2,7 @@
 
 // todo
 #include <iostream>
+#include "api/make_ref_counted.h"
 
 WebRTCPulseSymbolTable* _GetPulseSymbolTable() {
   static WebRTCPulseSymbolTable* pulse_symbol_table =
@@ -25,10 +26,6 @@ void MicrophoneModule::PaServerInfoCallback(pa_context* c,
 void MicrophoneModule::PaServerInfoCallbackHandler(const pa_server_info* i) {
   // Use PA native sampling rate
   sample_rate_hz_ = i->sample_spec.rate;
-
-  if (source != nullptr) {
-    source->sample_rate = sample_rate_hz_;
-  }
 
   // Copy the PA server version
   strncpy(_paServerVersion, i->server_version, 31);
@@ -295,7 +292,7 @@ int MicrophoneModule::Init() {
   return 0;
 }
 
-MicrophoneModule::MicrophoneModule() {
+MicrophoneModule::MicrophoneModule(webrtc::AudioDeviceBuffer* buffer) : cb(buffer) {
 #if defined(WEBRTC_USE_X11)
   memset(_oldKeyState, 0, sizeof(_oldKeyState));
 #endif
@@ -364,8 +361,15 @@ void MicrophoneModule::PaUnLock() {
   LATE(pa_threaded_mainloop_unlock)(_paMainloop);
 }
 
-CustomAudioSource* MicrophoneModule::createSource() {
-  source = new CustomAudioSource();
+rtc::scoped_refptr<CustomAudioSource> MicrophoneModule::CreateSource() {
+  if (!_recording) {
+    InitRecording();
+    StartRecording();
+  }
+
+  if (!source) {
+    source = rtc::scoped_refptr<CustomAudioSource>(new CustomAudioSource());
+  }
   return source;
 }
 
@@ -420,9 +424,6 @@ int32_t MicrophoneModule::StopRecording() {
     _recBuffer = NULL;
   }
 
-  if (source != nullptr) {
-    source->_state = webrtc::MediaSourceInterface::SourceState::kMuted;
-  }
   return 0;
 }
 
@@ -461,10 +462,6 @@ int32_t MicrophoneModule::StartRecording() {
       //   RTC_LOG(LS_ERROR) << "failed to activate recording";
       return -1;
     }
-  }
-
-  if (source != nullptr) {
-    source->_state = webrtc::MediaSourceInterface::SourceState::kLive;
   }
 
   return 0;
@@ -1023,11 +1020,7 @@ int32_t MicrophoneModule::ProcessRecordedData(int8_t* bufferData,
   cb->SetVQEData(_sndCardPlayDelay, recDelay);
   mutex_.Unlock();
   if (source != nullptr) {
-    source->frame.UpdateFrame(0, (const int16_t*)bufferData,
-                              bufferSizeInSamples, sample_rate_hz_,
-                              webrtc::AudioFrame::SpeechType::kNormalSpeech,
-                              webrtc::AudioFrame::VADActivity::kVadActive);
-    source->mutex_.Unlock();
+    source->UpdateFrame((const int16_t*)bufferData, bufferSizeInSamples, sample_rate_hz_);
   }
 
   mutex_.Lock();

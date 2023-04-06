@@ -1220,6 +1220,16 @@ pub(crate) mod webrtc {
         pub type AudioDeviceModule;
         pub type ADMm;
         pub type AudioLayer;
+        pub type SourceManagerr;
+        pub type CustomSource;
+
+        pub fn create_source_manager(adm: &ADMm, worker_thread: Pin<&mut Thread>) -> UniquePtr<SourceManagerr>;
+        pub fn adm_proxy_upcast(adm: UniquePtr<ADMm>, worker_thread: Pin<&mut Thread>) -> UniquePtr<AudioDeviceModule>;
+
+        pub fn create_source_micro(manager: Pin<&mut SourceManagerr>) -> UniquePtr<CustomSource>;
+        pub fn add_source_micro(manager: Pin<&mut SourceManagerr>, source: &CustomSource);
+        pub fn remove_source_micro(manager: Pin<&mut SourceManagerr>, source: &CustomSource);
+
 
         /// Creates a new [`AudioDeviceModule`] for the given [`AudioLayer`].
         pub fn create_audio_device_module(
@@ -1232,7 +1242,7 @@ pub(crate) mod webrtc {
             worker_thread: Pin<&mut Thread>,
             audio_layer: AudioLayer,
             task_queue_factory: Pin<&mut TaskQueueFactory>,
-        ) -> UniquePtr<AudioDeviceModule>;
+        ) -> UniquePtr<ADMm>;
 
 
         /// Creates a new fake [`AudioDeviceModule`], that will not try to

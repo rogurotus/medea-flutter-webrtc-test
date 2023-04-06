@@ -8,11 +8,8 @@ WebRTCPulseSymbolTable* _GetPulseSymbolTable();
 
 class MicrophoneModule {
  public:
-
-  CustomAudioSource* source = nullptr;
-  CustomAudioSource* createSource();
-
-  MicrophoneModule();
+  rtc::scoped_refptr<CustomAudioSource> CreateSource();
+  MicrophoneModule(webrtc::AudioDeviceBuffer* buffer);
 
   int32_t StartRecording();
 
@@ -80,6 +77,8 @@ class MicrophoneModule {
   int32_t SetMicrophoneMute(bool enable);
   int32_t MicrophoneMute(bool* enabled) const;
 
+  private:
+  rtc::scoped_refptr<CustomAudioSource> source = nullptr;
   bool _inputDeviceIsSpecified = false;
   int sample_rate_hz_ = 0;
   uint8_t _recChannels = 1;
@@ -124,6 +123,5 @@ class MicrophoneModule {
   char _oldKeyState[32];
   Display* _XDisplay;
   #endif
-
   webrtc::AudioDeviceBuffer* cb = nullptr;
 };

@@ -138,8 +138,32 @@ std::unique_ptr<AudioDeviceModule> create_audio_device_module(
 
 }
 
-std::unique_ptr<AudioDeviceModule> create_audio_device_module_custom(
-    Thread& worker_thread,
+std::unique_ptr<SourceManagerr> create_source_manager(const ADMm& adm, Thread& worker_thread) {
+    auto a = SourceManagerProxy::Create(&worker_thread, adm);
+    return a;
+}
+
+std::unique_ptr<AudioDeviceModule> adm_proxy_upcast(std::unique_ptr<ADMm> adm, Thread& worker_thread) {
+
+    AudioDeviceModule admm = *adm.get();
+    AudioDeviceModule proxied =
+      webrtc::AudioDeviceModuleProxy::Create(&worker_thread, admm);
+
+  return std::make_unique<AudioDeviceModule>(proxied);
+}
+
+std::unique_ptr<CustomSource> create_source_micro(SourceManagerr& manager) {
+  return std::make_unique<CustomSource>(manager.CreateMicroSource());
+}
+void add_source_micro(SourceManagerr& manager, const CustomSource& source) {
+  manager.AddSource(source);
+}
+void remove_source_micro(SourceManagerr& manager, const CustomSource& source) {
+  manager.RemoveSource(source);
+}
+
+std::unique_ptr<ADMm> create_audio_device_module_custom(
+  Thread& worker_thread,
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory) {
       
@@ -154,21 +178,7 @@ std::unique_ptr<AudioDeviceModule> create_audio_device_module_custom(
     return nullptr;
   }
 
-
-  std::unique_ptr<SourceManager> pproxied =
-      SourceManagerProxy::Create(&worker_thread, adm);
-
-  std::cout << "WTF ADDD" << std::endl;
-  pproxied->CreateSystemSource();
-  std::cout << "WTF2 ADDD" << std::endl;
-
-  // AudioDeviceModule aaa = adm;
-
-  AudioDeviceModule proxied =
-      webrtc::AudioDeviceModuleProxy::Create(&worker_thread, adm);
-
-
-  return std::make_unique<AudioDeviceModule>(proxied);
+  return std::make_unique<ADMm>(adm);
 }
 
 // Calls `AudioDeviceModule->Init()`.

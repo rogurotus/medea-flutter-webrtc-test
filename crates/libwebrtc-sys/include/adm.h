@@ -20,13 +20,14 @@
 #include "rtc_base/platform_thread.h"
 #include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/thread_annotations.h"
-#include "custom_audio.h"
 
 #include "modules/audio_mixer/audio_mixer_impl.h"
 
 #include "api/audio/audio_mixer.h"
 
 #include "api/audio/audio_frame.h"
+
+#include "custom_audio.h"
 
 #if defined(WEBRTC_USE_X11)
 #include <X11/Xlib.h>
@@ -36,10 +37,10 @@
 
 class SourceManager {
   public:
-  virtual webrtc::AudioMixer::Source* CreateMicroSource() = 0;
-  virtual webrtc::AudioMixer::Source* CreateSystemSource() = 0;
-  virtual void AddSource(webrtc::AudioMixer::Source* source) = 0;
-  virtual void RemoveSource(webrtc::AudioMixer::Source* source) = 0;
+  virtual rtc::scoped_refptr<CustomAudioSource> CreateMicroSource() = 0;
+  virtual rtc::scoped_refptr<CustomAudioSource>  CreateSystemSource() = 0;
+  virtual void AddSource(rtc::scoped_refptr<CustomAudioSource>  source) = 0;
+  virtual void RemoveSource(rtc::scoped_refptr<CustomAudioSource>  source) = 0;
 };
 
 
@@ -72,10 +73,10 @@ class ADM : public webrtc::AudioDeviceModuleImpl, public SourceManager {
   int32_t MaxMicrophoneVolume(uint32_t* maxVolume) const override;
   int32_t MinMicrophoneVolume(uint32_t* minVolume) const override;
 
-  webrtc::AudioMixer::Source* CreateMicroSource() override;
-  webrtc::AudioMixer::Source* CreateSystemSource() override;
-  void AddSource(webrtc::AudioMixer::Source* source) override;
-  void RemoveSource(webrtc::AudioMixer::Source* source) override;
+  rtc::scoped_refptr<CustomAudioSource> CreateMicroSource() override;
+  rtc::scoped_refptr<CustomAudioSource>  CreateSystemSource() override;
+  void AddSource(rtc::scoped_refptr<CustomAudioSource>  source) override;
+  void RemoveSource(rtc::scoped_refptr<CustomAudioSource>  source) override;
 
   // Microphone mute control
   int32_t MicrophoneMuteIsAvailable(bool* available) override;
@@ -83,6 +84,8 @@ class ADM : public webrtc::AudioDeviceModuleImpl, public SourceManager {
   int32_t MicrophoneMute(bool* enabled) const override;
 
   rtc::scoped_refptr<webrtc::AudioMixerImpl> mixer = webrtc::AudioMixerImpl::Create();
+  std::vector<rtc::scoped_refptr<CustomAudioSource>> sources;
+  
   MicrophoneModule audio_recorder;
   rtc::PlatformThread _ptrThreadRec;
 };

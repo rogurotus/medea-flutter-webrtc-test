@@ -53,8 +53,7 @@ bool ADM::MicrophoneIsInitialized() const {
   return audio_recorder.MicrophoneIsInitialized();
 }
 
-webrtc::AudioMixer::Source* ADM::CreateSystemSource() {
-  std::cout << "ADDD" << std::endl;
+rtc::scoped_refptr<CustomAudioSource>  ADM::CreateSystemSource() {
   auto system = new WavFileReader("./test3.wav", 44100, 1, true);
   auto th = std::thread([=] {
     while (true) {
@@ -63,25 +62,27 @@ webrtc::AudioMixer::Source* ADM::CreateSystemSource() {
     }
   });
   th.detach();
-  mixer->AddSource(system);
-  return system;
+  return nullptr;
 }
 
-webrtc::AudioMixer::Source* ADM::CreateMicroSource() {
-  audio_recorder.InitRecording();
-  audio_recorder.StartRecording();
-
-  auto microphone = audio_recorder.createSource();
-  mixer->AddSource(microphone);
+rtc::scoped_refptr<CustomAudioSource> ADM::CreateMicroSource() {
+  auto microphone = audio_recorder.CreateSource();
   return microphone;
 }
 
-void ADM::AddSource(webrtc::AudioMixer::Source* source) {
-  mixer->AddSource(source);
+void ADM::AddSource(rtc::scoped_refptr<CustomAudioSource>  source) {
+  sources.push_back(source);
+  mixer->AddSource(source.get());
 }
 
-void ADM::RemoveSource(webrtc::AudioMixer::Source* source) {
-  mixer->RemoveSource(source);
+void ADM::RemoveSource(rtc::scoped_refptr<CustomAudioSource>  source) {
+  for (int i =0; i<sources.size(); ++i) {
+    if (sources[i] == source) {
+      sources.erase(sources.begin() + i);
+      break;
+    }
+  }
+  mixer->RemoveSource(source.get());
 }
 
 int32_t ADM::MicrophoneVolumeIsAvailable(bool* available) {
@@ -147,8 +148,7 @@ rtc::scoped_refptr<ADM> ADM::CreateForTest(
 }
 
 ADM::ADM(AudioLayer audio_layer, webrtc::TaskQueueFactory* task_queue_factory)
-    : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory) {
-  audio_recorder.cb = GetAudioDeviceBuffer();
+    : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory), audio_recorder(GetAudioDeviceBuffer()) {
 }
 
 void ADM::RecordProcess() {
@@ -163,7 +163,6 @@ void ADM::RecordProcess() {
           cb->SetRecordingChannels(fr.num_channels());
           cb->SetRecordingSampleRate(fr.sample_rate_hz());
           cb->SetRecordedBuffer(fr.data(), fr.sample_rate_hz() / 100);
-          // cb->SetTypingStatus(da->KeyPressed());
           cb->DeliverRecordedData();
         }
       },
