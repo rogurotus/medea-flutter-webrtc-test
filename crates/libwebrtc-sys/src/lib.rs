@@ -191,7 +191,7 @@ impl TaskQueueFactory {
 }
 
 //todo
-pub struct CustomAudioSource(UniquePtr<webrtc::CustomSource>);
+pub struct CustomAudioSource(UniquePtr<webrtc::CustomAudioSource>);
 
 unsafe impl Send for webrtc::TaskQueueFactory {}
 unsafe impl Sync for webrtc::TaskQueueFactory {}
@@ -202,7 +202,7 @@ unsafe impl Sync for webrtc::TaskQueueFactory {}
 /// Backed by WebRTC's [Audio Device Module].
 ///
 /// [Audio Device Module]: https://tinyurl.com/doc-adm
-pub struct AudioDeviceModule(UniquePtr<webrtc::AudioDeviceModule>, UniquePtr<webrtc::SourceManagerr>);
+pub struct AudioDeviceModule(UniquePtr<webrtc::AudioDeviceModule>, UniquePtr<webrtc::AudioSourceManager>);
 
 impl AudioDeviceModule {
     /// Creates a new [`AudioDeviceModule`] for the given [`AudioLayer`].
@@ -502,11 +502,11 @@ impl AudioDeviceModule {
 unsafe impl Send for webrtc::AudioDeviceModule {}
 unsafe impl Sync for webrtc::AudioDeviceModule {}
 
-unsafe impl Send for webrtc::SourceManagerr {}
-unsafe impl Sync for webrtc::SourceManagerr {}
+unsafe impl Send for webrtc::AudioSourceManager {}
+unsafe impl Sync for webrtc::AudioSourceManager {}
 
-unsafe impl Send for webrtc::CustomSource {}
-unsafe impl Sync for webrtc::CustomSource {}
+unsafe impl Send for webrtc::CustomAudioSource {}
+unsafe impl Sync for webrtc::CustomAudioSource {}
 
 /// Representation of The Audio Processing Module, providing a collection of
 /// voice processing components designed for real-time communications software.

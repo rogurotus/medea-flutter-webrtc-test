@@ -33,6 +33,7 @@
 #include "pc/test/fake_video_track_source.h"
 #include "modules/audio_device/include/test_audio_device.h"
 #include "adm.h"
+#include "audio_source_manager_proxy.h"
 
 namespace bridge {
 
@@ -106,8 +107,9 @@ using MediaStreamTrackInterface =
     rtc::scoped_refptr<webrtc::MediaStreamTrackInterface>;
 
 using ADMm = rtc::scoped_refptr<ADM>;
-using SourceManagerr = SourceManager;
-using CustomSource = rtc::scoped_refptr<CustomAudioSource>;
+using CustomAudioSource = rtc::scoped_refptr<AudioSource>;
+using AudioSourceManager = ::AudioSourceManager;
+
 
 // Creates a new proxied `AudioDeviceModule` for the given `AudioLayer`.
 std::unique_ptr<AudioDeviceModule> create_audio_device_module(
@@ -127,12 +129,11 @@ std::unique_ptr<ADMm> create_audio_device_module_custom(
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory);
 
-std::unique_ptr<SourceManagerr> create_source_manager(const ADMm& adm, Thread& worker_thread);
 std::unique_ptr<AudioDeviceModule> adm_proxy_upcast(std::unique_ptr<ADMm> adm, Thread& worker_thread);
-std::unique_ptr<SourceManagerr> create_source_manager(const ADMm& adm, Thread& worker_thread);
-std::unique_ptr<CustomSource> create_source_micro(SourceManagerr& manager);
-void add_source_micro(SourceManagerr& manager, const CustomSource& source);
-void remove_source_micro(SourceManagerr& manager, const CustomSource& source);
+std::unique_ptr<AudioSourceManager> create_source_manager(const ADMm& adm, Thread& worker_thread);
+std::unique_ptr<CustomAudioSource> create_source_micro(AudioSourceManager& manager);
+void add_source_micro(AudioSourceManager& manager, const CustomAudioSource& source);
+void remove_source_micro(AudioSourceManager& manager, const CustomAudioSource& source);
 
 // Creates a new fake `AudioDeviceModule`.
 std::unique_ptr<AudioDeviceModule> create_fake_audio_device_module(

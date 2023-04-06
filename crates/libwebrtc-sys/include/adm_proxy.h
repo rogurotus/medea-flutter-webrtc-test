@@ -2,8 +2,6 @@
 
 #include "modules/audio_device/include/audio_device.h"
 #include "pc/proxy.h"
-#include "linux_micro.h"
-#include "adm.h"
 
 namespace webrtc {
 
@@ -78,41 +76,3 @@ PROXY_CONSTMETHOD0(int32_t, GetPlayoutUnderrunCount)
 END_PROXY_MAP(AudioDeviceModule)
 }  // namespace webrtc
 
-
-class SourceManagerProxy : SourceManager {
-  SourceManagerProxy(rtc::Thread* primary_thread, rtc::scoped_refptr<ADM> c) : adm(c), primary_thread_(primary_thread) {}
-  public:
-  static std::unique_ptr<SourceManager> Create( 
-      rtc::Thread* primary_thread, 
-      rtc::scoped_refptr<ADM> c) {
-         return std::unique_ptr<SourceManager>(new SourceManagerProxy(primary_thread, std::move(c)));
-      }
-
-  rtc::scoped_refptr<CustomAudioSource> CreateMicroSource() override {
-    TRACE_BOILERPLATE(CreateMicroSource);              
-    webrtc::MethodCall<SourceManager,  rtc::scoped_refptr<CustomAudioSource>> call(adm.get(), &SourceManager::CreateMicroSource); 
-    return call.Marshal(primary_thread_);
-  };
-
-  rtc::scoped_refptr<CustomAudioSource> CreateSystemSource() override {
-    TRACE_BOILERPLATE(CreateSystemSource);      
-    webrtc::MethodCall<SourceManager,  rtc::scoped_refptr<CustomAudioSource>> call(adm.get(), &SourceManager::CreateSystemSource); 
-    return call.Marshal(primary_thread_);
-  }
-
-  void AddSource(rtc::scoped_refptr<CustomAudioSource> source) override {
-    TRACE_BOILERPLATE(AddSource);
-    webrtc::MethodCall<SourceManager, void, rtc::scoped_refptr<CustomAudioSource>> call(adm.get(), &SourceManager::AddSource, std::move(source));
-    return call.Marshal(primary_thread_);  
-  }
-
-  void RemoveSource(rtc::scoped_refptr<CustomAudioSource> source) override {
-    TRACE_BOILERPLATE(RemoveSource);
-    webrtc::MethodCall<SourceManager, void, rtc::scoped_refptr<CustomAudioSource>> call(adm.get(), &SourceManager::RemoveSource, std::move(source));
-    return call.Marshal(primary_thread_);  
-  }
-
-  private:              
-  rtc::scoped_refptr<ADM> adm;                                               
-  rtc::Thread* primary_thread_;
-};

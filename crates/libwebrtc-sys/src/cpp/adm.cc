@@ -53,7 +53,7 @@ bool ADM::MicrophoneIsInitialized() const {
   return audio_recorder.MicrophoneIsInitialized();
 }
 
-rtc::scoped_refptr<CustomAudioSource>  ADM::CreateSystemSource() {
+rtc::scoped_refptr<AudioSource>  ADM::CreateSystemSource() {
   auto system = new WavFileReader("./test3.wav", 44100, 1, true);
   auto th = std::thread([=] {
     while (true) {
@@ -65,17 +65,17 @@ rtc::scoped_refptr<CustomAudioSource>  ADM::CreateSystemSource() {
   return nullptr;
 }
 
-rtc::scoped_refptr<CustomAudioSource> ADM::CreateMicroSource() {
+rtc::scoped_refptr<AudioSource> ADM::CreateMicroSource() {
   auto microphone = audio_recorder.CreateSource();
   return microphone;
 }
 
-void ADM::AddSource(rtc::scoped_refptr<CustomAudioSource>  source) {
+void ADM::AddSource(rtc::scoped_refptr<AudioSource>  source) {
   sources.push_back(source);
   mixer->AddSource(source.get());
 }
 
-void ADM::RemoveSource(rtc::scoped_refptr<CustomAudioSource>  source) {
+void ADM::RemoveSource(rtc::scoped_refptr<AudioSource>  source) {
   for (int i =0; i<sources.size(); ++i) {
     if (sources[i] == source) {
       sources.erase(sources.begin() + i);
@@ -156,13 +156,16 @@ void ADM::RecordProcess() {
       rtc::ThreadAttributes().SetPriority(rtc::ThreadPriority::kRealtime);
   _ptrThreadRec = rtc::PlatformThread::SpawnJoinable(
       [this] {
+        webrtc::AudioFrame frame;
         while (true) {
-          webrtc::AudioFrame fr;
-          mixer->Mix(1, &fr);
+          if (sources.size() == 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+          }
+          mixer->Mix(1, &frame);
           auto cb = GetAudioDeviceBuffer();
-          cb->SetRecordingChannels(fr.num_channels());
-          cb->SetRecordingSampleRate(fr.sample_rate_hz());
-          cb->SetRecordedBuffer(fr.data(), fr.sample_rate_hz() / 100);
+          cb->SetRecordingChannels(frame.num_channels());
+          cb->SetRecordingSampleRate(frame.sample_rate_hz());
+          cb->SetRecordedBuffer(frame.data(), frame.sample_rate_hz() / 100);
           cb->DeliverRecordedData();
         }
       },

@@ -2,7 +2,7 @@
 #include <iostream>
 
 webrtc::AudioMixer::Source::AudioFrameInfo
-CustomAudioSource::GetAudioFrameWithInfo(int sample_rate_hz,
+AudioSource::GetAudioFrameWithInfo(int sample_rate_hz,
                                          webrtc::AudioFrame* audio_frame) {
   mutex_.Lock();
   auto* source = frame.data();
@@ -23,7 +23,7 @@ CustomAudioSource::GetAudioFrameWithInfo(int sample_rate_hz,
   return webrtc::AudioMixer::Source::AudioFrameInfo::kNormal;
 };
 
-void CustomAudioSource::UpdateFrame(const int16_t* source,
+void AudioSource::UpdateFrame(const int16_t* source,
                                     int size,
                                     int sample_rate) {
   frame.UpdateFrame(0, source, size, sample_rate,
@@ -33,12 +33,12 @@ void CustomAudioSource::UpdateFrame(const int16_t* source,
 }
 
 // A way for a mixer implementation to distinguish participants.
-int CustomAudioSource::Ssrc() const {
+int AudioSource::Ssrc() const {
   return -1;
 };
 
 // A way for this source to say that GetAudioFrameWithInfo called
 // with this sample rate or higher will not cause quality loss.
-int CustomAudioSource::PreferredSampleRate() const {
+int AudioSource::PreferredSampleRate() const {
   return frame.sample_rate_hz();
 };

@@ -6,12 +6,12 @@
 #include "common_audio/resampler/include/push_resampler.h"
 #include "rtc_base/synchronization/mutex.h"
 
-class RefCountedSource : public webrtc::AudioMixer::Source, public rtc::RefCountInterface {};
+class RefCountedAudioSource : public webrtc::AudioMixer::Source, public rtc::RefCountInterface {};
 
-class CustomAudioSource : public rtc::RefCountedObject<RefCountedSource> {
+class AudioSource : public rtc::RefCountedObject<RefCountedAudioSource> {
   public:
 
-  CustomAudioSource() {}
+  AudioSource() {}
 
   webrtc::AudioMixer::Source::AudioFrameInfo GetAudioFrameWithInfo(
       int sample_rate_hz,

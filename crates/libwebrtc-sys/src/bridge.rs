@@ -1220,15 +1220,15 @@ pub(crate) mod webrtc {
         pub type AudioDeviceModule;
         pub type ADMm;
         pub type AudioLayer;
-        pub type SourceManagerr;
-        pub type CustomSource;
+        pub type AudioSourceManager;
+        pub type CustomAudioSource;
 
-        pub fn create_source_manager(adm: &ADMm, worker_thread: Pin<&mut Thread>) -> UniquePtr<SourceManagerr>;
+        pub fn create_source_manager(adm: &ADMm, worker_thread: Pin<&mut Thread>) -> UniquePtr<AudioSourceManager>;
         pub fn adm_proxy_upcast(adm: UniquePtr<ADMm>, worker_thread: Pin<&mut Thread>) -> UniquePtr<AudioDeviceModule>;
 
-        pub fn create_source_micro(manager: Pin<&mut SourceManagerr>) -> UniquePtr<CustomSource>;
-        pub fn add_source_micro(manager: Pin<&mut SourceManagerr>, source: &CustomSource);
-        pub fn remove_source_micro(manager: Pin<&mut SourceManagerr>, source: &CustomSource);
+        pub fn create_source_micro(manager: Pin<&mut AudioSourceManager>) -> UniquePtr<CustomAudioSource>;
+        pub fn add_source_micro(manager: Pin<&mut AudioSourceManager>, source: &CustomAudioSource);
+        pub fn remove_source_micro(manager: Pin<&mut AudioSourceManager>, source: &CustomAudioSource);
 
 
         /// Creates a new [`AudioDeviceModule`] for the given [`AudioLayer`].

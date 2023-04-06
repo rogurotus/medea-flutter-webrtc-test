@@ -361,14 +361,14 @@ void MicrophoneModule::PaUnLock() {
   LATE(pa_threaded_mainloop_unlock)(_paMainloop);
 }
 
-rtc::scoped_refptr<CustomAudioSource> MicrophoneModule::CreateSource() {
+rtc::scoped_refptr<AudioSource> MicrophoneModule::CreateSource() {
   if (!_recording) {
     InitRecording();
     StartRecording();
   }
 
   if (!source) {
-    source = rtc::scoped_refptr<CustomAudioSource>(new CustomAudioSource());
+    source = rtc::scoped_refptr<AudioSource>(new AudioSource());
   }
   return source;
 }
