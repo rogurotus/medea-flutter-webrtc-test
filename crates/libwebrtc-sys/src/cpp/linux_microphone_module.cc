@@ -1,7 +1,5 @@
 #include "linux_microphone_module.h"
 
-// todo
-#include <iostream>
 #include "api/make_ref_counted.h"
 
 WebRTCPulseSymbolTable* _GetPulseSymbolTable() {
@@ -23,9 +21,33 @@ void MicrophoneModule::PaServerInfoCallback(pa_context* c,
   static_cast<MicrophoneModule*>(pThis)->PaServerInfoCallbackHandler(i);
 }
 
+int MicrophoneSource::sources_num = 0;
+MicrophoneSource::MicrophoneSource(MicrophoneModule* module) {
+  this->module = module;
+  if (sources_num == 0) {
+    module->StartRecording();
+  }
+  ++sources_num;
+}
+
+MicrophoneSource::~MicrophoneSource() {
+  --sources_num;
+  if (sources_num == 0) {
+    module->ResetSource();
+    module->StopRecording();
+  }
+}
+
+
 int32_t MicrophoneModule::RecordingChannels() {
   return _recChannels;
 }
+
+  void MicrophoneModule::ResetSource() {
+      webrtc::MutexLock lock(&mutex_);
+      source = nullptr;
+  }
+
 
 void MicrophoneModule::PaServerInfoCallbackHandler(const pa_server_info* i) {
   // Use PA native sampling rate
@@ -287,9 +309,7 @@ int32_t MicrophoneModule::Init() {
   _ptrThreadRec = rtc::PlatformThread::SpawnJoinable(
       [this] {
         while (RecThreadProcess()) {
-        }
-      std::cout << "BOOM222" << std::endl;
-        
+        }        
       },
       "webrtc_audio_module_rec_thread", attributes);
 
@@ -422,13 +442,14 @@ void MicrophoneModule::PaUnLock() {
 rtc::scoped_refptr<AudioSource> MicrophoneModule::CreateSource() {
   if (!_recording) {
     InitRecording();
-    StartRecording();
   }
 
   if (!source) {
-    source = rtc::scoped_refptr<AudioSource>(new AudioSource());
+    source = rtc::scoped_refptr<MicrophoneSource>(new MicrophoneSource(this));
   }
-  return source;
+  auto result = source;
+  source->Release();
+  return result;
 }
 
 int32_t MicrophoneModule::StopRecording() {
@@ -1038,6 +1059,8 @@ int32_t MicrophoneModule::StereoRecording(bool& enabled) const {
 
 int32_t MicrophoneModule::SetRecordingDevice(uint16_t index) {
   // RTC_DCHECK(thread_checker_.IsCurrent());
+  auto start = _recIsInitialized;
+  StopRecording();
   if (_recIsInitialized) {
     return -1;
   }
@@ -1056,6 +1079,10 @@ int32_t MicrophoneModule::SetRecordingDevice(uint16_t index) {
   _inputDeviceIndex = index;
   _inputDeviceIsSpecified = true;
 
+  if (start) {
+    InitRecording();
+    StartRecording();
+  }
   return 0;
 }
 
@@ -1076,13 +1103,12 @@ int32_t MicrophoneModule::ProcessRecordedData(int8_t* bufferData,
   // Deliver recorded samples at specified sample rate,
   // mic level etc. to the observer using callback.
   cb->SetVQEData(_sndCardPlayDelay, recDelay);
-  mutex_.Unlock();
+
   if (source != nullptr) {
     source->UpdateFrame((const int16_t*)bufferData, bufferSizeInSamples,
                         sample_rate_hz_);
   }
 
-  mutex_.Lock();
 
   // We have been unlocked - check the flag again.
   if (!_recording) {
@@ -1161,7 +1187,6 @@ int32_t MicrophoneModule::MicrophoneVolumeIsAvailable(bool* available) {
   if (!wasInitialized && InitMicrophone() == -1) {
     // If we end up here it means that the selected microphone has no
     // volume control.
-    std::cout << "AVA" << std::endl;
     *available = false;
     return 0;
   }

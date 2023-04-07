@@ -54,7 +54,6 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   CustomAudioDeviceModule(AudioLayer audio_layer, webrtc::TaskQueueFactory* task_queue_factory);
   ~CustomAudioDeviceModule();
 
-  int32_t StartRecording() override;
 
   static rtc::scoped_refptr<CustomAudioDeviceModule> Create(
       AudioLayer audio_layer,
@@ -70,7 +69,7 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   // Main initializaton and termination
   int32_t Init() override;
   int32_t Terminate();
-  int32_t SetRecordingDevice(uint16_t index) override ;
+  int32_t SetRecordingDevice(uint16_t index) override;
   int32_t InitMicrophone() override;
   bool MicrophoneIsInitialized() const override;
 
@@ -91,12 +90,16 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   int32_t SetMicrophoneMute(bool enable) override;
   int32_t MicrophoneMute(bool* enabled) const override;
 
-  
+  // Mixes `AudioSource` to send.
   rtc::scoped_refptr<webrtc::AudioMixerImpl> mixer = webrtc::AudioMixerImpl::Create();
-  std::vector<rtc::scoped_refptr<AudioSource>> sources;
 
+  // `AudioSource` for mixing.
+  std::vector<rtc::scoped_refptr<AudioSource>> sources;
   std::mutex source_mutex;
+  
+  // Audio capture module.
   MicrophoneModule audio_recorder;
+
   rtc::PlatformThread ptrThreadRec;
   std::condition_variable cv;
   bool quit = false;

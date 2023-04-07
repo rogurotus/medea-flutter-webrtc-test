@@ -39,10 +39,6 @@ CustomAudioDeviceModule::~CustomAudioDeviceModule() {
   Terminate();
 }
 
-// todo
-int32_t CustomAudioDeviceModule::StartRecording() {
-  return 0;
-};
 
 rtc::scoped_refptr<CustomAudioDeviceModule> CustomAudioDeviceModule::Create(
     AudioLayer audio_layer,
