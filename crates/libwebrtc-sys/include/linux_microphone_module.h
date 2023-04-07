@@ -10,10 +10,12 @@ class MicrophoneModule {
  public:
   rtc::scoped_refptr<AudioSource> CreateSource();
   MicrophoneModule(webrtc::AudioDeviceBuffer* buffer);
+  ~MicrophoneModule();
 
   int32_t StartRecording();
 
-  int Init();
+  int32_t Init();
+  int32_t Terminate();
   void PaLock();
   void PaUnLock();
   int32_t LatencyUsecs(pa_stream* stream);
@@ -76,6 +78,7 @@ class MicrophoneModule {
   int32_t MicrophoneMuteIsAvailable(bool* available);
   int32_t SetMicrophoneMute(bool enable);
   int32_t MicrophoneMute(bool* enabled) const;
+  int32_t RecordingChannels();
 
   private:
   rtc::scoped_refptr<AudioSource> source = nullptr;

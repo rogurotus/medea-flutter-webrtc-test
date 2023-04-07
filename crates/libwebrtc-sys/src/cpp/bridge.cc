@@ -106,44 +106,35 @@ std::unique_ptr<VideoTrackSourceInterface> create_device_video_source(
   return std::make_unique<VideoTrackSourceInterface>(src);
 }
 
-// webrtc::AudioDeviceModuleImplMy* temp;
 // Creates a new `AudioDeviceModuleProxy`.
 std::unique_ptr<AudioDeviceModule> create_audio_device_module(
     Thread& worker_thread,
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory) {
-      
-  ADMm adm = worker_thread.Invoke<ADMm>(
+  AudioDeviceModule adm = worker_thread.Invoke<AudioDeviceModule>(
       RTC_FROM_HERE, [audio_layer, &task_queue_factory] {
-        auto ab = ADM::Create(audio_layer, &task_queue_factory);        
-        // admm=da;
-        return ab;
+        return webrtc::AudioDeviceModule::Create(audio_layer,
+                                                 &task_queue_factory);
       });
 
   if (adm == nullptr) {
     return nullptr;
   }
 
-
-  std::unique_ptr<AudioSourceManager> pproxied =
-      AudioSourceManagerProxy::Create(&worker_thread, adm);
-
-  pproxied->CreateSystemSource();
-
   AudioDeviceModule proxied =
       webrtc::AudioDeviceModuleProxy::Create(&worker_thread, adm);
 
-
   return std::make_unique<AudioDeviceModule>(proxied);
-
 }
 
-std::unique_ptr<AudioSourceManager> create_source_manager(const ADMm& adm, Thread& worker_thread) {
+// Creates a new `AudioSourceManager` for the given `CustomAudioDeviceModule`.
+std::unique_ptr<AudioSourceManager> create_source_manager(const CustomAudioDeviceModule& adm, Thread& worker_thread) {
     auto a = AudioSourceManagerProxy::Create(&worker_thread, adm);
     return a;
 }
 
-std::unique_ptr<AudioDeviceModule> adm_proxy_upcast(std::unique_ptr<ADMm> adm, Thread& worker_thread) {
+// Creates a new proxied `AudioDeviceModule` from the provided `CustomAudioDeviceModule`.
+std::unique_ptr<AudioDeviceModule> custom_audio_device_module_proxy_upcast(std::unique_ptr<CustomAudioDeviceModule> adm, Thread& worker_thread) {
 
     AudioDeviceModule admm = *adm.get();
     AudioDeviceModule proxied =
@@ -152,33 +143,37 @@ std::unique_ptr<AudioDeviceModule> adm_proxy_upcast(std::unique_ptr<ADMm> adm, T
   return std::make_unique<AudioDeviceModule>(proxied);
 }
 
-std::unique_ptr<CustomAudioSource> create_source_micro(AudioSourceManager& manager) {
-  return std::make_unique<CustomAudioSource>(manager.CreateMicroSource());
+// Creates a new `AudioSource` from microphone.
+std::unique_ptr<AudioSource> create_source_microphone(AudioSourceManager& manager) {
+  return std::make_unique<AudioSource>(manager.CreateMicrophoneSource());
 }
-void add_source_micro(AudioSourceManager& manager, const CustomAudioSource& source) {
+
+// Adds `AudioSource` to `AudioSourceManager`.
+void add_source(AudioSourceManager& manager, const AudioSource& source) {
   manager.AddSource(source);
 }
-void remove_source_micro(AudioSourceManager& manager, const CustomAudioSource& source) {
+
+// Removes `AudioSource` from `AudioSourceManager`.
+void remove_source(AudioSourceManager& manager, const AudioSource& source) {
   manager.RemoveSource(source);
 }
 
-std::unique_ptr<ADMm> create_audio_device_module_custom(
+// Creates a new `CustomAudioDeviceModule`.
+std::unique_ptr<CustomAudioDeviceModule> create_custom_audio_device_module(
   Thread& worker_thread,
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory) {
       
-  ADMm adm = worker_thread.Invoke<ADMm>(
+  CustomAudioDeviceModule adm = worker_thread.Invoke<CustomAudioDeviceModule>(
       RTC_FROM_HERE, [audio_layer, &task_queue_factory] {
-        auto ab = ADM::Create(audio_layer, &task_queue_factory);        
-        // admm=da;
-        return ab;
+        return ::CustomAudioDeviceModule::Create(audio_layer, &task_queue_factory);
       });
 
   if (adm == nullptr) {
     return nullptr;
   }
 
-  return std::make_unique<ADMm>(adm);
+  return std::make_unique<CustomAudioDeviceModule>(adm);
 }
 
 // Calls `AudioDeviceModule->Init()`.

@@ -1218,32 +1218,49 @@ pub(crate) mod webrtc {
 
     unsafe extern "C++" {
         pub type AudioDeviceModule;
-        pub type ADMm;
+        pub type CustomAudioDeviceModule;
         pub type AudioLayer;
         pub type AudioSourceManager;
-        pub type CustomAudioSource;
+        pub type AudioSource;
 
-        pub fn create_source_manager(adm: &ADMm, worker_thread: Pin<&mut Thread>) -> UniquePtr<AudioSourceManager>;
-        pub fn adm_proxy_upcast(adm: UniquePtr<ADMm>, worker_thread: Pin<&mut Thread>) -> UniquePtr<AudioDeviceModule>;
-
-        pub fn create_source_micro(manager: Pin<&mut AudioSourceManager>) -> UniquePtr<CustomAudioSource>;
-        pub fn add_source_micro(manager: Pin<&mut AudioSourceManager>, source: &CustomAudioSource);
-        pub fn remove_source_micro(manager: Pin<&mut AudioSourceManager>, source: &CustomAudioSource);
-
-
-        /// Creates a new [`AudioDeviceModule`] for the given [`AudioLayer`].
-        pub fn create_audio_device_module(
+        /// Creates a new [`AudioSourceManager`]
+        /// for the given [`CustomAudioDeviceModule`].
+        pub fn create_source_manager(
+            adm: &CustomAudioDeviceModule,
             worker_thread: Pin<&mut Thread>,
-            audio_layer: AudioLayer,
-            task_queue_factory: Pin<&mut TaskQueueFactory>,
+        ) -> UniquePtr<AudioSourceManager>;
+
+        /// Creates a new proxied [`AudioDeviceModule`]
+        /// from the provided [`CustomAudioDeviceModule`].
+        pub fn custom_audio_device_module_proxy_upcast(
+            adm: UniquePtr<CustomAudioDeviceModule>,
+            worker_thread: Pin<&mut Thread>,
         ) -> UniquePtr<AudioDeviceModule>;
 
-        pub fn create_audio_device_module_custom(
+        /// Creates a new [`AudioSource`] from microphone.
+        pub fn create_source_microphone(
+            manager: Pin<&mut AudioSourceManager>,
+        ) -> UniquePtr<AudioSource>;
+
+        /// Adds [`AudioSource`] to [`AudioSourceManager`].
+        pub fn add_source(
+            manager: Pin<&mut AudioSourceManager>,
+            source: &AudioSource,
+        );
+
+        /// Removes [`AudioSource`] to [`AudioSourceManager`].
+        pub fn remove_source(
+            manager: Pin<&mut AudioSourceManager>,
+            source: &AudioSource,
+        );
+
+        /// Creates a new [`CustomAudioDeviceModule`]
+        /// for the given [`AudioLayer`].
+        pub fn create_custom_audio_device_module(
             worker_thread: Pin<&mut Thread>,
             audio_layer: AudioLayer,
             task_queue_factory: Pin<&mut TaskQueueFactory>,
-        ) -> UniquePtr<ADMm>;
-
+        ) -> UniquePtr<CustomAudioDeviceModule>;
 
         /// Creates a new fake [`AudioDeviceModule`], that will not try to
         /// access real media devices, but will generate pulsed noise.

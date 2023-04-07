@@ -56,7 +56,9 @@ impl Webrtc {
                     if Arc::get_mut(&mut self.audio_source.as_mut().unwrap().0)
                         .is_some()
                     {
-                        self.audio_device_module.remove_source(&self.audio_source.as_ref().unwrap().1);
+                        self.audio_device_module.remove_source(
+                            &self.audio_source.as_ref().unwrap().1,
+                        );
                         self.audio_source.take();
                     }
                     return Err(err);
@@ -298,15 +300,14 @@ impl Webrtc {
             self.audio_device_module
                 .set_recording_device(device_id, device_index)?;
         }
-        
+
         let src = if let Some((src, _)) = self.audio_source.as_ref() {
             Arc::clone(src)
         } else {
             let src =
                 Arc::new(self.peer_connection_factory.create_audio_source()?);
             let source = self.audio_device_module.create_source();
-            // self.audio_device_module.add_source(&source);
-
+            self.audio_device_module.add_source(&source);
             self.audio_source.replace((Arc::clone(&src), source));
             src
         };
@@ -662,15 +663,15 @@ impl AudioDeviceModule {
         }
     }
 
-    pub fn create_source(&mut self) -> sys::CustomAudioSource {
+    pub fn create_source(&mut self) -> sys::AudioSource {
         self.inner.create_source()
     }
 
-    pub fn add_source(&mut self, source: &sys::CustomAudioSource) {
+    pub fn add_source(&mut self, source: &sys::AudioSource) {
         self.inner.add_source(source);
     }
 
-    pub fn remove_source(&mut self, source: &sys::CustomAudioSource) {
+    pub fn remove_source(&mut self, source: &sys::AudioSource) {
         self.inner.remove_source(source);
     }
 

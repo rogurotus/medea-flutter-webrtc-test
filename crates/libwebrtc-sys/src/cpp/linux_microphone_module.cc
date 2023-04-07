@@ -1,4 +1,4 @@
-#include "linux_micro.h"
+#include "linux_microphone_module.h"
 
 // todo
 #include <iostream>
@@ -21,6 +21,10 @@ void MicrophoneModule::PaServerInfoCallback(pa_context* c,
                                             const pa_server_info* i,
                                             void* pThis) {
   static_cast<MicrophoneModule*>(pThis)->PaServerInfoCallbackHandler(i);
+}
+
+int32_t MicrophoneModule::RecordingChannels() {
+  return _recChannels;
 }
 
 void MicrophoneModule::PaServerInfoCallbackHandler(const pa_server_info* i) {
@@ -253,7 +257,7 @@ int32_t MicrophoneModule::TerminatePulseAudio() {
   return 0;
 }
 
-int MicrophoneModule::Init() {
+int32_t MicrophoneModule::Init() {
   // RTC_DCHECK(thread_checker_.IsCurrent());
   if (_initialized) {
     return 0;
@@ -284,6 +288,8 @@ int MicrophoneModule::Init() {
       [this] {
         while (RecThreadProcess()) {
         }
+      std::cout << "BOOM222" << std::endl;
+        
       },
       "webrtc_audio_module_rec_thread", attributes);
 
@@ -292,10 +298,62 @@ int MicrophoneModule::Init() {
   return 0;
 }
 
-MicrophoneModule::MicrophoneModule(webrtc::AudioDeviceBuffer* buffer) : cb(buffer) {
+int32_t MicrophoneModule::Terminate() {
+  // RTC_DCHECK(thread_checker_.IsCurrent());
+  if (!_initialized) {
+    return 0;
+  }
+
+  {
+    webrtc::MutexLock lock(&mutex_);
+    quit_ = true;
+  }
+  _mixerManager.Close();
+
+  // RECORDING
+  _timeEventRec.Set();
+  _ptrThreadRec.Finalize();
+
+  // Terminate PulseAudio
+  if (TerminatePulseAudio() < 0) {
+    // RTC_LOG(LS_ERROR) << "failed to terminate PulseAudio";
+    return -1;
+  }
+
+#if defined(WEBRTC_USE_X11)
+  if (_XDisplay) {
+    XCloseDisplay(_XDisplay);
+    _XDisplay = NULL;
+  }
+#endif
+
+  _initialized = false;
+  _inputDeviceIsSpecified = false;
+
+  return 0;
+}
+
+MicrophoneModule::MicrophoneModule(webrtc::AudioDeviceBuffer* buffer)
+    : cb(buffer) {
 #if defined(WEBRTC_USE_X11)
   memset(_oldKeyState, 0, sizeof(_oldKeyState));
 #endif
+}
+
+MicrophoneModule::~MicrophoneModule() {
+  Terminate();
+  if (_recBuffer) {
+    delete[] _recBuffer;
+    _recBuffer = NULL;
+  }
+  if (_playDeviceName) {
+    delete[] _playDeviceName;
+    _playDeviceName = NULL;
+  }
+  if (_recDeviceName) {
+    delete[] _recDeviceName;
+    _recDeviceName = NULL;
+  }
 }
 
 void MicrophoneModule::PaSourceInfoCallback(pa_context* c,
@@ -1020,7 +1078,8 @@ int32_t MicrophoneModule::ProcessRecordedData(int8_t* bufferData,
   cb->SetVQEData(_sndCardPlayDelay, recDelay);
   mutex_.Unlock();
   if (source != nullptr) {
-    source->UpdateFrame((const int16_t*)bufferData, bufferSizeInSamples, sample_rate_hz_);
+    source->UpdateFrame((const int16_t*)bufferData, bufferSizeInSamples,
+                        sample_rate_hz_);
   }
 
   mutex_.Lock();
@@ -1195,7 +1254,7 @@ int32_t MicrophoneModule::SetMicrophoneMute(bool enable) {
 }
 
 int32_t MicrophoneModule::MicrophoneMute(bool* enabled) const {
-//   RTC_DCHECK(thread_checker_.IsCurrent());
+  //   RTC_DCHECK(thread_checker_.IsCurrent());
   bool muted(0);
   if (_mixerManager.MicrophoneMute(muted) == -1) {
     return -1;

@@ -33,28 +33,34 @@
 #include <X11/Xlib.h>
 #endif
 
-#include "linux_micro.h"
+#include "linux_microphone_module.h"
 
 
 class AudioSourceManager {
   public:
-  virtual rtc::scoped_refptr<AudioSource> CreateMicroSource() = 0;
+  // Creates a `AudioSource` from a microphone.
+  virtual rtc::scoped_refptr<AudioSource> CreateMicrophoneSource() = 0;
+  // Creates a `AudioSource` from a system audio.
   virtual rtc::scoped_refptr<AudioSource> CreateSystemSource() = 0;
+  // Adds `AudioSource` to `AudioSourceManager`.
   virtual void AddSource(rtc::scoped_refptr<AudioSource> source) = 0;
+  // Removes `AudioSource` to `AudioSourceManager`.
   virtual void RemoveSource(rtc::scoped_refptr<AudioSource> source) = 0;
 };
 
 
-class ADM : public webrtc::AudioDeviceModuleImpl, public AudioSourceManager {
+class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public AudioSourceManager {
  public:
-  ADM(AudioLayer audio_layer, webrtc::TaskQueueFactory* task_queue_factory);
+  CustomAudioDeviceModule(AudioLayer audio_layer, webrtc::TaskQueueFactory* task_queue_factory);
+  ~CustomAudioDeviceModule();
+
   int32_t StartRecording() override;
 
-  static rtc::scoped_refptr<ADM> Create(
+  static rtc::scoped_refptr<CustomAudioDeviceModule> Create(
       AudioLayer audio_layer,
       webrtc::TaskQueueFactory* task_queue_factory);
 
-  static rtc::scoped_refptr<ADM> CreateForTest(
+  static rtc::scoped_refptr<CustomAudioDeviceModule> CreateForTest(
       AudioLayer audio_layer,
       webrtc::TaskQueueFactory* task_queue_factory);
 
@@ -63,6 +69,7 @@ class ADM : public webrtc::AudioDeviceModuleImpl, public AudioSourceManager {
 
   // Main initializaton and termination
   int32_t Init() override;
+  int32_t Terminate();
   int32_t SetRecordingDevice(uint16_t index) override ;
   int32_t InitMicrophone() override;
   bool MicrophoneIsInitialized() const override;
@@ -74,7 +81,7 @@ class ADM : public webrtc::AudioDeviceModuleImpl, public AudioSourceManager {
   int32_t MaxMicrophoneVolume(uint32_t* maxVolume) const override;
   int32_t MinMicrophoneVolume(uint32_t* minVolume) const override;
 
-  rtc::scoped_refptr<AudioSource> CreateMicroSource() override;
+  rtc::scoped_refptr<AudioSource> CreateMicrophoneSource() override;
   rtc::scoped_refptr<AudioSource>  CreateSystemSource() override;
   void AddSource(rtc::scoped_refptr<AudioSource>  source) override;
   void RemoveSource(rtc::scoped_refptr<AudioSource>  source) override;
@@ -84,9 +91,13 @@ class ADM : public webrtc::AudioDeviceModuleImpl, public AudioSourceManager {
   int32_t SetMicrophoneMute(bool enable) override;
   int32_t MicrophoneMute(bool* enabled) const override;
 
+  
   rtc::scoped_refptr<webrtc::AudioMixerImpl> mixer = webrtc::AudioMixerImpl::Create();
   std::vector<rtc::scoped_refptr<AudioSource>> sources;
 
+  std::mutex source_mutex;
   MicrophoneModule audio_recorder;
-  rtc::PlatformThread _ptrThreadRec;
+  rtc::PlatformThread ptrThreadRec;
+  std::condition_variable cv;
+  bool quit = false;
 };

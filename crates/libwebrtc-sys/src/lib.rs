@@ -191,7 +191,7 @@ impl TaskQueueFactory {
 }
 
 //todo
-pub struct CustomAudioSource(UniquePtr<webrtc::CustomAudioSource>);
+pub struct AudioSource(UniquePtr<webrtc::AudioSource>);
 
 unsafe impl Send for webrtc::TaskQueueFactory {}
 unsafe impl Sync for webrtc::TaskQueueFactory {}
@@ -202,7 +202,10 @@ unsafe impl Sync for webrtc::TaskQueueFactory {}
 /// Backed by WebRTC's [Audio Device Module].
 ///
 /// [Audio Device Module]: https://tinyurl.com/doc-adm
-pub struct AudioDeviceModule(UniquePtr<webrtc::AudioDeviceModule>, UniquePtr<webrtc::AudioSourceManager>);
+pub struct AudioDeviceModule(
+    UniquePtr<webrtc::AudioDeviceModule>,
+    UniquePtr<webrtc::AudioSourceManager>,
+);
 
 impl AudioDeviceModule {
     /// Creates a new [`AudioDeviceModule`] for the given [`AudioLayer`].
@@ -214,18 +217,16 @@ impl AudioDeviceModule {
         audio_layer: AudioLayer,
         task_queue_factory: &mut TaskQueueFactory,
     ) -> anyhow::Result<Self> {
-        let adm = webrtc::create_audio_device_module_custom(
+        let adm = webrtc::create_custom_audio_device_module(
             worker_thread.0.pin_mut(),
             audio_layer,
             task_queue_factory.0.pin_mut(),
         );
 
-        let manager = webrtc::create_source_manager(
-            &adm,
-            worker_thread.0.pin_mut(),
-        );
+        let manager =
+            webrtc::create_source_manager(&adm, worker_thread.0.pin_mut());
 
-        let ptr = webrtc::adm_proxy_upcast(
+        let ptr = webrtc::custom_audio_device_module_proxy_upcast(
             adm,
             worker_thread.0.pin_mut(),
         );
@@ -233,15 +234,18 @@ impl AudioDeviceModule {
         if ptr.is_null() {
             bail!("`null` pointer returned from `AudioDeviceModule::Create()`");
         }
-        Ok(Self(ptr,manager))
+        Ok(Self(ptr, manager))
     }
 
     /// Creates a new fake [`AudioDeviceModule`], that will not try to access
     /// real media devices, but will generate pulsed noise.
     pub fn create_fake(task_queue_factory: &mut TaskQueueFactory) -> Self {
-        Self(webrtc::create_fake_audio_device_module(
-            task_queue_factory.0.pin_mut(),
-        ), UniquePtr::null())
+        Self(
+            webrtc::create_fake_audio_device_module(
+                task_queue_factory.0.pin_mut(),
+            ),
+            UniquePtr::null(),
+        )
     }
 
     /// Initializes the current [`AudioDeviceModule`].
@@ -253,17 +257,20 @@ impl AudioDeviceModule {
         Ok(())
     }
 
-    pub fn create_source(&mut self) -> CustomAudioSource {
-        let result = webrtc::create_source_micro(self.1.pin_mut());
-        CustomAudioSource(result)
+    /// Creates a new [`AudioSource`] from microphone.
+    pub fn create_source(&mut self) -> AudioSource {
+        let result = webrtc::create_source_microphone(self.1.pin_mut());
+        AudioSource(result)
     }
 
-    pub fn add_source(&mut self, source: &CustomAudioSource) {
-        webrtc::add_source_micro(self.1.pin_mut(), &source.0);
+    /// Adds [`AudioSource`] to [`webrtc::AudioSourceManager`].
+    pub fn add_source(&mut self, source: &AudioSource) {
+        webrtc::add_source(self.1.pin_mut(), &source.0);
     }
 
-    pub fn remove_source(&mut self, source: &CustomAudioSource) {
-        webrtc::remove_source_micro(self.1.pin_mut(), &source.0);
+    /// Removes [`AudioSource`] from [`webrtc::AudioSourceManager`].
+    pub fn remove_source(&mut self, source: &AudioSource) {
+        webrtc::remove_source(self.1.pin_mut(), &source.0);
     }
 
     /// Returns count of available audio playout devices.
@@ -505,8 +512,8 @@ unsafe impl Sync for webrtc::AudioDeviceModule {}
 unsafe impl Send for webrtc::AudioSourceManager {}
 unsafe impl Sync for webrtc::AudioSourceManager {}
 
-unsafe impl Send for webrtc::CustomAudioSource {}
-unsafe impl Sync for webrtc::CustomAudioSource {}
+unsafe impl Send for webrtc::AudioSource {}
+unsafe impl Sync for webrtc::AudioSource {}
 
 /// Representation of The Audio Processing Module, providing a collection of
 /// voice processing components designed for real-time communications software.

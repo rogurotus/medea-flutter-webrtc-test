@@ -5,6 +5,8 @@
 #include "api/media_stream_interface.h"
 #include "common_audio/resampler/include/push_resampler.h"
 #include "rtc_base/synchronization/mutex.h"
+#include <condition_variable>
+#include <mutex>
 
 class RefCountedAudioSource : public webrtc::AudioMixer::Source, public rtc::RefCountInterface {};
 
@@ -28,8 +30,11 @@ class AudioSource : public rtc::RefCountedObject<RefCountedAudioSource> {
   void UpdateFrame(const int16_t* source, int size, int sample_rate);
 
   private:
-  webrtc::AudioFrame frame;
-  webrtc::Mutex mutex_;
+  webrtc::AudioFrame frame_;
   webrtc::PushResampler<int16_t> render_resampler_;
   int16_t resample_buffer[webrtc::AudioFrame::kMaxDataSizeSamples];
+
+  std::mutex mutex_;
+  std::condition_variable cv_;
+  bool frame_available_ = false;
 };

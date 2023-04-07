@@ -106,8 +106,8 @@ using RtpReceiverInterface = rtc::scoped_refptr<webrtc::RtpReceiverInterface>;
 using MediaStreamTrackInterface =
     rtc::scoped_refptr<webrtc::MediaStreamTrackInterface>;
 
-using ADMm = rtc::scoped_refptr<ADM>;
-using CustomAudioSource = rtc::scoped_refptr<AudioSource>;
+using CustomAudioDeviceModule = rtc::scoped_refptr<::CustomAudioDeviceModule>;
+using AudioSource = rtc::scoped_refptr<::AudioSource>;
 using AudioSourceManager = ::AudioSourceManager;
 
 
@@ -117,23 +117,26 @@ std::unique_ptr<AudioDeviceModule> create_audio_device_module(
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory);
 
-// error: invalid conversion from 
-// ‘std::unique_ptr<SourceManager> (*)(const ADMm&, bridge::Thread&)’ 
-// {aka ‘std::unique_ptr<SourceManager> (*)(const rtc::scoped_refptr<ADM>&, rtc::Thread&)’} to 
-
-// ‘std::unique_ptr<SourceManager> (*)(const ADMm&, const std::unique_ptr<rtc::Thread>&)’ 
-// {aka ‘std::unique_ptr<SourceManager> (*)(const rtc::scoped_refptr<ADM>&, const std::unique_ptr<rtc::Thread>&)’}
-
-std::unique_ptr<ADMm> create_audio_device_module_custom(
+// Creates a new `CustomAudioDeviceModule` for the given `AudioLayer`.
+std::unique_ptr<CustomAudioDeviceModule> create_custom_audio_device_module(
     Thread& worker_thread,
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory);
 
-std::unique_ptr<AudioDeviceModule> adm_proxy_upcast(std::unique_ptr<ADMm> adm, Thread& worker_thread);
-std::unique_ptr<AudioSourceManager> create_source_manager(const ADMm& adm, Thread& worker_thread);
-std::unique_ptr<CustomAudioSource> create_source_micro(AudioSourceManager& manager);
-void add_source_micro(AudioSourceManager& manager, const CustomAudioSource& source);
-void remove_source_micro(AudioSourceManager& manager, const CustomAudioSource& source);
+// Creates a new proxied `AudioDeviceModule` from the provided `CustomAudioDeviceModule`.
+std::unique_ptr<AudioDeviceModule> custom_audio_device_module_proxy_upcast(std::unique_ptr<CustomAudioDeviceModule> adm, Thread& worker_thread);
+
+// Creates a new `AudioSourceManager` for the given `CustomAudioDeviceModule`.
+std::unique_ptr<AudioSourceManager> create_source_manager(const CustomAudioDeviceModule& adm, Thread& worker_thread);
+
+// Creates a new `AudioSource` from microphone.
+std::unique_ptr<AudioSource> create_source_microphone(AudioSourceManager& manager);
+
+// Adds `AudioSource` to `AudioSourceManager`.
+void add_source(AudioSourceManager& manager, const AudioSource& source);
+
+// Removes `AudioSource` from `AudioSourceManager`.
+void remove_source(AudioSourceManager& manager, const AudioSource& source);
 
 // Creates a new fake `AudioDeviceModule`.
 std::unique_ptr<AudioDeviceModule> create_fake_audio_device_module(
