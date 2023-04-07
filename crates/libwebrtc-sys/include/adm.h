@@ -14,8 +14,7 @@
 #include "modules/audio_device/audio_device_generic.h"
 #include "modules/audio_device/include/audio_device.h"
 #include "modules/audio_device/include/audio_device_defines.h"
-#include "modules/audio_device/linux/audio_mixer_manager_pulse_linux.h"
-#include "modules/audio_device/linux/pulseaudiosymboltable_linux.h"
+
 #include "rtc_base/event.h"
 #include "rtc_base/platform_thread.h"
 #include "rtc_base/synchronization/mutex.h"
@@ -33,8 +32,11 @@
 #include <X11/Xlib.h>
 #endif
 
-#include "linux_microphone_module.h"
+// #include "linux_microphone_module.h"
+#include "windows_microphone_module.h"
 
+// #include "modules/audio_device/linux/audio_mixer_manager_pulse_linux.h"
+// #include "modules/audio_device/linux/pulseaudiosymboltable_linux.h"
 
 class AudioSourceManager {
   public:
