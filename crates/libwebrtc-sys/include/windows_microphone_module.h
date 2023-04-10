@@ -1,47 +1,83 @@
 #pragma once
 
-WEBRTC_WINDOWS_CORE_AUDIO_BUILD
-
-#include "modules/audio_device/win/audio_device_core_win.h"
 #include "custom_audio.h"
+#include "modules/audio_device/win/audio_device_core_win.h"
+#include "rtc_base\win\scoped_com_initializer.h"
 
-namespace webrtc {
 class MicrophoneModule;
 
 class MicrophoneSource : public AudioSource {
-  public:
+ public:
   MicrophoneSource(MicrophoneModule* module);
 
-  private:
+ private:
   ~MicrophoneSource();
   MicrophoneModule* module;
   static int sources_num;
 };
 
-
 class MicrophoneModule {
  public:
+  int32_t _EnumerateEndpointDevicesAll(EDataFlow dataFlow) const;  //
+  void _TraceCOMError(HRESULT hr) const;                           //
 
-  int32_t Init();
-  int32_t SetRecordingDevice(int index);
-  int32_t InitMicrophone();
-  int32_t MicrophoneIsInitialized();
+  int32_t Init();                                                         //
+  int32_t InitMicrophone();                                               //
+  int32_t InitMicrophoneLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);    //
+  int16_t RecordingDevicesLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);  //
+
+  int32_t _GetListDevice(EDataFlow dir, int index, IMMDevice** ppDevice);  //
+  int32_t _RefreshDeviceList(EDataFlow dir);        //
+  int16_t _DeviceListCount(EDataFlow dir);          //
+
+  int32_t SetRecordingDevice(uint32_t index);  //
+  int32_t _GetDeviceName(IMMDevice* pDevice, LPWSTR pszBuffer, int bufferLen);//
+  int32_t _GetDefaultDeviceID(EDataFlow dir,
+                              ERole role,
+                              LPWSTR szBuffer,
+                              int bufferLen);
+
+  int16_t RecordingDevices(); //
+
+  void ResetSource();
+  virtual int32_t StopRecording();
+
+
+  DWORD DoCaptureThreadPollDMO(); //
+  DWORD InitCaptureThreadPriority(); //
+  static DWORD WINAPI WSAPICaptureThreadPollDMO(LPVOID context); //
+  int32_t StartRecording();
+  static DWORD WINAPI WSAPICaptureThread(LPVOID context);
+  DWORD DoCaptureThread();
+  void RevertCaptureThreadPriority();
+  virtual int32_t InitRecording() RTC_LOCKS_EXCLUDED(mutex_);
+  int32_t InitRecordingDMO();
+  int SetDMOProperties();
+  int SetBoolProperty(IPropertyStore* ptrPS,
+                      REFPROPERTYKEY key,
+                      VARIANT_BOOL value);
+  int32_t _GetDefaultDeviceIndex(EDataFlow dir, ERole role, int* index);
+
+  int SetVtI4Property(IPropertyStore* ptrPS, REFPROPERTYKEY key, LONG value);
+  int32_t _GetDeviceID(IMMDevice* pDevice, LPWSTR pszBuffer, int bufferLen);
+  int32_t _GetDefaultDevice(EDataFlow dir, ERole role, IMMDevice** ppDevice);
+
+
+  int32_t MicrophoneIsInitialized() const;
   int32_t MicrophoneVolumeIsAvailable(bool* available);
-  int32_t SetMicrophoneVolume(int volume);
-  int32_t MicrophoneVolume(int* volume);
-  int32_t MaxMicrophoneVolume(int* maxVolume);
-  int32_t MinMicrophoneVolume(int* minVolume);
+  int32_t SetMicrophoneVolume(uint32_t volume);
+  int32_t MicrophoneVolume(uint32_t* volume) const;
+  int32_t MaxMicrophoneVolume(uint32_t* maxVolume) const;
+  int32_t MinMicrophoneVolume(uint32_t* minVolume) const;
   int32_t MicrophoneMuteIsAvailable(bool* available);
   int32_t SetMicrophoneMute(bool enable);
-  int32_t MicrophoneMute(bool* enabled);
+  int32_t MicrophoneMute(bool* enabled) const;
   int32_t RecordingChannels();
   rtc::scoped_refptr<AudioSource> CreateSource();
-
   MicrophoneModule(webrtc::AudioDeviceBuffer* buffer);
   ~MicrophoneModule();
 
-  public:
-  
+ public:
   webrtc::ScopedCOMInitializer _comInit;
   webrtc::AudioDeviceBuffer* _ptrAudioBuffer;
   mutable webrtc::Mutex mutex_;
@@ -52,6 +88,12 @@ class MicrophoneModule {
   IMMDeviceCollection* _ptrCaptureCollection;
   IMMDevice* _ptrDeviceOut;
   IMMDevice* _ptrDeviceIn;
+
+  PAvRevertMmThreadCharacteristics _PAvRevertMmThreadCharacteristics;
+  PAvSetMmThreadCharacteristicsA _PAvSetMmThreadCharacteristicsA;
+  PAvSetMmThreadPriority _PAvSetMmThreadPriority;
+  HMODULE _avrtLibrary;
+  bool _winSupportAvrt;
 
   IAudioClient* _ptrClientOut;
   IAudioClient* _ptrClientIn;
@@ -113,8 +155,7 @@ class MicrophoneModule {
   uint16_t _inputDeviceIndex;
   uint16_t _outputDeviceIndex;
 
-  private:
+ private:
   rtc::scoped_refptr<MicrophoneSource> source = nullptr;
   webrtc::AudioDeviceBuffer* cb = nullptr;
 };
-}

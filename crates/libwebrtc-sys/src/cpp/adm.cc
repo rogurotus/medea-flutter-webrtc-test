@@ -17,7 +17,7 @@
 #include "common_audio/wav_file.h"
 #include "fake_source.h"
 #include "modules/audio_device/include/test_audio_device.h"
-#include "modules/audio_device/linux/latebindingsymboltable_linux.h"
+// #include "modules/audio_device/linux/latebindingsymboltable_linux.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/platform_thread.h"
@@ -33,6 +33,7 @@ int32_t CustomAudioDeviceModule::Init() {
 
 int32_t CustomAudioDeviceModule::Terminate() {
   quit = true;
+  return 0;
 }
 
 CustomAudioDeviceModule::~CustomAudioDeviceModule() {
@@ -60,14 +61,14 @@ bool CustomAudioDeviceModule::MicrophoneIsInitialized() const {
 }
 
 rtc::scoped_refptr<AudioSource> CustomAudioDeviceModule::CreateSystemSource() {
-  auto system = new WavFileReader("./test3.wav", 44100, 1, true);
-  auto th = std::thread([=] {
-    while (true) {
-      system->Capture(&(system->bufffer));
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-  });
-  th.detach();
+  // auto system = new WavFileReader("./test3.wav", 44100, 1, true);
+  // auto th = std::thread([=] {
+  //   while (true) {
+  //     system->Capture(&(system->bufffer));
+  //     std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  //   }
+  // });
+  // th.detach();
   return nullptr;
 }
 
