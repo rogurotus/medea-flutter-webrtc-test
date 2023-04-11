@@ -57,7 +57,6 @@ fn main() -> anyhow::Result<()> {
             .flag("-DWEBRTC_LINUX")
             .flag("-DWEBRTC_POSIX")
             .flag("-DWEBRTC_USE_X11")
-            .flag("-DWEBRTC_APM_DEBUG_DUMP=0")
             .flag("-std=c++17");
     }
     #[cfg(target_os = "macos")]

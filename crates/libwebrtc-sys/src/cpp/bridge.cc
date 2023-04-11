@@ -1,7 +1,6 @@
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <iostream>
 #include <chrono>
 #include <thread>
 
@@ -15,9 +14,9 @@
 namespace bridge {
  
 // Creates a new `TrackEventObserver`.
-TrackEventObserver::TrackEventObserver( 
+TrackEventObserver::TrackEventObserver(
     rust::Box<bridge::DynTrackEventCallback> cb)
-    : cb_(std::move(cb)){}; 
+    : cb_(std::move(cb)){};
 
 // Called when the `MediaStreamTrackInterface`, that this `TrackEventObserver`
 // is attached to, has its state changed.
@@ -379,9 +378,7 @@ std::unique_ptr<VideoTrackSourceInterface> create_display_video_source(
 std::unique_ptr<AudioSourceInterface> create_audio_source(
     const PeerConnectionFactoryInterface& peer_connection_factory) {
   
-  auto setting = cricket::AudioOptions();
-  // setting.echo_cancellation = false;
-  auto src =  peer_connection_factory->CreateAudioSource(setting);
+  auto src =  peer_connection_factory->CreateAudioSource(cricket::AudioOptions());
   if (src == nullptr) {
     return nullptr;
   }
@@ -539,7 +536,7 @@ std::unique_ptr<PeerConnectionFactoryInterface> create_peer_connection_factory(
       webrtc::CreateBuiltinAudioEncoderFactory(),
       webrtc::CreateBuiltinAudioDecoderFactory(),
       webrtc::CreateBuiltinVideoEncoderFactory(),
-      webrtc::CreateBuiltinVideoDecoderFactory(), nullptr, ap ? *ap : nullptr); 
+      webrtc::CreateBuiltinVideoDecoderFactory(), nullptr, ap ? *ap : nullptr);
 
   if (factory == nullptr) {
     return nullptr;
@@ -657,11 +654,11 @@ create_set_local_description_observer(
 }
 
 // Creates a new `SetRemoteDescriptionObserverInterface` from the provided
-// `bridge::DynSetDescriptionCallback`. 
+// `bridge::DynSetDescriptionCallback`.
 std::unique_ptr<SetRemoteDescriptionObserver>
 create_set_remote_description_observer(
     rust::Box<bridge::DynSetDescriptionCallback> cb) {
-  return std::make_unique<SetRemoteDescriptionObserver>(std::move(cb)); 
+  return std::make_unique<SetRemoteDescriptionObserver>(std::move(cb));
 }
 
 // Returns the `RtpExtension.uri` field value.

@@ -190,7 +190,8 @@ impl TaskQueueFactory {
     }
 }
 
-//todo
+/// Representation of a custom audio source, 
+/// used to mix and send an audio device module.
 pub struct AudioSource(UniquePtr<webrtc::AudioSource>);
 
 unsafe impl Send for webrtc::TaskQueueFactory {}
