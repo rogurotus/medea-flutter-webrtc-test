@@ -1,3 +1,4 @@
+// swiftformat:disable throwcapturing
 import Flutter
 
 /// Controller of a `MediaStreamTrack`.
@@ -67,12 +68,10 @@ class MediaStreamTrackController {
       self.track.stop()
       result(nil)
     case "clone":
-      // swiftformat:disable throwcapturing
       do {
         result(
           MediaStreamTrackController(
             messenger: self.messenger,
-            // swiftformat:disable throwcapturing
             track: try self.track.fork()
           )
           .asFlutterResult()
