@@ -1,3 +1,4 @@
+#if WEBRTC_LINUX
 
 #include "linux_microphone_module.h"
 #include "api/make_ref_counted.h"
@@ -1284,3 +1285,5 @@ int32_t MicrophoneModule::MicrophoneMute(bool* enabled) const {
   *enabled = muted;
   return 0;
 }
+
+#endif

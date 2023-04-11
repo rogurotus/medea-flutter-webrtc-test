@@ -8,6 +8,7 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#if WEBRTC_WIN
 #pragma warning(disable : 4995)  // name was marked as #pragma deprecated
 
 #if (_MSC_VER >= 1310) && (_MSC_VER < 1400)
@@ -2356,3 +2357,4 @@ int32_t MicrophoneModule::StopRecording() {
 }
 
 #endif WEBRTC_WINDOWS_CORE_AUDIO_BUILD
+#endif
