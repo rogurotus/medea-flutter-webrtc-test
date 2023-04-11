@@ -90,7 +90,6 @@ impl Webrtc {
                     if let MediaTrackSource::Local(src) = track.source {
                         if Arc::strong_count(&src) == 2 {
                             if let Some((_,s)) = self.audio_source.take() {
-                                println!("HERE DA DA");
                                 self.audio_device_module.remove_source(&s);
                             }
                             // TODO: We should make `AudioDeviceModule` to stop
