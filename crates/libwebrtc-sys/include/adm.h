@@ -43,7 +43,9 @@
 #include "windows_microphone_module.h"
 #endif
 
-
+#if defined(WEBRTC_MAC)
+#include "macos_microphone_module.h"
+#endif
 
 class AudioSourceManager {
   public:
