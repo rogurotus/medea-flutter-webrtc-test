@@ -378,8 +378,10 @@ std::unique_ptr<VideoTrackSourceInterface> create_display_video_source(
 // `AudioOptions`.
 std::unique_ptr<AudioSourceInterface> create_audio_source(
     const PeerConnectionFactoryInterface& peer_connection_factory) {
-      
-  auto src =  peer_connection_factory->CreateAudioSource(cricket::AudioOptions());
+  
+  auto setting = cricket::AudioOptions();
+  // setting.echo_cancellation = false;
+  auto src =  peer_connection_factory->CreateAudioSource(setting);
   if (src == nullptr) {
     return nullptr;
   }

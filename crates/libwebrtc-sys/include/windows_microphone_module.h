@@ -3,81 +3,78 @@
 #include "custom_audio.h"
 #include "modules/audio_device/win/audio_device_core_win.h"
 #include "rtc_base\win\scoped_com_initializer.h"
+#include "microphone_module.h"
 
-class MicrophoneModule;
-
-class MicrophoneSource : public AudioSource {
+class MicrophoneModule : public MicrophoneModuleInterface {
  public:
-  MicrophoneSource(MicrophoneModule* module);
 
- private:
-  ~MicrophoneSource();
-  MicrophoneModule* module;
-  static int sources_num;
-};
+  MicrophoneModule();
+  ~MicrophoneModule();
 
-class MicrophoneModule {
- public:
-  int32_t _EnumerateEndpointDevicesAll(EDataFlow dataFlow) const;  //
-  void _TraceCOMError(HRESULT hr) const;                           //
+  // MicrophoneModuleInterface
 
-  int32_t Init();                                                         //
-  int32_t InitMicrophone();                                               //
-  int32_t InitMicrophoneLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);    //
-  int16_t RecordingDevicesLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);  //
+  // Initialization and terminate.
+  int32_t Init();
+  int32_t Terminate();
+  int32_t InitMicrophone();
 
-  int32_t _GetListDevice(EDataFlow dir, int index, IMMDevice** ppDevice);  //
-  int32_t _RefreshDeviceList(EDataFlow dir);        //
-  int16_t _DeviceListCount(EDataFlow dir);          //
+  // Microphone control.
+  int32_t MicrophoneMuteIsAvailable(bool* available);
+  int32_t SetMicrophoneMute(bool enable);
+  int32_t MicrophoneMute(bool* enabled) const;
+  bool MicrophoneIsInitialized ();
+  int32_t MicrophoneVolumeIsAvailable(bool* available);
+  int32_t SetMicrophoneVolume(uint32_t volume);
+  int32_t MicrophoneVolume(uint32_t* volume) const;
+  int32_t MaxMicrophoneVolume(uint32_t* maxVolume) const;
+  int32_t MinMicrophoneVolume(uint32_t* minVolume) const;
 
-  int32_t SetRecordingDevice(uint32_t index);  //
-  int32_t _GetDeviceName(IMMDevice* pDevice, LPWSTR pszBuffer, int bufferLen);//
+  // Settings.
+  int32_t SetRecordingDevice(uint16_t index);
+
+  // Microphone source.
+  rtc::scoped_refptr<AudioSource> CreateSource();
+  void ResetSource();
+  int32_t StopRecording();
+  int32_t StartRecording();
+  int32_t RecordingChannels();
+
+  // END MicrophoneModuleInterface
+
+
+  private:
+  // Сopied from "audio_device_core_win.h"
+
+  int32_t _EnumerateEndpointDevicesAll(EDataFlow dataFlow) const; 
+  void _TraceCOMError(HRESULT hr) const;
+  int32_t InitMicrophoneLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_); 
+  int16_t RecordingDevicesLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_); 
+  int32_t _GetListDevice(EDataFlow dir, int index, IMMDevice** ppDevice);
+  int32_t _RefreshDeviceList(EDataFlow dir);
+  int16_t _DeviceListCount(EDataFlow dir);
+  int32_t _GetDeviceName(IMMDevice* pDevice, LPWSTR pszBuffer, int bufferLen);
   int32_t _GetDefaultDeviceID(EDataFlow dir,
                               ERole role,
                               LPWSTR szBuffer,
                               int bufferLen);
-
-  int16_t RecordingDevices(); //
-
-  void ResetSource();
-  virtual int32_t StopRecording();
-
-
-  DWORD DoCaptureThreadPollDMO(); //
-  DWORD InitCaptureThreadPriority(); //
-  static DWORD WINAPI WSAPICaptureThreadPollDMO(LPVOID context); //
-  int32_t StartRecording();
+  int16_t RecordingDevices(); 
+  DWORD DoCaptureThreadPollDMO();
+  DWORD InitCaptureThreadPriority();
+  static DWORD WINAPI WSAPICaptureThreadPollDMO(LPVOID context);
   static DWORD WINAPI WSAPICaptureThread(LPVOID context);
   DWORD DoCaptureThread();
   void RevertCaptureThreadPriority();
-  virtual int32_t InitRecording() RTC_LOCKS_EXCLUDED(mutex_);
+   int32_t InitRecording() RTC_LOCKS_EXCLUDED(mutex_);
   int32_t InitRecordingDMO();
   int SetDMOProperties();
   int SetBoolProperty(IPropertyStore* ptrPS,
                       REFPROPERTYKEY key,
                       VARIANT_BOOL value);
   int32_t _GetDefaultDeviceIndex(EDataFlow dir, ERole role, int* index);
-
   int SetVtI4Property(IPropertyStore* ptrPS, REFPROPERTYKEY key, LONG value);
   int32_t _GetDeviceID(IMMDevice* pDevice, LPWSTR pszBuffer, int bufferLen);
   int32_t _GetDefaultDevice(EDataFlow dir, ERole role, IMMDevice** ppDevice);
 
-
-  int32_t MicrophoneIsInitialized() const;
-  int32_t MicrophoneVolumeIsAvailable(bool* available);
-  int32_t SetMicrophoneVolume(uint32_t volume);
-  int32_t MicrophoneVolume(uint32_t* volume) const;
-  int32_t MaxMicrophoneVolume(uint32_t* maxVolume) const;
-  int32_t MinMicrophoneVolume(uint32_t* minVolume) const;
-  int32_t MicrophoneMuteIsAvailable(bool* available);
-  int32_t SetMicrophoneMute(bool enable);
-  int32_t MicrophoneMute(bool* enabled) const;
-  int32_t RecordingChannels();
-  rtc::scoped_refptr<AudioSource> CreateSource();
-  MicrophoneModule(webrtc::AudioDeviceBuffer* buffer);
-  ~MicrophoneModule();
-
- public:
   webrtc::ScopedCOMInitializer _comInit;
   webrtc::AudioDeviceBuffer* _ptrAudioBuffer;
   mutable webrtc::Mutex mutex_;
@@ -155,7 +152,5 @@ class MicrophoneModule {
   uint16_t _inputDeviceIndex;
   uint16_t _outputDeviceIndex;
 
- private:
-  rtc::scoped_refptr<MicrophoneSource> source = nullptr;
-  webrtc::AudioDeviceBuffer* cb = nullptr;
+  // END Сopied from "audio_device_core_win.h"
 };

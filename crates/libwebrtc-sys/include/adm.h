@@ -32,11 +32,18 @@
 #include <X11/Xlib.h>
 #endif
 
-// #include "linux_microphone_module.h"
-#include "windows_microphone_module.h"
+#include "microphone_module.h"
+#if defined(WEBRTC_LINUX)
+#include "modules/audio_device/linux/audio_mixer_manager_pulse_linux.h"
+#include "modules/audio_device/linux/pulseaudiosymboltable_linux.h"
+#include "linux_microphone_module.h"
+#endif
 
-// #include "modules/audio_device/linux/audio_mixer_manager_pulse_linux.h"
-// #include "modules/audio_device/linux/pulseaudiosymboltable_linux.h"
+#if defined(WEBRTC_WIN)
+#include "windows_microphone_module.h"
+#endif
+
+
 
 class AudioSourceManager {
   public:
@@ -65,29 +72,31 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
       AudioLayer audio_layer,
       webrtc::TaskQueueFactory* task_queue_factory);
 
-  //todo
+  // Mixes source and sends on.
   void RecordProcess();
 
-  // Main initializaton and termination
+  // Main initializaton and termination.
   int32_t Init() override;
   int32_t Terminate();
+  int32_t StartRecording() override;
   int32_t SetRecordingDevice(uint16_t index) override;
   int32_t InitMicrophone() override;
   bool MicrophoneIsInitialized() const override;
 
-  // Microphone volume controls
+  // Microphone volume controls.
   int32_t MicrophoneVolumeIsAvailable(bool* available)  override;
   int32_t SetMicrophoneVolume(uint32_t volume) override;
   int32_t MicrophoneVolume(uint32_t* volume) const override;
   int32_t MaxMicrophoneVolume(uint32_t* maxVolume) const override;
   int32_t MinMicrophoneVolume(uint32_t* minVolume) const override;
 
+  // AudioSourceManager interface.
   rtc::scoped_refptr<AudioSource> CreateMicrophoneSource() override;
   rtc::scoped_refptr<AudioSource>  CreateSystemSource() override;
   void AddSource(rtc::scoped_refptr<AudioSource>  source) override;
   void RemoveSource(rtc::scoped_refptr<AudioSource>  source) override;
 
-  // Microphone mute control
+  // Microphone mute control.
   int32_t MicrophoneMuteIsAvailable(bool* available) override;
   int32_t SetMicrophoneMute(bool enable) override;
   int32_t MicrophoneMute(bool* enabled) const override;
@@ -100,7 +109,7 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   std::mutex source_mutex;
   
   // Audio capture module.
-  MicrophoneModule audio_recorder;
+  std::unique_ptr<MicrophoneModuleInterface> audio_recorder;
 
   rtc::PlatformThread ptrThreadRec;
   std::condition_variable cv;

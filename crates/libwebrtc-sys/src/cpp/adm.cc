@@ -15,20 +15,17 @@
 #include "adm.h"
 #include "api/make_ref_counted.h"
 #include "common_audio/wav_file.h"
-#include "fake_source.h"
 #include "modules/audio_device/include/test_audio_device.h"
-// #include "modules/audio_device/linux/latebindingsymboltable_linux.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/platform_thread.h"
-
 
 // Main initializaton and termination
 int32_t CustomAudioDeviceModule::Init() {
   if (webrtc::AudioDeviceModuleImpl::Init() != 0) {
     return -1;
   }
-  return audio_recorder.Init();
+  return audio_recorder->Init();
 };
 
 int32_t CustomAudioDeviceModule::Terminate() {
@@ -40,7 +37,6 @@ CustomAudioDeviceModule::~CustomAudioDeviceModule() {
   Terminate();
 }
 
-
 rtc::scoped_refptr<CustomAudioDeviceModule> CustomAudioDeviceModule::Create(
     AudioLayer audio_layer,
     webrtc::TaskQueueFactory* task_queue_factory) {
@@ -49,31 +45,25 @@ rtc::scoped_refptr<CustomAudioDeviceModule> CustomAudioDeviceModule::Create(
 }
 
 int32_t CustomAudioDeviceModule::SetRecordingDevice(uint16_t index) {
-  return audio_recorder.SetRecordingDevice(index);
+  return audio_recorder->SetRecordingDevice(index);
 }
 
 int32_t CustomAudioDeviceModule::InitMicrophone() {
-  return audio_recorder.InitMicrophone();
+  return audio_recorder->InitMicrophone();
 }
 
 bool CustomAudioDeviceModule::MicrophoneIsInitialized() const {
-  return audio_recorder.MicrophoneIsInitialized();
+  return audio_recorder->MicrophoneIsInitialized();
 }
 
 rtc::scoped_refptr<AudioSource> CustomAudioDeviceModule::CreateSystemSource() {
-  // auto system = new WavFileReader("./test3.wav", 44100, 1, true);
-  // auto th = std::thread([=] {
-  //   while (true) {
-  //     system->Capture(&(system->bufffer));
-  //     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  //   }
-  // });
-  // th.detach();
+  // TODO
   return nullptr;
 }
 
-rtc::scoped_refptr<AudioSource> CustomAudioDeviceModule::CreateMicrophoneSource() {
-  auto microphone = audio_recorder.CreateSource();
+rtc::scoped_refptr<AudioSource>
+CustomAudioDeviceModule::CreateMicrophoneSource() {
+  auto microphone = audio_recorder->CreateSource();
   return microphone;
 }
 
@@ -102,32 +92,36 @@ void CustomAudioDeviceModule::RemoveSource(
 }
 
 int32_t CustomAudioDeviceModule::MicrophoneVolumeIsAvailable(bool* available) {
-  return audio_recorder.MicrophoneVolumeIsAvailable(available);
+  return audio_recorder->MicrophoneVolumeIsAvailable(available);
 }
 int32_t CustomAudioDeviceModule::SetMicrophoneVolume(uint32_t volume) {
-  return audio_recorder.SetMicrophoneVolume(volume);
+  return audio_recorder->SetMicrophoneVolume(volume);
 }
 int32_t CustomAudioDeviceModule::MicrophoneVolume(uint32_t* volume) const {
-  return audio_recorder.MicrophoneVolume(volume);
+  return audio_recorder->MicrophoneVolume(volume);
 }
 int32_t CustomAudioDeviceModule::MaxMicrophoneVolume(
     uint32_t* maxVolume) const {
-  return audio_recorder.MaxMicrophoneVolume(maxVolume);
+  return audio_recorder->MaxMicrophoneVolume(maxVolume);
 }
 int32_t CustomAudioDeviceModule::MinMicrophoneVolume(
     uint32_t* minVolume) const {
-  return audio_recorder.MinMicrophoneVolume(minVolume);
+  return audio_recorder->MinMicrophoneVolume(minVolume);
 }
 
 // Microphone mute control
 int32_t CustomAudioDeviceModule::MicrophoneMuteIsAvailable(bool* available) {
-  return audio_recorder.MicrophoneMuteIsAvailable(available);
+  return audio_recorder->MicrophoneMuteIsAvailable(available);
 }
 int32_t CustomAudioDeviceModule::SetMicrophoneMute(bool enable) {
-  return audio_recorder.SetMicrophoneMute(enable);
+  return audio_recorder->SetMicrophoneMute(enable);
 }
 int32_t CustomAudioDeviceModule::MicrophoneMute(bool* enabled) const {
-  return audio_recorder.MicrophoneMute(enabled);
+  return audio_recorder->MicrophoneMute(enabled);
+}
+
+int32_t CustomAudioDeviceModule::StartRecording() {
+  return 0;
 }
 
 // static
@@ -161,7 +155,6 @@ CustomAudioDeviceModule::CreateForTest(
     return nullptr;
   }
 
-  // todo
   audio_device->RecordProcess();
 
   return audio_device;
@@ -171,7 +164,9 @@ CustomAudioDeviceModule::CustomAudioDeviceModule(
     AudioLayer audio_layer,
     webrtc::TaskQueueFactory* task_queue_factory)
     : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory),
-      audio_recorder(GetAudioDeviceBuffer()) {}
+      audio_recorder(std::move(
+          std::unique_ptr<MicrophoneModuleInterface>(new MicrophoneModule()))) {
+}
 
 void CustomAudioDeviceModule::RecordProcess() {
   const auto attributes =
@@ -179,14 +174,14 @@ void CustomAudioDeviceModule::RecordProcess() {
   ptrThreadRec = rtc::PlatformThread::SpawnJoinable(
       [this] {
         webrtc::AudioFrame frame;
+        auto cb = GetAudioDeviceBuffer();
         while (!quit) {
           {
             std::unique_lock<std::mutex> lock(source_mutex);
             cv.wait(lock, [&]() { return sources.size() > 0; });
           }
 
-          mixer->Mix(audio_recorder.RecordingChannels(), &frame);
-          auto cb = GetAudioDeviceBuffer();
+          mixer->Mix(audio_recorder->RecordingChannels(), &frame);
           cb->SetRecordingChannels(frame.num_channels());
           cb->SetRecordingSampleRate(frame.sample_rate_hz());
           cb->SetRecordedBuffer(frame.data(), frame.sample_rate_hz() / 100);

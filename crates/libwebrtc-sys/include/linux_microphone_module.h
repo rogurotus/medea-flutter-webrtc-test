@@ -6,23 +6,10 @@
 typedef webrtc::adm_linux_pulse::PulseAudioSymbolTable WebRTCPulseSymbolTable;
 WebRTCPulseSymbolTable* _GetPulseSymbolTable();
 
-class MicrophoneModule;
-
-class MicrophoneSource : public AudioSource {
-  public:
-  MicrophoneSource(MicrophoneModule* module);
-
-  private:
-  ~MicrophoneSource();
-  MicrophoneModule* module;
-  static int sources_num;
-};
-
-
-class MicrophoneModule {
+class MicrophoneModule  : public MicrophoneModuleInterface {
  public:
   rtc::scoped_refptr<AudioSource> CreateSource();
-  MicrophoneModule(webrtc::AudioDeviceBuffer* buffer);
+  MicrophoneModule();
   ~MicrophoneModule();
 
   int32_t StartRecording();
@@ -140,5 +127,4 @@ class MicrophoneModule {
   char _oldKeyState[32];
   Display* _XDisplay;
   #endif
-  webrtc::AudioDeviceBuffer* cb = nullptr;
 };

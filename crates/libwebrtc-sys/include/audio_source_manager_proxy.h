@@ -9,24 +9,23 @@ class AudioSourceManagerProxy : AudioSourceManager {
       : adm(c), primary_thread_(primary_thread) {}
 
  public:
-  static std::unique_ptr<AudioSourceManager> Create(rtc::Thread* primary_thread,
-                                                    rtc::scoped_refptr<CustomAudioDeviceModule> c) {
+  static std::unique_ptr<AudioSourceManager> Create(
+      rtc::Thread* primary_thread,
+      rtc::scoped_refptr<CustomAudioDeviceModule> c) {
     return std::unique_ptr<AudioSourceManager>(
         new AudioSourceManagerProxy(primary_thread, std::move(c)));
   }
 
   rtc::scoped_refptr<AudioSource> CreateMicrophoneSource() override {
     TRACE_BOILERPLATE(CreateMicrophoneSource);
-    webrtc::MethodCall<AudioSourceManager,
-                       rtc::scoped_refptr<AudioSource>>
+    webrtc::MethodCall<AudioSourceManager, rtc::scoped_refptr<AudioSource>>
         call(adm.get(), &AudioSourceManager::CreateMicrophoneSource);
     return call.Marshal(primary_thread_);
   };
 
   rtc::scoped_refptr<AudioSource> CreateSystemSource() override {
     TRACE_BOILERPLATE(CreateSystemSource);
-    webrtc::MethodCall<AudioSourceManager,
-                       rtc::scoped_refptr<AudioSource>>
+    webrtc::MethodCall<AudioSourceManager, rtc::scoped_refptr<AudioSource>>
         call(adm.get(), &AudioSourceManager::CreateSystemSource);
     return call.Marshal(primary_thread_);
   }

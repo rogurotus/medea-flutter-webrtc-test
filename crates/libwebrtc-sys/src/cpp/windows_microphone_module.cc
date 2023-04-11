@@ -8,7 +8,6 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include <iostream>
 #pragma warning(disable : 4995)  // name was marked as #pragma deprecated
 
 #if (_MSC_VER >= 1310) && (_MSC_VER < 1400)
@@ -168,16 +167,523 @@ class MediaBufferImpl final : public IMediaBuffer {
   const DWORD _maxLength;
   LONG _refCount;
 };
-}
 }  // namespace
+}  // namespace webrtc
+
+
+int MicrophoneSource::sources_num = 0;
+MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
+  this->module = module;
+  if (sources_num == 0) {
+    module->StartRecording();
+  }
+  ++sources_num;
+}
+
+MicrophoneSource::~MicrophoneSource() {
+  --sources_num;
+  if (sources_num == 0) {
+    module->StopRecording();
+    module->ResetSource();
+  }
+}
+
+void MicrophoneModule::ResetSource() {
+  webrtc::MutexLock lock(&mutex_);
+  source = nullptr;
+}
+
+// ----------------------------------------------------------------------------
+//  SetRecordingDevice I (II)
+// ----------------------------------------------------------------------------
+
+int32_t MicrophoneModule::SetRecordingDevice(uint16_t index) {
+  bool start = _recIsInitialized;
+  StopRecording();
+
+  if (_recIsInitialized) {
+    return -1;
+  }
+
+  // Get current number of available capture endpoint devices and refresh the
+  // capture collection.
+  UINT nDevices = RecordingDevices();
+
+  if (index < 0 || index > (nDevices - 1)) {
+    RTC_LOG(LS_ERROR) << "device index is out of range [0," << (nDevices - 1)
+                      << "]";
+    return -1;
+  }
+
+  webrtc::MutexLock lock(&mutex_);
+
+  HRESULT hr(S_OK);
+
+  RTC_DCHECK(_ptrCaptureCollection);
+
+  // Select an endpoint capture device given the specified index
+  SAFE_RELEASE(_ptrDeviceIn);
+  hr = _ptrCaptureCollection->Item(index, &_ptrDeviceIn);
+  if (FAILED(hr)) {
+    _TraceCOMError(hr);
+    SAFE_RELEASE(_ptrDeviceIn);
+    return -1;
+  }
+
+  WCHAR szDeviceName[MAX_PATH];
+  const int bufferLen = sizeof(szDeviceName) / sizeof(szDeviceName)[0];
+
+  // Get the endpoint device's friendly-name
+  if (_GetDeviceName(_ptrDeviceIn, szDeviceName, bufferLen) == 0) {
+    RTC_LOG(LS_VERBOSE) << "friendly name: \"" << szDeviceName << "\"";
+  }
+
+  _usingInputDeviceIndex = true;
+  _inputDeviceIndex = index;
+
+  if (start) {
+    InitRecording();
+    StartRecording();
+  }
+  return 0;
+}
+
+int32_t MicrophoneModule::RecordingChannels() {
+  return _recChannels;
+}
+
+// ----------------------------------------------------------------------------
+//  DoCaptureThread
+// ----------------------------------------------------------------------------
+
+DWORD MicrophoneModule::DoCaptureThread() {
+  bool keepRecording = true;
+  HANDLE waitArray[2] = {_hShutdownCaptureEvent, _hCaptureSamplesReadyEvent};
+  HRESULT hr = S_OK;
+
+  LARGE_INTEGER t1;
+
+  BYTE* syncBuffer = NULL;
+  UINT32 syncBufIndex = 0;
+
+  _readSamples = 0;
+
+  // Initialize COM as MTA in this thread.
+  webrtc::ScopedCOMInitializer comInit(webrtc::ScopedCOMInitializer::kMTA);
+  if (!comInit.Succeeded()) {
+    RTC_LOG(LS_ERROR) << "failed to initialize COM in capture thread";
+    return 1;
+  }
+
+  hr = InitCaptureThreadPriority();
+  if (FAILED(hr)) {
+    return hr;
+  }
+
+  mutex_.Lock();
+
+  // Get size of capturing buffer (length is expressed as the number of audio
+  // frames the buffer can hold). This value is fixed during the capturing
+  // session.
+  //
+  UINT32 bufferLength = 0;
+  if (_ptrClientIn == NULL) {
+    RTC_LOG(LS_ERROR)
+        << "input state has been modified before capture loop starts.";
+    return 1;
+  }
+  hr = _ptrClientIn->GetBufferSize(&bufferLength);
+  EXIT_ON_ERROR(hr);
+  RTC_LOG(LS_VERBOSE) << "[CAPT] size of buffer       : " << bufferLength;
+
+  // Allocate memory for sync buffer.
+  // It is used for compensation between native 44.1 and internal 44.0 and
+  // for cases when the capture buffer is larger than 10ms.
+  //
+  const UINT32 syncBufferSize = 2 * (bufferLength * _recAudioFrameSize);
+  syncBuffer = new BYTE[syncBufferSize];
+  if (syncBuffer == NULL) {
+    return (DWORD)E_POINTER;
+  }
+  RTC_LOG(LS_VERBOSE) << "[CAPT] size of sync buffer  : " << syncBufferSize
+                      << " [bytes]";
+
+  // Get maximum latency for the current stream (will not change for the
+  // lifetime of the IAudioClient object).
+  //
+  REFERENCE_TIME latency;
+  _ptrClientIn->GetStreamLatency(&latency);
+  RTC_LOG(LS_VERBOSE) << "[CAPT] max stream latency   : " << (DWORD)latency
+                      << " (" << (double)(latency / 10000.0) << " ms)";
+
+  // Get the length of the periodic interval separating successive processing
+  // passes by the audio engine on the data in the endpoint buffer.
+  //
+  REFERENCE_TIME devPeriod = 0;
+  REFERENCE_TIME devPeriodMin = 0;
+  _ptrClientIn->GetDevicePeriod(&devPeriod, &devPeriodMin);
+  RTC_LOG(LS_VERBOSE) << "[CAPT] device period        : " << (DWORD)devPeriod
+                      << " (" << (double)(devPeriod / 10000.0) << " ms)";
+
+  double extraDelayMS = (double)((latency + devPeriod) / 10000.0);
+  RTC_LOG(LS_VERBOSE) << "[CAPT] extraDelayMS         : " << extraDelayMS;
+
+  double endpointBufferSizeMS =
+      10.0 * ((double)bufferLength / (double)_recBlockSize);
+  RTC_LOG(LS_VERBOSE) << "[CAPT] endpointBufferSizeMS : "
+                      << endpointBufferSizeMS;
+
+  // Start up the capturing stream.
+  //
+  hr = _ptrClientIn->Start();
+  EXIT_ON_ERROR(hr);
+
+  mutex_.Unlock();
+
+  // Set event which will ensure that the calling thread modifies the recording
+  // state to true.
+  //
+  SetEvent(_hCaptureStartedEvent);
+
+  // >> ---------------------------- THREAD LOOP ----------------------------
+
+  while (keepRecording) {
+    // Wait for a capture notification event or a shutdown event
+    DWORD waitResult = WaitForMultipleObjects(2, waitArray, FALSE, 500);
+    switch (waitResult) {
+      case WAIT_OBJECT_0 + 0:  // _hShutdownCaptureEvent
+        keepRecording = false;
+        break;
+      case WAIT_OBJECT_0 + 1:  // _hCaptureSamplesReadyEvent
+        break;
+      case WAIT_TIMEOUT:  // timeout notification
+        RTC_LOG(LS_WARNING) << "capture event timed out after 0.5 seconds";
+        goto Exit;
+      default:  // unexpected error
+        RTC_LOG(LS_WARNING) << "unknown wait termination on capture side";
+        goto Exit;
+    }
+
+    while (keepRecording) {
+      BYTE* pData = 0;
+      UINT32 framesAvailable = 0;
+      DWORD flags = 0;
+      UINT64 recTime = 0;
+      UINT64 recPos = 0;
+
+      mutex_.Lock();
+
+      // Sanity check to ensure that essential states are not modified
+      // during the unlocked period.
+      if (_ptrCaptureClient == NULL || _ptrClientIn == NULL) {
+        mutex_.Unlock();
+        RTC_LOG(LS_ERROR)
+            << "input state has been modified during unlocked period";
+        goto Exit;
+      }
+
+      //  Find out how much capture data is available
+      //
+      hr = _ptrCaptureClient->GetBuffer(
+          &pData,            // packet which is ready to be read by used
+          &framesAvailable,  // #frames in the captured packet (can be zero)
+          &flags,            // support flags (check)
+          &recPos,    // device position of first audio frame in data packet
+          &recTime);  // value of performance counter at the time of recording
+                      // the first audio frame
+
+      if (SUCCEEDED(hr)) {
+        if (AUDCLNT_S_BUFFER_EMPTY == hr) {
+          // Buffer was empty => start waiting for a new capture notification
+          // event
+          mutex_.Unlock();
+          break;
+        }
+
+        if (flags & AUDCLNT_BUFFERFLAGS_SILENT) {
+          // Treat all of the data in the packet as silence and ignore the
+          // actual data values.
+          RTC_LOG(LS_WARNING) << "AUDCLNT_BUFFERFLAGS_SILENT";
+          pData = NULL;
+        }
+
+        RTC_DCHECK_NE(framesAvailable, 0);
+
+        if (pData) {
+          CopyMemory(&syncBuffer[syncBufIndex * _recAudioFrameSize], pData,
+                     framesAvailable * _recAudioFrameSize);
+        } else {
+          ZeroMemory(&syncBuffer[syncBufIndex * _recAudioFrameSize],
+                     framesAvailable * _recAudioFrameSize);
+        }
+        RTC_DCHECK_GE(syncBufferSize, (syncBufIndex * _recAudioFrameSize) +
+                                          framesAvailable * _recAudioFrameSize);
+
+        // Release the capture buffer
+        //
+        hr = _ptrCaptureClient->ReleaseBuffer(framesAvailable);
+        EXIT_ON_ERROR(hr);
+
+        _readSamples += framesAvailable;
+        syncBufIndex += framesAvailable;
+
+        QueryPerformanceCounter(&t1);
+
+        // Get the current recording and playout delay.
+        uint32_t sndCardRecDelay =
+            (uint32_t)(((((UINT64)t1.QuadPart * _perfCounterFactor) - recTime) /
+                        10000) +
+                       (10 * syncBufIndex) / _recBlockSize - 10);
+        uint32_t sndCardPlayDelay = static_cast<uint32_t>(_sndCardPlayDelay);
+
+        while (syncBufIndex >= _recBlockSize) {
+          if (source) {
+            source->UpdateFrame((const int16_t*)syncBuffer, _recBlockSize,
+                                _recSampleRate, _recChannels);
+          }
+
+          // store remaining data which was not able to deliver as 10ms segment
+          MoveMemory(&syncBuffer[0],
+                     &syncBuffer[_recBlockSize * _recAudioFrameSize],
+                     (syncBufIndex - _recBlockSize) * _recAudioFrameSize);
+          syncBufIndex -= _recBlockSize;
+          sndCardRecDelay -= 10;
+        }
+      } else {
+        // If GetBuffer returns AUDCLNT_E_BUFFER_ERROR, the thread consuming the
+        // audio samples must wait for the next processing pass. The client
+        // might benefit from keeping a count of the failed GetBuffer calls. If
+        // GetBuffer returns this error repeatedly, the client can start a new
+        // processing loop after shutting down the current client by calling
+        // IAudioClient::Stop, IAudioClient::Reset, and releasing the audio
+        // client.
+        RTC_LOG(LS_ERROR) << "IAudioCaptureClient::GetBuffer returned"
+                             " AUDCLNT_E_BUFFER_ERROR, hr = 0x"
+                          << rtc::ToHex(hr);
+        goto Exit;
+      }
+
+      mutex_.Unlock();
+    }
+  }
+
+  // ---------------------------- THREAD LOOP ---------------------------- <<
+
+  if (_ptrClientIn) {
+    hr = _ptrClientIn->Stop();
+  }
+
+Exit:
+  if (FAILED(hr)) {
+    _ptrClientIn->Stop();
+    mutex_.Unlock();
+    _TraceCOMError(hr);
+  }
+
+  RevertCaptureThreadPriority();
+
+  mutex_.Lock();
+
+  if (keepRecording) {
+    if (_ptrClientIn != NULL) {
+      hr = _ptrClientIn->Stop();
+      if (FAILED(hr)) {
+        _TraceCOMError(hr);
+      }
+      hr = _ptrClientIn->Reset();
+      if (FAILED(hr)) {
+        _TraceCOMError(hr);
+      }
+    }
+
+    RTC_LOG(LS_ERROR)
+        << "Recording error: capturing thread has ended pre-maturely";
+  } else {
+    RTC_LOG(LS_VERBOSE) << "_Capturing thread is now terminated properly";
+  }
+
+  SAFE_RELEASE(_ptrClientIn);
+  SAFE_RELEASE(_ptrCaptureClient);
+
+  mutex_.Unlock();
+
+  if (syncBuffer) {
+    delete[] syncBuffer;
+  }
+
+  return (DWORD)hr;
+}
+
+
+rtc::scoped_refptr<AudioSource> MicrophoneModule::CreateSource() {
+  if (!_recording) {
+    InitRecording();
+  }
+
+  if (!source) {
+    source = rtc::scoped_refptr<MicrophoneSource>(new MicrophoneSource(this));
+  }
+  auto result = source;
+  source->Release();
+  return result;
+}
+
+DWORD MicrophoneModule::DoCaptureThreadPollDMO() {
+  RTC_DCHECK(_mediaBuffer);
+  bool keepRecording = true;
+
+  // Initialize COM as MTA in this thread.
+  webrtc::ScopedCOMInitializer comInit(webrtc::ScopedCOMInitializer::kMTA);
+  if (!comInit.Succeeded()) {
+    RTC_LOG(LS_ERROR) << "failed to initialize COM in polling DMO thread";
+    return 1;
+  }
+
+  HRESULT hr = InitCaptureThreadPriority();
+  if (FAILED(hr)) {
+    return hr;
+  }
+
+  // Set event which will ensure that the calling thread modifies the
+  // recording state to true.
+  SetEvent(_hCaptureStartedEvent);
+
+  // >> ---------------------------- THREAD LOOP ----------------------------
+  while (keepRecording) {
+    // Poll the DMO every 5 ms.
+    // (The same interval used in the Wave implementation.)
+    DWORD waitResult = WaitForSingleObject(_hShutdownCaptureEvent, 5);
+    switch (waitResult) {
+      case WAIT_OBJECT_0:  // _hShutdownCaptureEvent
+        keepRecording = false;
+        break;
+      case WAIT_TIMEOUT:  // timeout notification
+        break;
+      default:  // unexpected error
+        RTC_LOG(LS_WARNING) << "Unknown wait termination on capture side";
+        hr = -1;  // To signal an error callback.
+        keepRecording = false;
+        break;
+    }
+
+    while (keepRecording) {
+      webrtc::MutexLock lockScoped(&mutex_);
+
+      DWORD dwStatus = 0;
+      {
+        DMO_OUTPUT_DATA_BUFFER dmoBuffer = {0};
+        dmoBuffer.pBuffer = _mediaBuffer.get();
+        dmoBuffer.pBuffer->AddRef();
+
+        // Poll the DMO for AEC processed capture data. The DMO will
+        // copy available data to `dmoBuffer`, and should only return
+        // 10 ms frames. The value of `dwStatus` should be ignored.
+        hr = _dmo->ProcessOutput(0, 1, &dmoBuffer, &dwStatus);
+        SAFE_RELEASE(dmoBuffer.pBuffer);
+        dwStatus = dmoBuffer.dwStatus;
+      }
+      if (FAILED(hr)) {
+        _TraceCOMError(hr);
+        keepRecording = false;
+        RTC_DCHECK_NOTREACHED();
+        break;
+      }
+
+      ULONG bytesProduced = 0;
+      BYTE* data;
+      // Get a pointer to the data buffer. This should be valid until
+      // the next call to ProcessOutput.
+      hr = _mediaBuffer->GetBufferAndLength(&data, &bytesProduced);
+      if (FAILED(hr)) {
+        _TraceCOMError(hr);
+        keepRecording = false;
+        RTC_DCHECK_NOTREACHED();
+        break;
+      }
+
+      if (bytesProduced > 0) {
+        const int kSamplesProduced = bytesProduced / _recAudioFrameSize;
+        // TODO(andrew): verify that this is always satisfied. It might
+        // be that ProcessOutput will try to return more than 10 ms if
+        // we fail to call it frequently enough.
+        RTC_DCHECK_EQ(kSamplesProduced, static_cast<int>(_recBlockSize));
+        RTC_DCHECK_EQ(sizeof(BYTE), sizeof(int8_t));
+
+        if (source) {
+          source->UpdateFrame((const int16_t*)data, kSamplesProduced,
+                              _recSampleRate, _recChannels);
+        }
+
+        // mutex_.Unlock();  // Release lock while making the callback.
+        // _ptrAudioBuffer->DeliverRecordedData();
+        // mutex_.Lock();
+      }
+
+      // Reset length to indicate buffer availability.
+      hr = _mediaBuffer->SetLength(0);
+      if (FAILED(hr)) {
+        _TraceCOMError(hr);
+        keepRecording = false;
+        RTC_DCHECK_NOTREACHED();
+        break;
+      }
+
+      if (!(dwStatus & DMO_OUTPUT_DATA_BUFFERF_INCOMPLETE)) {
+        // The DMO cannot currently produce more data. This is the
+        // normal case; otherwise it means the DMO had more than 10 ms
+        // of data available and ProcessOutput should be called again.
+        break;
+      }
+    }
+  }
+}
 
 
 
+// ----------------------------------------------------------------------------
+//  Everything below has been copied unchanged from audio_device_core_win.сс
+// ----------------------------------------------------------------------------
 
-MicrophoneModule::MicrophoneModule(webrtc::AudioDeviceBuffer* buffer)
+
+
+// ----------------------------------------------------------------------------
+//  Terminate
+// ----------------------------------------------------------------------------
+
+int32_t MicrophoneModule::Terminate() {
+  webrtc::MutexLock lock(&mutex_);
+
+  if (!_initialized) {
+    return 0;
+  }
+
+  _initialized = false;
+  _speakerIsInitialized = false;
+  _microphoneIsInitialized = false;
+  _playing = false;
+  _recording = false;
+
+  SAFE_RELEASE(_ptrRenderCollection);
+  SAFE_RELEASE(_ptrCaptureCollection);
+  SAFE_RELEASE(_ptrDeviceOut);
+  SAFE_RELEASE(_ptrDeviceIn);
+  SAFE_RELEASE(_ptrClientOut);
+  SAFE_RELEASE(_ptrClientIn);
+  SAFE_RELEASE(_ptrRenderClient);
+  SAFE_RELEASE(_ptrCaptureClient);
+  SAFE_RELEASE(_ptrCaptureVolume);
+  SAFE_RELEASE(_ptrRenderSimpleVolume);
+
+  return 0;
+}
+
+// ----------------------------------------------------------------------------
+//  MicrophoneModule() - ctor
+// ----------------------------------------------------------------------------
+
+MicrophoneModule::MicrophoneModule()
     : _avrtLibrary(nullptr),
       _winSupportAvrt(false),
-      cb(buffer),
       _comInit(webrtc::ScopedCOMInitializer::kMTA),
       _ptrAudioBuffer(nullptr),
       _ptrEnumerator(nullptr),
@@ -319,8 +825,63 @@ MicrophoneModule::MicrophoneModule(webrtc::AudioDeviceBuffer* buffer)
   }
 }
 
-  MicrophoneModule::~MicrophoneModule() {}
+// ----------------------------------------------------------------------------
+//  MicrophoneModule() - dtor
+// ----------------------------------------------------------------------------
 
+MicrophoneModule::~MicrophoneModule() {
+  RTC_DLOG(LS_INFO) << __FUNCTION__ << " destroyed";
+
+  Terminate();
+
+  // The IMMDeviceEnumerator is created during construction. Must release
+  // it here and not in Terminate() since we don't recreate it in Init().
+  SAFE_RELEASE(_ptrEnumerator);
+
+  _ptrAudioBuffer = NULL;
+
+  if (NULL != _hRenderSamplesReadyEvent) {
+    CloseHandle(_hRenderSamplesReadyEvent);
+    _hRenderSamplesReadyEvent = NULL;
+  }
+
+  if (NULL != _hCaptureSamplesReadyEvent) {
+    CloseHandle(_hCaptureSamplesReadyEvent);
+    _hCaptureSamplesReadyEvent = NULL;
+  }
+
+  if (NULL != _hRenderStartedEvent) {
+    CloseHandle(_hRenderStartedEvent);
+    _hRenderStartedEvent = NULL;
+  }
+
+  if (NULL != _hCaptureStartedEvent) {
+    CloseHandle(_hCaptureStartedEvent);
+    _hCaptureStartedEvent = NULL;
+  }
+
+  if (NULL != _hShutdownRenderEvent) {
+    CloseHandle(_hShutdownRenderEvent);
+    _hShutdownRenderEvent = NULL;
+  }
+
+  if (NULL != _hShutdownCaptureEvent) {
+    CloseHandle(_hShutdownCaptureEvent);
+    _hShutdownCaptureEvent = NULL;
+  }
+
+  if (_avrtLibrary) {
+    BOOL freeOK = FreeLibrary(_avrtLibrary);
+    if (!freeOK) {
+      RTC_LOG(LS_WARNING)
+          << "AudioDeviceWindowsCore::~AudioDeviceWindowsCore()"
+             " failed to free the loaded Avrt DLL module correctly";
+    } else {
+      RTC_LOG(LS_WARNING) << "AudioDeviceWindowsCore::~AudioDeviceWindowsCore()"
+                             " the Avrt DLL module is now unloaded";
+    }
+  }
+}
 
 // ----------------------------------------------------------------------------
 //  _EnumerateEndpointDevicesAll
@@ -505,9 +1066,13 @@ Exit:
   return -1;
 }
 
+// ----------------------------------------------------------------------------
+//  Init
+// ----------------------------------------------------------------------------
 
-  int32_t MicrophoneModule::Init() {
-      webrtc::MutexLock lock(&mutex_);
+
+int32_t MicrophoneModule::Init() {
+  webrtc::MutexLock lock(&mutex_);
 
   if (_initialized) {
     return 0;
@@ -521,9 +1086,7 @@ Exit:
   _initialized = true;
 
   return 0;
-  }
-
-
+}
 
 // ----------------------------------------------------------------------------
 //  _TraceCOMError
@@ -556,11 +1119,15 @@ void MicrophoneModule::_TraceCOMError(HRESULT hr) const {
   RTC_LOG(LS_ERROR) << rtc::ToUtf8(buf);
 }
 
-  int32_t MicrophoneModule::InitMicrophone() 
-  {
-      webrtc::MutexLock lock(&mutex_);
+
+// ----------------------------------------------------------------------------
+//  InitMicrophone
+// ----------------------------------------------------------------------------
+
+int32_t MicrophoneModule::InitMicrophone() {
+  webrtc::MutexLock lock(&mutex_);
   return InitMicrophoneLocked();
-  }
+}
 
 int32_t MicrophoneModule::InitMicrophoneLocked() {
   if (_recording) {
@@ -570,7 +1137,6 @@ int32_t MicrophoneModule::InitMicrophoneLocked() {
   if (_ptrDeviceIn == NULL) {
     return -1;
   }
-
 
   if (_usingInputDeviceIndex) {
     int16_t nDevices = RecordingDevicesLocked();
@@ -621,8 +1187,8 @@ int32_t MicrophoneModule::InitMicrophoneLocked() {
 // ----------------------------------------------------------------------------
 
 int32_t MicrophoneModule::_GetListDevice(EDataFlow dir,
-                                               int index,
-                                               IMMDevice** ppDevice) {
+                                         int index,
+                                         IMMDevice** ppDevice) {
   HRESULT hr(S_OK);
 
   RTC_DCHECK(_ptrEnumerator);
@@ -716,7 +1282,6 @@ int32_t MicrophoneModule::_RefreshDeviceList(EDataFlow dir) {
   return 0;
 }
 
-
 // ----------------------------------------------------------------------------
 //  RecordingDevices
 // ----------------------------------------------------------------------------
@@ -739,8 +1304,8 @@ int16_t MicrophoneModule::RecordingDevicesLocked() {
 // ----------------------------------------------------------------------------
 
 int32_t MicrophoneModule::_GetDeviceName(IMMDevice* pDevice,
-                                               LPWSTR pszBuffer,
-                                               int bufferLen) {
+                                         LPWSTR pszBuffer,
+                                         int bufferLen) {
   RTC_DLOG(LS_VERBOSE) << __FUNCTION__;
 
   static const WCHAR szDefault[] = L"<Device not available>";
@@ -803,62 +1368,262 @@ int32_t MicrophoneModule::_GetDeviceName(IMMDevice* pDevice,
 
 
 // ----------------------------------------------------------------------------
-//  SetRecordingDevice I (II)
+//  MicrophoneIsInitialized
 // ----------------------------------------------------------------------------
-int32_t MicrophoneModule::SetRecordingDevice(uint32_t index) {
-  if (_recIsInitialized) {
-    return -1;
-  }
 
-  // Get current number of available capture endpoint devices and refresh the
-  // capture collection.
-  UINT nDevices = RecordingDevices();
+bool MicrophoneModule::MicrophoneIsInitialized() {
+  return (_microphoneIsInitialized);
+}
 
-  if (index < 0 || index > (nDevices - 1)) {
-    RTC_LOG(LS_ERROR) << "device index is out of range [0," << (nDevices - 1)
-                      << "]";
-    return -1;
-  }
+// ----------------------------------------------------------------------------
+//  MicrophoneVolumeIsAvailable
+// ----------------------------------------------------------------------------
 
+int32_t MicrophoneModule::MicrophoneVolumeIsAvailable(bool* available) {
   webrtc::MutexLock lock(&mutex_);
 
-  HRESULT hr(S_OK);
-
-  RTC_DCHECK(_ptrCaptureCollection);
-
-  // Select an endpoint capture device given the specified index
-  SAFE_RELEASE(_ptrDeviceIn);
-  hr = _ptrCaptureCollection->Item(index, &_ptrDeviceIn);
-  if (FAILED(hr)) {
-    _TraceCOMError(hr);
-    SAFE_RELEASE(_ptrDeviceIn);
+  if (_ptrDeviceIn == NULL) {
     return -1;
   }
 
-  WCHAR szDeviceName[MAX_PATH];
-  const int bufferLen = sizeof(szDeviceName) / sizeof(szDeviceName)[0];
+  HRESULT hr = S_OK;
+  IAudioEndpointVolume* pVolume = NULL;
 
-  // Get the endpoint device's friendly-name
-  if (_GetDeviceName(_ptrDeviceIn, szDeviceName, bufferLen) == 0) {
-    RTC_LOG(LS_VERBOSE) << "friendly name: \"" << szDeviceName << "\"";
+  hr = _ptrDeviceIn->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL,
+                              reinterpret_cast<void**>(&pVolume));
+  EXIT_ON_ERROR(hr);
+
+  float volume(0.0f);
+  hr = pVolume->GetMasterVolumeLevelScalar(&volume);
+  if (FAILED(hr)) {
+    *available = false;
+  }
+  *available = true;
+
+  SAFE_RELEASE(pVolume);
+  return 0;
+
+Exit:
+  _TraceCOMError(hr);
+  SAFE_RELEASE(pVolume);
+  return -1;
+}
+
+// ----------------------------------------------------------------------------
+//  SetMicrophoneVolume
+// ----------------------------------------------------------------------------
+
+int32_t MicrophoneModule::SetMicrophoneVolume(uint32_t volume) {
+  RTC_LOG(LS_VERBOSE) << "AudioDeviceWindowsCore::SetMicrophoneVolume(volume="
+                      << volume << ")";
+
+  {
+    webrtc::MutexLock lock(&mutex_);
+
+    if (!_microphoneIsInitialized) {
+      return -1;
+    }
+
+    if (_ptrDeviceIn == NULL) {
+      return -1;
+    }
   }
 
-  _usingInputDeviceIndex = true;
-  _inputDeviceIndex = index;
+  if (volume < static_cast<uint32_t>(webrtc::MIN_CORE_MICROPHONE_VOLUME) ||
+      volume > static_cast<uint32_t>(webrtc::MAX_CORE_MICROPHONE_VOLUME)) {
+    return -1;
+  }
+
+  HRESULT hr = S_OK;
+  // scale input volume to valid range (0.0 to 1.0)
+  const float fLevel =
+      static_cast<float>(volume) / webrtc::MAX_CORE_MICROPHONE_VOLUME;
+  volume_mutex_.Lock();
+  _ptrCaptureVolume->SetMasterVolumeLevelScalar(fLevel, NULL);
+  volume_mutex_.Unlock();
+  EXIT_ON_ERROR(hr);
+
+  return 0;
+
+Exit:
+  _TraceCOMError(hr);
+  return -1;
+}
+
+// ----------------------------------------------------------------------------
+//  MicrophoneVolume
+// ----------------------------------------------------------------------------
+
+int32_t MicrophoneModule::MicrophoneVolume(uint32_t* volume) const {
+  {
+    webrtc::MutexLock lock(&mutex_);
+
+    if (!_microphoneIsInitialized) {
+      return -1;
+    }
+
+    if (_ptrDeviceIn == NULL) {
+      return -1;
+    }
+  }
+
+  HRESULT hr = S_OK;
+  float fLevel(0.0f);
+  *volume = 0;
+  volume_mutex_.Lock();
+  hr = _ptrCaptureVolume->GetMasterVolumeLevelScalar(&fLevel);
+  volume_mutex_.Unlock();
+  EXIT_ON_ERROR(hr);
+
+  // scale input volume range [0.0,1.0] to valid output range
+  *volume = static_cast<uint32_t>(fLevel * webrtc::MAX_CORE_MICROPHONE_VOLUME);
+
+  return 0;
+
+Exit:
+  _TraceCOMError(hr);
+  return -1;
+}
+
+// ----------------------------------------------------------------------------
+//  MaxMicrophoneVolume
+//
+//  The internal range for Core Audio is 0.0 to 1.0, where 0.0 indicates
+//  silence and 1.0 indicates full volume (no attenuation).
+//  We add our (webrtc-internal) own max level to match the Wave API and
+//  how it is used today in VoE.
+// ----------------------------------------------------------------------------
+
+int32_t MicrophoneModule::MaxMicrophoneVolume(uint32_t* maxVolume) const {
+  RTC_DLOG(LS_VERBOSE) << __FUNCTION__;
+
+  if (!_microphoneIsInitialized) {
+    return -1;
+  }
+
+  *maxVolume = static_cast<uint32_t>(webrtc::MAX_CORE_MICROPHONE_VOLUME);
 
   return 0;
 }
 
-  int32_t MicrophoneModule::MicrophoneIsInitialized() const {return 0;}
-  int32_t MicrophoneModule::MicrophoneVolumeIsAvailable(bool* available) {return 0;}
-  int32_t MicrophoneModule::SetMicrophoneVolume(uint32_t volume) {return 0;}
-  int32_t MicrophoneModule::MicrophoneVolume(uint32_t* volume) const {return 0;}
-  int32_t MicrophoneModule::MaxMicrophoneVolume(uint32_t* maxVolume) const {return 0;}
-  int32_t MicrophoneModule::MinMicrophoneVolume(uint32_t* minVolume) const {return 0;}
-  int32_t MicrophoneModule::MicrophoneMuteIsAvailable(bool* available) {return 0;}
-  int32_t MicrophoneModule::SetMicrophoneMute(bool enable) {return 0;}
-  int32_t MicrophoneModule::MicrophoneMute(bool* enabled) const {return 0;}
-  int32_t MicrophoneModule::RecordingChannels() {return 1;}
+// ----------------------------------------------------------------------------
+//  MinMicrophoneVolume
+// ----------------------------------------------------------------------------
+
+int32_t MicrophoneModule::MinMicrophoneVolume(uint32_t* minVolume) const {
+  if (!_microphoneIsInitialized) {
+    return -1;
+  }
+
+  *minVolume = static_cast<uint32_t>(webrtc::MIN_CORE_MICROPHONE_VOLUME);
+
+  return 0;
+}
+
+// ----------------------------------------------------------------------------
+//  MicrophoneMuteIsAvailable
+// ----------------------------------------------------------------------------
+
+int32_t MicrophoneModule::MicrophoneMuteIsAvailable(bool* available) {
+  webrtc::MutexLock lock(&mutex_);
+
+  if (_ptrDeviceIn == NULL) {
+    return -1;
+  }
+
+  HRESULT hr = S_OK;
+  IAudioEndpointVolume* pVolume = NULL;
+
+  // Query the microphone system mute state.
+  hr = _ptrDeviceIn->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL,
+                              reinterpret_cast<void**>(&pVolume));
+  EXIT_ON_ERROR(hr);
+
+  BOOL mute;
+  hr = pVolume->GetMute(&mute);
+  if (FAILED(hr))
+    *available = false;
+  else
+    *available = true;
+
+  SAFE_RELEASE(pVolume);
+  return 0;
+
+Exit:
+  _TraceCOMError(hr);
+  SAFE_RELEASE(pVolume);
+  return -1;
+}
+
+// ----------------------------------------------------------------------------
+//  SetMicrophoneMute
+// ----------------------------------------------------------------------------
+
+int32_t MicrophoneModule::SetMicrophoneMute(bool enable) {
+  if (!_microphoneIsInitialized) {
+    return -1;
+  }
+
+  if (_ptrDeviceIn == NULL) {
+    return -1;
+  }
+
+  HRESULT hr = S_OK;
+  IAudioEndpointVolume* pVolume = NULL;
+
+  // Set the microphone system mute state.
+  hr = _ptrDeviceIn->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL,
+                              reinterpret_cast<void**>(&pVolume));
+  EXIT_ON_ERROR(hr);
+
+  const BOOL mute(enable);
+  hr = pVolume->SetMute(mute, NULL);
+  EXIT_ON_ERROR(hr);
+
+  SAFE_RELEASE(pVolume);
+  return 0;
+
+Exit:
+  _TraceCOMError(hr);
+  SAFE_RELEASE(pVolume);
+  return -1;
+}
+
+// ----------------------------------------------------------------------------
+//  MicrophoneMute
+// ----------------------------------------------------------------------------
+
+int32_t MicrophoneModule::MicrophoneMute(bool* enabled) const {
+  if (!_microphoneIsInitialized) {
+    return -1;
+  }
+
+  HRESULT hr = S_OK;
+  IAudioEndpointVolume* pVolume = NULL;
+
+  // Query the microphone system mute state.
+  hr = _ptrDeviceIn->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL,
+                              reinterpret_cast<void**>(&pVolume));
+  EXIT_ON_ERROR(hr);
+
+  BOOL mute;
+  hr = pVolume->GetMute(&mute);
+  EXIT_ON_ERROR(hr);
+
+  *enabled = (mute == TRUE) ? true : false;
+
+  SAFE_RELEASE(pVolume);
+  return 0;
+
+Exit:
+  _TraceCOMError(hr);
+  SAFE_RELEASE(pVolume);
+  return -1;
+}
+
+// ----------------------------------------------------------------------------
+//  InitCaptureThreadPriority
+// ----------------------------------------------------------------------------
 
 DWORD MicrophoneModule::InitCaptureThreadPriority() {
   _hMmTask = NULL;
@@ -888,287 +1653,8 @@ DWORD MicrophoneModule::InitCaptureThreadPriority() {
 }
 
 // ----------------------------------------------------------------------------
-//  DoCaptureThread
+//  RevertCaptureThreadPriority
 // ----------------------------------------------------------------------------
-
-DWORD MicrophoneModule::DoCaptureThread() {
-  bool keepRecording = true;
-  HANDLE waitArray[2] = {_hShutdownCaptureEvent, _hCaptureSamplesReadyEvent};
-  HRESULT hr = S_OK;
-
-  LARGE_INTEGER t1;
-
-  BYTE* syncBuffer = NULL;
-  UINT32 syncBufIndex = 0;
-
-  _readSamples = 0;
-
-  // Initialize COM as MTA in this thread.
-  webrtc::ScopedCOMInitializer comInit(webrtc::ScopedCOMInitializer::kMTA);
-  if (!comInit.Succeeded()) {
-    RTC_LOG(LS_ERROR) << "failed to initialize COM in capture thread";
-    return 1;
-  }
-
-  hr = InitCaptureThreadPriority();
-  if (FAILED(hr)) {
-    return hr;
-  }
-
-  mutex_.Lock();
-
-  // Get size of capturing buffer (length is expressed as the number of audio
-  // frames the buffer can hold). This value is fixed during the capturing
-  // session.
-  //
-  UINT32 bufferLength = 0;
-  if (_ptrClientIn == NULL) {
-    RTC_LOG(LS_ERROR)
-        << "input state has been modified before capture loop starts.";
-    return 1;
-  }
-  hr = _ptrClientIn->GetBufferSize(&bufferLength);
-  EXIT_ON_ERROR(hr);
-  RTC_LOG(LS_VERBOSE) << "[CAPT] size of buffer       : " << bufferLength;
-
-  // Allocate memory for sync buffer.
-  // It is used for compensation between native 44.1 and internal 44.0 and
-  // for cases when the capture buffer is larger than 10ms.
-  //
-  const UINT32 syncBufferSize = 2 * (bufferLength * _recAudioFrameSize);
-  syncBuffer = new BYTE[syncBufferSize];
-  if (syncBuffer == NULL) {
-    return (DWORD)E_POINTER;
-  }
-  RTC_LOG(LS_VERBOSE) << "[CAPT] size of sync buffer  : " << syncBufferSize
-                      << " [bytes]";
-
-  // Get maximum latency for the current stream (will not change for the
-  // lifetime of the IAudioClient object).
-  //
-  REFERENCE_TIME latency;
-  _ptrClientIn->GetStreamLatency(&latency);
-  RTC_LOG(LS_VERBOSE) << "[CAPT] max stream latency   : " << (DWORD)latency
-                      << " (" << (double)(latency / 10000.0) << " ms)";
-
-  // Get the length of the periodic interval separating successive processing
-  // passes by the audio engine on the data in the endpoint buffer.
-  //
-  REFERENCE_TIME devPeriod = 0;
-  REFERENCE_TIME devPeriodMin = 0;
-  _ptrClientIn->GetDevicePeriod(&devPeriod, &devPeriodMin);
-  RTC_LOG(LS_VERBOSE) << "[CAPT] device period        : " << (DWORD)devPeriod
-                      << " (" << (double)(devPeriod / 10000.0) << " ms)";
-
-  double extraDelayMS = (double)((latency + devPeriod) / 10000.0);
-  RTC_LOG(LS_VERBOSE) << "[CAPT] extraDelayMS         : " << extraDelayMS;
-
-  double endpointBufferSizeMS =
-      10.0 * ((double)bufferLength / (double)_recBlockSize);
-  RTC_LOG(LS_VERBOSE) << "[CAPT] endpointBufferSizeMS : "
-                      << endpointBufferSizeMS;
-
-  // Start up the capturing stream.
-  //
-  hr = _ptrClientIn->Start();
-  EXIT_ON_ERROR(hr);
-
-  mutex_.Unlock();
-
-  // Set event which will ensure that the calling thread modifies the recording
-  // state to true.
-  //
-  SetEvent(_hCaptureStartedEvent);
-
-  // >> ---------------------------- THREAD LOOP ----------------------------
-
-  while (keepRecording) {
-    // Wait for a capture notification event or a shutdown event
-    DWORD waitResult = WaitForMultipleObjects(2, waitArray, FALSE, 500);
-    switch (waitResult) {
-      case WAIT_OBJECT_0 + 0:  // _hShutdownCaptureEvent
-        keepRecording = false;
-        break;
-      case WAIT_OBJECT_0 + 1:  // _hCaptureSamplesReadyEvent
-        break;
-      case WAIT_TIMEOUT:  // timeout notification
-        RTC_LOG(LS_WARNING) << "capture event timed out after 0.5 seconds";
-        goto Exit;
-      default:  // unexpected error
-        RTC_LOG(LS_WARNING) << "unknown wait termination on capture side";
-        goto Exit;
-    }
-
-    while (keepRecording) {
-      BYTE* pData = 0;
-      UINT32 framesAvailable = 0;
-      DWORD flags = 0;
-      UINT64 recTime = 0;
-      UINT64 recPos = 0;
-
-      mutex_.Lock();
-
-      // Sanity check to ensure that essential states are not modified
-      // during the unlocked period.
-      if (_ptrCaptureClient == NULL || _ptrClientIn == NULL) {
-        mutex_.Unlock();
-        RTC_LOG(LS_ERROR)
-            << "input state has been modified during unlocked period";
-        goto Exit;
-      }
-
-      //  Find out how much capture data is available
-      //
-      hr = _ptrCaptureClient->GetBuffer(
-          &pData,            // packet which is ready to be read by used
-          &framesAvailable,  // #frames in the captured packet (can be zero)
-          &flags,            // support flags (check)
-          &recPos,    // device position of first audio frame in data packet
-          &recTime);  // value of performance counter at the time of recording
-                      // the first audio frame
-
-      if (SUCCEEDED(hr)) {
-        if (AUDCLNT_S_BUFFER_EMPTY == hr) {
-          // Buffer was empty => start waiting for a new capture notification
-          // event
-          mutex_.Unlock();
-          break;
-        }
-
-        if (flags & AUDCLNT_BUFFERFLAGS_SILENT) {
-          // Treat all of the data in the packet as silence and ignore the
-          // actual data values.
-          RTC_LOG(LS_WARNING) << "AUDCLNT_BUFFERFLAGS_SILENT";
-          pData = NULL;
-        }
-
-        RTC_DCHECK_NE(framesAvailable, 0);
-
-        if (pData) {
-          CopyMemory(&syncBuffer[syncBufIndex * _recAudioFrameSize], pData,
-                     framesAvailable * _recAudioFrameSize);
-        } else {
-          ZeroMemory(&syncBuffer[syncBufIndex * _recAudioFrameSize],
-                     framesAvailable * _recAudioFrameSize);
-        }
-        RTC_DCHECK_GE(syncBufferSize, (syncBufIndex * _recAudioFrameSize) +
-                                          framesAvailable * _recAudioFrameSize);
-
-        // Release the capture buffer
-        //
-        hr = _ptrCaptureClient->ReleaseBuffer(framesAvailable);
-        EXIT_ON_ERROR(hr);
-
-        _readSamples += framesAvailable;
-        syncBufIndex += framesAvailable;
-
-        QueryPerformanceCounter(&t1);
-
-        // Get the current recording and playout delay.
-        uint32_t sndCardRecDelay = (uint32_t)(
-            ((((UINT64)t1.QuadPart * _perfCounterFactor) - recTime) / 10000) +
-            (10 * syncBufIndex) / _recBlockSize - 10);
-        uint32_t sndCardPlayDelay = static_cast<uint32_t>(_sndCardPlayDelay);
-
-        while (syncBufIndex >= _recBlockSize) {
-          if (source) {
-            std::cout << _recSampleRate << " " << _recBlockSize << " " << sndCardPlayDelay << " " << sndCardRecDelay << " " << std::endl;
-                source->UpdateFrame((const int16_t*)syncBuffer, _recBlockSize,
-                        _recSampleRate);
-          }
-          if (_ptrAudioBuffer) {
-            // _ptrAudioBuffer->SetRecordedBuffer((const int8_t*)syncBuffer,
-            //                                    _recBlockSize);
-            // _ptrAudioBuffer->SetVQEData(sndCardPlayDelay, sndCardRecDelay);
-
-            // // _ptrAudioBuffer->SetTypingStatus(KeyPressed()); // todo
-
-            // mutex_.Unlock();  // release lock while making the callback
-            // _ptrAudioBuffer->DeliverRecordedData();
-            // mutex_.Lock();  // restore the lock
-
-            // // Sanity check to ensure that essential states are not modified
-            // // during the unlocked period
-            // if (_ptrCaptureClient == NULL || _ptrClientIn == NULL) {
-            //   mutex_.Unlock();
-            //   RTC_LOG(LS_ERROR) << "input state has been modified during"
-            //                        " unlocked period";
-            //   goto Exit;
-            // }
-          }
-
-          // store remaining data which was not able to deliver as 10ms segment
-          MoveMemory(&syncBuffer[0],
-                     &syncBuffer[_recBlockSize * _recAudioFrameSize],
-                     (syncBufIndex - _recBlockSize) * _recAudioFrameSize);
-          syncBufIndex -= _recBlockSize;
-          sndCardRecDelay -= 10;
-        }
-      } else {
-        // If GetBuffer returns AUDCLNT_E_BUFFER_ERROR, the thread consuming the
-        // audio samples must wait for the next processing pass. The client
-        // might benefit from keeping a count of the failed GetBuffer calls. If
-        // GetBuffer returns this error repeatedly, the client can start a new
-        // processing loop after shutting down the current client by calling
-        // IAudioClient::Stop, IAudioClient::Reset, and releasing the audio
-        // client.
-        RTC_LOG(LS_ERROR) << "IAudioCaptureClient::GetBuffer returned"
-                             " AUDCLNT_E_BUFFER_ERROR, hr = 0x"
-                          << rtc::ToHex(hr);
-        goto Exit;
-      }
-
-      mutex_.Unlock();
-    }
-  }
-
-  // ---------------------------- THREAD LOOP ---------------------------- <<
-
-  if (_ptrClientIn) {
-    hr = _ptrClientIn->Stop();
-  }
-
-Exit:
-  if (FAILED(hr)) {
-    _ptrClientIn->Stop();
-    mutex_.Unlock();
-    _TraceCOMError(hr);
-  }
-
-  RevertCaptureThreadPriority();
-
-  mutex_.Lock();
-
-  if (keepRecording) {
-    if (_ptrClientIn != NULL) {
-      hr = _ptrClientIn->Stop();
-      if (FAILED(hr)) {
-        _TraceCOMError(hr);
-      }
-      hr = _ptrClientIn->Reset();
-      if (FAILED(hr)) {
-        _TraceCOMError(hr);
-      }
-    }
-
-    RTC_LOG(LS_ERROR)
-        << "Recording error: capturing thread has ended pre-maturely";
-  } else {
-    RTC_LOG(LS_VERBOSE) << "_Capturing thread is now terminated properly";
-  }
-
-  SAFE_RELEASE(_ptrClientIn);
-  SAFE_RELEASE(_ptrCaptureClient);
-
-  mutex_.Unlock();
-
-  if (syncBuffer) {
-    delete[] syncBuffer;
-  }
-
-  return (DWORD)hr;
-}
-
 
 void MicrophoneModule::RevertCaptureThreadPriority() {
   if (_winSupportAvrt) {
@@ -1179,7 +1665,6 @@ void MicrophoneModule::RevertCaptureThreadPriority() {
 
   _hMmTask = NULL;
 }
-
 
 // ----------------------------------------------------------------------------
 //  InitRecording
@@ -1343,19 +1828,6 @@ int32_t MicrophoneModule::InitRecording() {
   }
   EXIT_ON_ERROR(hr);
 
-  if (_ptrAudioBuffer) {
-    // Update the audio buffer with the selected parameters
-    _ptrAudioBuffer->SetRecordingSampleRate(_recSampleRate);
-    _ptrAudioBuffer->SetRecordingChannels((uint8_t)_recChannels);
-  } else {
-    // We can enter this state during CoreAudioIsSupported() when no
-    // AudioDeviceImplementation has been created, hence the AudioDeviceBuffer
-    // does not exist. It is OK to end up here since we don't initiate any media
-    // in CoreAudioIsSupported().
-    RTC_LOG(LS_VERBOSE)
-        << "AudioDeviceBuffer must be attached before streaming can start";
-  }
-
   // Get the actual size of the shared (endpoint buffer).
   // Typical value is 960 audio frames <=> 20ms @ 48kHz sample rate.
   UINT bufferFrameCount(0);
@@ -1395,10 +1867,9 @@ Exit:
   return -1;
 }
 
-
 int MicrophoneModule::SetVtI4Property(IPropertyStore* ptrPS,
-                                            REFPROPERTYKEY key,
-                                            LONG value) {
+                                      REFPROPERTYKEY key,
+                                      LONG value) {
   PROPVARIANT pv;
   PropVariantInit(&pv);
   pv.vt = VT_I4;
@@ -1412,10 +1883,9 @@ int MicrophoneModule::SetVtI4Property(IPropertyStore* ptrPS,
   return 0;
 }
 
-
 int MicrophoneModule::SetBoolProperty(IPropertyStore* ptrPS,
-                                            REFPROPERTYKEY key,
-                                            VARIANT_BOOL value) {
+                                      REFPROPERTYKEY key,
+                                      VARIANT_BOOL value) {
   PROPVARIANT pv;
   PropVariantInit(&pv);
   pv.vt = VT_BOOL;
@@ -1529,8 +1999,8 @@ int MicrophoneModule::SetDMOProperties() {
 }
 
 int32_t MicrophoneModule::_GetDefaultDeviceIndex(EDataFlow dir,
-                                                       ERole role,
-                                                       int* index) {
+                                                 ERole role,
+                                                 int* index) {
   RTC_DLOG(LS_VERBOSE) << __FUNCTION__;
 
   HRESULT hr = S_OK;
@@ -1607,9 +2077,9 @@ int32_t MicrophoneModule::_GetDefaultDeviceIndex(EDataFlow dir,
 // ----------------------------------------------------------------------------
 
 int32_t MicrophoneModule::_GetDefaultDeviceID(EDataFlow dir,
-                                                    ERole role,
-                                                    LPWSTR szBuffer,
-                                                    int bufferLen) {
+                                              ERole role,
+                                              LPWSTR szBuffer,
+                                              int bufferLen) {
   RTC_DLOG(LS_VERBOSE) << __FUNCTION__;
 
   HRESULT hr = S_OK;
@@ -1632,14 +2102,13 @@ int32_t MicrophoneModule::_GetDefaultDeviceID(EDataFlow dir,
   return res;
 }
 
-
 // ----------------------------------------------------------------------------
 //  _GetDeviceID
 // ----------------------------------------------------------------------------
 
 int32_t MicrophoneModule::_GetDeviceID(IMMDevice* pDevice,
-                                             LPWSTR pszBuffer,
-                                             int bufferLen) {
+                                       LPWSTR pszBuffer,
+                                       int bufferLen) {
   RTC_DLOG(LS_VERBOSE) << __FUNCTION__;
 
   static const WCHAR szDefault[] = L"<Device not available>";
@@ -1671,8 +2140,8 @@ int32_t MicrophoneModule::_GetDeviceID(IMMDevice* pDevice,
 // ----------------------------------------------------------------------------
 
 int32_t MicrophoneModule::_GetDefaultDevice(EDataFlow dir,
-                                                  ERole role,
-                                                  IMMDevice** ppDevice) {
+                                            ERole role,
+                                            IMMDevice** ppDevice) {
   RTC_DLOG(LS_VERBOSE) << __FUNCTION__;
 
   HRESULT hr(S_OK);
@@ -1739,17 +2208,8 @@ int32_t MicrophoneModule::InitRecordingDMO() {
     return -1;
   }
 
-  if (_ptrAudioBuffer) {
-    _ptrAudioBuffer->SetRecordingSampleRate(_recSampleRate);
-    _ptrAudioBuffer->SetRecordingChannels(_recChannels);
-  } else {
-    // Refer to InitRecording() for comments.
-    RTC_LOG(LS_VERBOSE)
-        << "AudioDeviceBuffer must be attached before streaming can start";
-  }
-
-  _mediaBuffer = rtc::make_ref_counted<webrtc::MediaBufferImpl>(_recBlockSize *
-                                                        _recAudioFrameSize);
+  _mediaBuffer = rtc::make_ref_counted<webrtc::MediaBufferImpl>(
+      _recBlockSize * _recAudioFrameSize);
 
   // Optional, but if called, must be after media types are set.
   hr = _dmo->AllocateStreamingResources();
@@ -1764,20 +2224,6 @@ int32_t MicrophoneModule::InitRecordingDMO() {
   return 0;
 }
 
-
-rtc::scoped_refptr<AudioSource> MicrophoneModule::CreateSource() {
-  if (!_recording) {
-    InitRecording();
-  }
-
-  if (!source) {
-    source = rtc::scoped_refptr<MicrophoneSource>(new MicrophoneSource(this));
-  }
-  auto result = source;
-  source->Release();
-  return result;
-}
-
 // ----------------------------------------------------------------------------
 //  [static] WSAPICaptureThread
 // ----------------------------------------------------------------------------
@@ -1785,7 +2231,6 @@ rtc::scoped_refptr<AudioSource> MicrophoneModule::CreateSource() {
 DWORD WINAPI MicrophoneModule::WSAPICaptureThread(LPVOID context) {
   return reinterpret_cast<MicrophoneModule*>(context)->DoCaptureThread();
 }
-
 
 // ----------------------------------------------------------------------------
 //  StartRecording
@@ -1847,140 +2292,8 @@ int32_t MicrophoneModule::StartRecording() {
 }
 
 DWORD WINAPI MicrophoneModule::WSAPICaptureThreadPollDMO(LPVOID context) {
-  return reinterpret_cast<MicrophoneModule*>(context)
-      ->DoCaptureThreadPollDMO();
+  return reinterpret_cast<MicrophoneModule*>(context)->DoCaptureThreadPollDMO();
 }
-
-  DWORD MicrophoneModule::DoCaptureThreadPollDMO() {
-  RTC_DCHECK(_mediaBuffer);
-  bool keepRecording = true;
-
-  // Initialize COM as MTA in this thread.
-  webrtc::ScopedCOMInitializer comInit(webrtc::ScopedCOMInitializer::kMTA);
-  if (!comInit.Succeeded()) {
-    RTC_LOG(LS_ERROR) << "failed to initialize COM in polling DMO thread";
-    return 1;
-  }
-
-  HRESULT hr = InitCaptureThreadPriority();
-  if (FAILED(hr)) {
-    return hr;
-  }
-
-  // Set event which will ensure that the calling thread modifies the
-  // recording state to true.
-  SetEvent(_hCaptureStartedEvent);
-
-  // >> ---------------------------- THREAD LOOP ----------------------------
-  while (keepRecording) {
-    // Poll the DMO every 5 ms.
-    // (The same interval used in the Wave implementation.)
-    DWORD waitResult = WaitForSingleObject(_hShutdownCaptureEvent, 5);
-    switch (waitResult) {
-      case WAIT_OBJECT_0:  // _hShutdownCaptureEvent
-        keepRecording = false;
-        break;
-      case WAIT_TIMEOUT:  // timeout notification
-        break;
-      default:  // unexpected error
-        RTC_LOG(LS_WARNING) << "Unknown wait termination on capture side";
-        hr = -1;  // To signal an error callback.
-        keepRecording = false;
-        break;
-    }
-
-    while (keepRecording) {
-      webrtc::MutexLock lockScoped(&mutex_);
-
-      DWORD dwStatus = 0;
-      {
-        DMO_OUTPUT_DATA_BUFFER dmoBuffer = {0};
-        dmoBuffer.pBuffer = _mediaBuffer.get();
-        dmoBuffer.pBuffer->AddRef();
-
-        // Poll the DMO for AEC processed capture data. The DMO will
-        // copy available data to `dmoBuffer`, and should only return
-        // 10 ms frames. The value of `dwStatus` should be ignored.
-        hr = _dmo->ProcessOutput(0, 1, &dmoBuffer, &dwStatus);
-        SAFE_RELEASE(dmoBuffer.pBuffer);
-        dwStatus = dmoBuffer.dwStatus;
-      }
-      if (FAILED(hr)) {
-        _TraceCOMError(hr);
-        keepRecording = false;
-        RTC_DCHECK_NOTREACHED();
-        break;
-      }
-
-      ULONG bytesProduced = 0;
-      BYTE* data;
-      // Get a pointer to the data buffer. This should be valid until
-      // the next call to ProcessOutput.
-      hr = _mediaBuffer->GetBufferAndLength(&data, &bytesProduced);
-      if (FAILED(hr)) {
-        _TraceCOMError(hr);
-        keepRecording = false;
-        RTC_DCHECK_NOTREACHED();
-        break;
-      }
-
-      if (bytesProduced > 0) {
-        const int kSamplesProduced = bytesProduced / _recAudioFrameSize;
-        // TODO(andrew): verify that this is always satisfied. It might
-        // be that ProcessOutput will try to return more than 10 ms if
-        // we fail to call it frequently enough.
-        RTC_DCHECK_EQ(kSamplesProduced, static_cast<int>(_recBlockSize));
-        RTC_DCHECK_EQ(sizeof(BYTE), sizeof(int8_t));
-        _ptrAudioBuffer->SetRecordedBuffer(reinterpret_cast<int8_t*>(data),
-                                           kSamplesProduced);
-        _ptrAudioBuffer->SetVQEData(0, 0);
-
-        mutex_.Unlock();  // Release lock while making the callback.
-        _ptrAudioBuffer->DeliverRecordedData();
-        mutex_.Lock();
-      }
-
-      // Reset length to indicate buffer availability.
-      hr = _mediaBuffer->SetLength(0);
-      if (FAILED(hr)) {
-        _TraceCOMError(hr);
-        keepRecording = false;
-        RTC_DCHECK_NOTREACHED();
-        break;
-      }
-
-      if (!(dwStatus & DMO_OUTPUT_DATA_BUFFERF_INCOMPLETE)) {
-        // The DMO cannot currently produce more data. This is the
-        // normal case; otherwise it means the DMO had more than 10 ms
-        // of data available and ProcessOutput should be called again.
-        break;
-      }
-    }
-  }
-}
-
-int MicrophoneSource::sources_num = 0;
-MicrophoneSource::MicrophoneSource(MicrophoneModule* module) {
-  this->module = module;
-  if (sources_num == 0) {
-    module->StartRecording();
-  }
-  ++sources_num;
-}
-
-MicrophoneSource::~MicrophoneSource() {
-  --sources_num;
-  if (sources_num == 0) {
-    module->ResetSource();
-    module->StopRecording();
-  }
-}
-
-void MicrophoneModule::ResetSource() {
-    webrtc::MutexLock lock(&mutex_);
-    source = nullptr;
-}
-
 
 // ----------------------------------------------------------------------------
 //  StopRecording
