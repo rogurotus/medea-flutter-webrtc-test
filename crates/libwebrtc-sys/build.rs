@@ -43,7 +43,7 @@ fn main() -> anyhow::Result<()> {
         .include(libpath.join("include/third_party/abseil-cpp"))
         .include(libpath.join("include/third_party/libyuv/include"))
         .flag("-DNOMINMAX");
-    
+
     #[cfg(target_os = "windows")]
     build.flag("-DNDEBUG");
     #[cfg(not(target_os = "windows"))]

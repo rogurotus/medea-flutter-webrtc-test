@@ -1,25 +1,52 @@
 #pragma once
 
-#include "modules/audio_device/linux/audio_device_pulse_linux.h"
 #include "custom_audio.h"
+#include "microphone_module.h"
+#include "modules/audio_device/linux/audio_device_pulse_linux.h"
 
 typedef webrtc::adm_linux_pulse::PulseAudioSymbolTable WebRTCPulseSymbolTable;
 WebRTCPulseSymbolTable* _GetPulseSymbolTable();
 
-class MicrophoneModule  : public MicrophoneModuleInterface {
+class MicrophoneModule : public MicrophoneModuleInterface {
  public:
-  rtc::scoped_refptr<AudioSource> CreateSource();
   MicrophoneModule();
   ~MicrophoneModule();
 
-  int32_t StartRecording();
+  // MicrophoneModuleInterface
 
+  // Initialization and terminate.
   int32_t Init();
   int32_t Terminate();
+  int32_t InitMicrophone();
+
+  // Microphone control.
+  int32_t MicrophoneMuteIsAvailable(bool* available);
+  int32_t SetMicrophoneMute(bool enable);
+  int32_t MicrophoneMute(bool* enabled) const;
+  bool MicrophoneIsInitialized();
+  int32_t MicrophoneVolumeIsAvailable(bool* available);
+  int32_t SetMicrophoneVolume(uint32_t volume);
+  int32_t MicrophoneVolume(uint32_t* volume) const;
+  int32_t MaxMicrophoneVolume(uint32_t* maxVolume) const;
+  int32_t MinMicrophoneVolume(uint32_t* minVolume) const;
+
+  // Settings.
+  int32_t SetRecordingDevice(uint16_t index);
+
+  // Microphone source.
+  rtc::scoped_refptr<AudioSource> CreateSource();
+  void ResetSource();
+  int32_t StopRecording();
+  int32_t StartRecording();
+  int32_t RecordingChannels();
+
+  // END MicrophoneModuleInterface
+
+ private:
   void PaLock();
   void PaUnLock();
   int32_t LatencyUsecs(pa_stream* stream);
-    static void PaSourceInfoCallback(pa_context* c,
+  static void PaSourceInfoCallback(pa_context* c,
                                    const pa_source_info* i,
                                    int eol,
                                    void* pThis);
@@ -40,10 +67,10 @@ class MicrophoneModule  : public MicrophoneModuleInterface {
                                    void* pThis);
   void PaStreamReadCallbackHandler();
   static void PaContextStateCallback(pa_context* c, void* pThis);
-    static void PaServerInfoCallback(pa_context* c,
+  static void PaServerInfoCallback(pa_context* c,
                                    const pa_server_info* i,
                                    void* pThis);
-    void PaContextStateCallbackHandler(pa_context* c);
+  void PaContextStateCallbackHandler(pa_context* c);
   void PaServerInfoCallbackHandler(const pa_server_info* i);
 
   int32_t InitPulseAudio();
@@ -51,37 +78,17 @@ class MicrophoneModule  : public MicrophoneModuleInterface {
   void WaitForOperationCompletion(pa_operation* paOperation) const;
   int32_t CheckPulseAudioVersion();
   int32_t InitSamplingFrequency();
-  int32_t StopRecording();
   int32_t InitRecording();
   int32_t GetDefaultDeviceInfo(bool recDevice, char* name, uint16_t& index);
   static void PaStreamStateCallback(pa_stream* p, void* pThis);
   void PaStreamStateCallbackHandler(pa_stream* p);
   static void PaStreamOverflowCallback(pa_stream* unused, void* pThis);
   void PaStreamOverflowCallbackHandler();
-  int32_t SetRecordingDevice(uint16_t index);
 
   int32_t StereoRecordingIsAvailable(bool& available);
   int32_t SetStereoRecording(bool enable);
   int32_t StereoRecording(bool& enabled) const;
 
-  int32_t InitMicrophone();
-  bool MicrophoneIsInitialized() const;
-
-  // Microphone volume controls
-  int32_t MicrophoneVolumeIsAvailable(bool* available);
-  int32_t SetMicrophoneVolume(uint32_t volume);
-  int32_t MicrophoneVolume(uint32_t* volume) const;
-  int32_t MaxMicrophoneVolume(uint32_t* maxVolume) const;
-  int32_t MinMicrophoneVolume(uint32_t* minVolume) const;
-
-  // Microphone mute control
-  int32_t MicrophoneMuteIsAvailable(bool* available);
-  int32_t SetMicrophoneMute(bool enable);
-  int32_t MicrophoneMute(bool* enabled) const;
-  int32_t RecordingChannels();
-  void ResetSource();
-
-  private:
   rtc::scoped_refptr<MicrophoneSource> source = nullptr;
   bool _inputDeviceIsSpecified = false;
   int sample_rate_hz_ = 0;
@@ -113,6 +120,12 @@ class MicrophoneModule  : public MicrophoneModuleInterface {
   uint32_t _recStreamFlags = 0;
   pa_stream* _playStream = nullptr;
 
+  // Stores thread ID in constructor.
+  // We can then use RTC_DCHECK_RUN_ON(&worker_thread_checker_) to ensure that
+  // other methods are called from the same thread.
+  // Currently only does RTC_DCHECK(thread_checker_.IsCurrent()).
+  webrtc::SequenceChecker thread_checker_;
+
   rtc::Event _timeEventRec;
   webrtc::Mutex mutex_;
   int16_t _numPlayDevices;
@@ -123,8 +136,8 @@ class MicrophoneModule  : public MicrophoneModuleInterface {
   char _paServerVersion[32];
   webrtc::AudioMixerManagerLinuxPulse _mixerManager;
 
-  #if defined(WEBRTC_USE_X11)
+#if defined(WEBRTC_USE_X11)
   char _oldKeyState[32];
   Display* _XDisplay;
-  #endif
+#endif
 };

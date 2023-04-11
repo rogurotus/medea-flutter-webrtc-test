@@ -57,7 +57,7 @@ bool CustomAudioDeviceModule::MicrophoneIsInitialized() const {
 }
 
 rtc::scoped_refptr<AudioSource> CustomAudioDeviceModule::CreateSystemSource() {
-  // TODO
+  // TODO implement system sound capture.
   return nullptr;
 }
 
@@ -91,6 +91,7 @@ void CustomAudioDeviceModule::RemoveSource(
   mixer->RemoveSource(source.get());
 }
 
+// Microphone mute control
 int32_t CustomAudioDeviceModule::MicrophoneVolumeIsAvailable(bool* available) {
   return audio_recorder->MicrophoneVolumeIsAvailable(available);
 }
@@ -108,8 +109,6 @@ int32_t CustomAudioDeviceModule::MinMicrophoneVolume(
     uint32_t* minVolume) const {
   return audio_recorder->MinMicrophoneVolume(minVolume);
 }
-
-// Microphone mute control
 int32_t CustomAudioDeviceModule::MicrophoneMuteIsAvailable(bool* available) {
   return audio_recorder->MicrophoneMuteIsAvailable(available);
 }
@@ -120,11 +119,11 @@ int32_t CustomAudioDeviceModule::MicrophoneMute(bool* enabled) const {
   return audio_recorder->MicrophoneMute(enabled);
 }
 
+// Audio device module delegates StartRecording to `audio_recorder`.
 int32_t CustomAudioDeviceModule::StartRecording() {
   return 0;
 }
 
-// static
 rtc::scoped_refptr<CustomAudioDeviceModule>
 CustomAudioDeviceModule::CreateForTest(
     AudioLayer audio_layer,

@@ -259,17 +259,29 @@ impl AudioDeviceModule {
 
     /// Creates a new [`AudioSource`] from microphone.
     pub fn create_source(&mut self) -> AudioSource {
+        // Fake media.
+        if self.1.is_null() {
+            return AudioSource(UniquePtr::null());
+        }
         let result = webrtc::create_source_microphone(self.1.pin_mut());
         AudioSource(result)
     }
 
     /// Adds [`AudioSource`] to [`webrtc::AudioSourceManager`].
     pub fn add_source(&mut self, source: &AudioSource) {
+        // Fake media.
+        if self.1.is_null() {
+            return;
+        }
         webrtc::add_source(self.1.pin_mut(), &source.0);
     }
 
     /// Removes [`AudioSource`] from [`webrtc::AudioSourceManager`].
     pub fn remove_source(&mut self, source: &AudioSource) {
+        // Fake media.
+        if self.1.is_null() {
+            return;
+        }
         webrtc::remove_source(self.1.pin_mut(), &source.0);
     }
 

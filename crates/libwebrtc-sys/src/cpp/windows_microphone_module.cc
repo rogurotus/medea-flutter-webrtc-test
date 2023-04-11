@@ -170,7 +170,6 @@ class MediaBufferImpl final : public IMediaBuffer {
 }  // namespace
 }  // namespace webrtc
 
-
 int MicrophoneSource::sources_num = 0;
 MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
   this->module = module;
@@ -514,7 +513,6 @@ Exit:
   return (DWORD)hr;
 }
 
-
 rtc::scoped_refptr<AudioSource> MicrophoneModule::CreateSource() {
   if (!_recording) {
     InitRecording();
@@ -638,13 +636,9 @@ DWORD MicrophoneModule::DoCaptureThreadPollDMO() {
   }
 }
 
-
-
 // ----------------------------------------------------------------------------
 //  Everything below has been copied unchanged from audio_device_core_win.сс
 // ----------------------------------------------------------------------------
-
-
 
 // ----------------------------------------------------------------------------
 //  Terminate
@@ -1070,7 +1064,6 @@ Exit:
 //  Init
 // ----------------------------------------------------------------------------
 
-
 int32_t MicrophoneModule::Init() {
   webrtc::MutexLock lock(&mutex_);
 
@@ -1118,7 +1111,6 @@ void MicrophoneModule::_TraceCOMError(HRESULT hr) const {
   StringCchCatW(buf, MAXERRORLENGTH, errorText);
   RTC_LOG(LS_ERROR) << rtc::ToUtf8(buf);
 }
-
 
 // ----------------------------------------------------------------------------
 //  InitMicrophone
@@ -1365,7 +1357,6 @@ int32_t MicrophoneModule::_GetDeviceName(IMMDevice* pDevice,
 
   return 0;
 }
-
 
 // ----------------------------------------------------------------------------
 //  MicrophoneIsInitialized

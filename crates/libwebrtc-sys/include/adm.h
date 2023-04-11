@@ -101,6 +101,7 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   int32_t SetMicrophoneMute(bool enable) override;
   int32_t MicrophoneMute(bool* enabled) const override;
 
+  private:
   // Mixes `AudioSource` to send.
   rtc::scoped_refptr<webrtc::AudioMixerImpl> mixer = webrtc::AudioMixerImpl::Create();
 

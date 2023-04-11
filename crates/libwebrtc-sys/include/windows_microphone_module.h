@@ -1,13 +1,12 @@
 #pragma once
 
 #include "custom_audio.h"
+#include "microphone_module.h"
 #include "modules/audio_device/win/audio_device_core_win.h"
 #include "rtc_base\win\scoped_com_initializer.h"
-#include "microphone_module.h"
 
 class MicrophoneModule : public MicrophoneModuleInterface {
  public:
-
   MicrophoneModule();
   ~MicrophoneModule();
 
@@ -22,7 +21,7 @@ class MicrophoneModule : public MicrophoneModuleInterface {
   int32_t MicrophoneMuteIsAvailable(bool* available);
   int32_t SetMicrophoneMute(bool enable);
   int32_t MicrophoneMute(bool* enabled) const;
-  bool MicrophoneIsInitialized ();
+  bool MicrophoneIsInitialized();
   int32_t MicrophoneVolumeIsAvailable(bool* available);
   int32_t SetMicrophoneVolume(uint32_t volume);
   int32_t MicrophoneVolume(uint32_t* volume) const;
@@ -41,14 +40,13 @@ class MicrophoneModule : public MicrophoneModuleInterface {
 
   // END MicrophoneModuleInterface
 
-
-  private:
+ private:
   // Сopied from "audio_device_core_win.h"
 
-  int32_t _EnumerateEndpointDevicesAll(EDataFlow dataFlow) const; 
+  int32_t _EnumerateEndpointDevicesAll(EDataFlow dataFlow) const;
   void _TraceCOMError(HRESULT hr) const;
-  int32_t InitMicrophoneLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_); 
-  int16_t RecordingDevicesLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_); 
+  int32_t InitMicrophoneLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  int16_t RecordingDevicesLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
   int32_t _GetListDevice(EDataFlow dir, int index, IMMDevice** ppDevice);
   int32_t _RefreshDeviceList(EDataFlow dir);
   int16_t _DeviceListCount(EDataFlow dir);
@@ -57,14 +55,14 @@ class MicrophoneModule : public MicrophoneModuleInterface {
                               ERole role,
                               LPWSTR szBuffer,
                               int bufferLen);
-  int16_t RecordingDevices(); 
+  int16_t RecordingDevices();
   DWORD DoCaptureThreadPollDMO();
   DWORD InitCaptureThreadPriority();
   static DWORD WINAPI WSAPICaptureThreadPollDMO(LPVOID context);
   static DWORD WINAPI WSAPICaptureThread(LPVOID context);
   DWORD DoCaptureThread();
   void RevertCaptureThreadPriority();
-   int32_t InitRecording() RTC_LOCKS_EXCLUDED(mutex_);
+  int32_t InitRecording() RTC_LOCKS_EXCLUDED(mutex_);
   int32_t InitRecordingDMO();
   int SetDMOProperties();
   int SetBoolProperty(IPropertyStore* ptrPS,
