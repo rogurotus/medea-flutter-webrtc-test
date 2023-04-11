@@ -66,6 +66,7 @@ class MediaStreamTrackController {
     case "stop":
       self.track.stop()
       result(nil)
+    // swiftformat:disable throwcapturing
     case "clone":
       do {
         result(
