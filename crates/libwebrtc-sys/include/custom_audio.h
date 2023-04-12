@@ -5,7 +5,7 @@
 #include "api/audio/audio_frame.h"
 #include "api/audio/audio_mixer.h"
 #include "common_audio/resampler/include/push_resampler.h"
-#include "rtc_base/synchronization/mutex.h"
+// #include "rtc_base/synchronization/mutex.h"
 
 class RefCountedAudioSource : public webrtc::AudioMixer::Source,
                               public rtc::RefCountInterface {};

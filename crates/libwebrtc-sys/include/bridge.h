@@ -34,6 +34,8 @@
 #include "audio_source_manager_proxy.h"
 #include "adm.h"
 
+#include "desktop.h"
+
 namespace bridge {
 
 struct DynTrackEventCallback;

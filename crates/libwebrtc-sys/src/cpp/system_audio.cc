@@ -14,6 +14,7 @@
 #include <Audioclient.h>
 #include <RTWorkQ.h>
 #include <functional>
+#include "desktop.h"
 
 
 #define RECONNECT_INTERVAL 3000
@@ -215,6 +216,7 @@ std::string GetDeviceName(IMMDevice *device)
 		}
 	}
 
+    std::cout << device_name << std::endl;
 	return device_name;
 }
 
@@ -541,6 +543,12 @@ public:
 					frames, UINT64_C(1000000000),
 					sampleRate);
 
+            // for (int i = 0; i < 8; ++i) {
+            //     std::cout << (int)data.data[i] << " ";
+            // } 
+            // std::cout << std::endl;
+
+            // HERE
 			// std::cout << "AAAAAA2" << std::endl;
 			_lambda(&data);
 			// std::cout << "AAAAAA3" << std::endl;
@@ -852,7 +860,7 @@ public:
 		}
 
 		Start();
-		// std::cout <<"NAME" << device_name << std::endl;
+		std::cout <<"NAME" << device_name << std::endl;
 	}
 
 	~Cap()
@@ -865,106 +873,15 @@ public:
 
 
 DesktopAudioSource::DesktopAudioSource() {
+	std::cout <<"RA2Z" << std::endl;
+
 
 	auto lambda = [&] (void* x) {
-		std::lock_guard<std::mutex> guard(lock_);
 		obs_source_audio* a = (obs_source_audio*)x;
-		// std::cout << "BRR_" << a->frames << std::endl;
-		// // 	for (int i = 0; i < vec3.size(); ++i) { 
-		// // std::cout << "BRR";
-		// //  vec3[i]->OnChanged();
-		// // }
-		// // 	for (int i = 0; i < vec2.size(); ++i) { 
-		// //  vec2[i]->OnSetVolume(100);
-		// // }
-		for (int i = 0; i < vec.size(); ++i) { 
-			vec[i]->OnData(a->data, 16, a->samples_per_sec, 2, 64, a->timestamp);
-		}
-		// std::cout << "BRR2" << std::endl;
+        UpdateFrame((const int16_t *)(a->data), 480, 48000, 1);
 	};
 	Cap* cap = new Cap(lambda);
 
-	// std::cout <<"RA2Z" << std::endl;
 }
-// TODO(deadbeef): Makes all the interfaces pure virtual after they're
-// implemented in chromium.
-
-// Sets the volume of the source. `volume` is in  the range of [0, 10].
-// TODO(tommi): This method should be on the track and ideally volume should
-// be applied in the track in a way that does not affect clones of the track.
-void DesktopAudioSource::SetVolume(double volume) {
-  // std::cout <<"WASM2" << std::endl;
-};
-
-// Registers/unregisters observers to the audio source.
-void DesktopAudioSource::RegisterAudioObserver(AudioObserver* observer) {
-  // std::cout <<"WASM3" << std::endl;
-  vec2.push_back(observer);
-};
-
-void DesktopAudioSource::UnregisterAudioObserver(AudioObserver* observer) {
-  // std::cout <<"WASM4" << std::endl;
-    for (int i = 0; i < vec2.size(); ++i) {
-    if (vec2[i] == observer) {
-      vec2.erase(vec2.begin() + i);
-      return;
-    }
-  }
-};
-
-// TODO(tommi): Make pure virtual.
-void DesktopAudioSource::AddSink(webrtc::AudioTrackSinkInterface* sink) {
-std::lock_guard<std::mutex> guard(lock_);
-  // std::cout <<"WASM5" << std::endl;
-  vec.push_back(sink);
-};
-
-void DesktopAudioSource::RemoveSink(webrtc::AudioTrackSinkInterface* sink) {
-  // std::cout <<"WASM6" << std::endl;
-std::lock_guard<std::mutex> guard(lock_);
-  for (int i = 0; i < vec.size(); ++i) {
-    if (vec[i] == sink) {
-      vec.erase(vec.begin() + i);
-      return;
-    }
-  }
-};
-
-// Returns options for the AudioSource.
-// (for some of the settings this approach is broken, e.g. setting
-// audio network adaptation on the source is the wrong layer of abstraction).
-const cricket::AudioOptions DesktopAudioSource::options() const {
-  // std::cout <<"WASM7" << std::endl;
-  auto a = cricket::AudioOptions();
-  a.echo_cancellation = false;
-  return a;
-}
-
-void DesktopAudioSource::RegisterObserver(webrtc::ObserverInterface* observer) {
-  // std::cout <<"WASM8" << std::endl;
-  vec3.push_back(observer);
-};
-
-void DesktopAudioSource::UnregisterObserver(
-    webrtc::ObserverInterface* observer) {
-  // std::cout <<"WASM9" << std::endl;
-  for (int i = 0; i < vec3.size(); ++i) {
-    if (vec3[i] == observer) {
-      vec3.erase(vec3.begin() + i);
-      return;
-    }
-  }
-};
-
-webrtc::MediaSourceInterface::SourceState DesktopAudioSource::state() const {
-  // std::cout <<"WASM10" << std::endl;
-  return SourceState::kLive;
-}
-
-bool DesktopAudioSource::remote() const {
-  // std::cout <<"WASM11" << std::endl;
-  return false;
-}
-
 
 

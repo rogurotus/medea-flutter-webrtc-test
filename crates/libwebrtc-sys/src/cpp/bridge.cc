@@ -144,12 +144,19 @@ std::unique_ptr<AudioDeviceModule> custom_audio_device_module_proxy_upcast(std::
 
 // Creates a new `AudioSource` from microphone.
 std::unique_ptr<AudioSource> create_source_microphone(AudioSourceManager& manager) {
+  std::cout << 422 << std::endl;
+  auto source = rtc::scoped_refptr<DesktopAudioSource>(new DesktopAudioSource());
+  std::cout << 421 << std::endl;
+  // manager.AddSource(source);
+  std::cout << 42 << std::endl;
   return std::make_unique<AudioSource>(manager.CreateMicrophoneSource());
 }
 
 // Adds `AudioSource` to `AudioSourceManager`.
 void add_source(AudioSourceManager& manager, const AudioSource& source) {
-  manager.AddSource(source);
+  std::cout << 100 << std::endl;
+  // manager.AddSource(source);
+  std::cout << 200 << std::endl;
 }
 
 // Removes `AudioSource` from `AudioSourceManager`.
@@ -162,7 +169,6 @@ std::unique_ptr<CustomAudioDeviceModule> create_custom_audio_device_module(
   Thread& worker_thread,
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory) {
-      
   CustomAudioDeviceModule adm = worker_thread.Invoke<CustomAudioDeviceModule>(
       RTC_FROM_HERE, [audio_layer, &task_queue_factory] {
         return ::CustomAudioDeviceModule::Create(audio_layer, &task_queue_factory);

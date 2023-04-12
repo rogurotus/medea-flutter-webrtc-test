@@ -70,11 +70,17 @@ CustomAudioDeviceModule::CreateMicrophoneSource() {
 void CustomAudioDeviceModule::AddSource(
     rtc::scoped_refptr<AudioSource> source) {
   {
+    std::cout << "WTF " << 100 << std::endl;
     std::unique_lock<std::mutex> lock(source_mutex);
     sources.push_back(source);
   }
+  std::cout << "WTF " << 200 << std::endl;
   cv.notify_all();
-  mixer->AddSource(source.get());
+  std::cout << "WTF " << 300 << std::endl;
+  auto a = source.get();
+  std::cout << "WTF " << 350 << std::endl;
+  mixer->AddSource(a);
+  std::cout << "WTF " << 400 << std::endl;
 }
 
 void CustomAudioDeviceModule::RemoveSource(
@@ -175,10 +181,12 @@ void CustomAudioDeviceModule::RecordProcess() {
         webrtc::AudioFrame frame;
         auto cb = GetAudioDeviceBuffer();
         while (!quit) {
+
           {
             std::unique_lock<std::mutex> lock(source_mutex);
             cv.wait(lock, [&]() { return sources.size() > 0; });
           }
+
 
           mixer->Mix(audio_recorder->RecordingChannels(), &frame);
           cb->SetRecordingChannels(frame.num_channels());
