@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <iostream>
 #include <minwindef.h>
-#include "Header.h"
+#include "system_audio.h"
 #include <handleapi.h>
 #include <avrt.h>
 #include <combaseapi.h>
@@ -14,7 +14,6 @@
 #include <Audioclient.h>
 #include <RTWorkQ.h>
 #include <functional>
-#include "libwebrtc-sys/include/desktop_audio_source.h"
 
 
 #define RECONNECT_INTERVAL 3000
