@@ -32,6 +32,9 @@ class AudioSource : public rtc::RefCountedObject<RefCountedAudioSource> {
                    int sample_rate,
                    int channels);
 
+  // todo
+  void SetMute(bool mute);
+
  private:
   webrtc::AudioFrame frame_;
   webrtc::PushResampler<int16_t> render_resampler_;
@@ -40,4 +43,6 @@ class AudioSource : public rtc::RefCountedObject<RefCountedAudioSource> {
   std::mutex mutex_;
   std::condition_variable cv_;
   bool frame_available_ = false;
+  std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+  bool mute = false;
 };

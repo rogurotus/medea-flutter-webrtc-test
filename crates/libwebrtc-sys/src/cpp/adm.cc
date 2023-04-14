@@ -57,8 +57,8 @@ bool CustomAudioDeviceModule::MicrophoneIsInitialized() const {
 }
 
 rtc::scoped_refptr<AudioSource> CustomAudioDeviceModule::CreateSystemSource() {
-  // TODO implement system sound capture.
-  return nullptr;
+  auto system = system_recorder->CreateSource();
+  return system;
 }
 
 rtc::scoped_refptr<AudioSource>
@@ -170,7 +170,9 @@ CustomAudioDeviceModule::CustomAudioDeviceModule(
     webrtc::TaskQueueFactory* task_queue_factory)
     : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory),
       audio_recorder(std::move(
-          std::unique_ptr<MicrophoneModuleInterface>(new MicrophoneModule()))) {
+          std::unique_ptr<MicrophoneModuleInterface>(new MicrophoneModule()))),
+      system_recorder(std::move(
+          std::unique_ptr<SystemModuleInterface>(new SystemModule()))) {
 }
 
 void CustomAudioDeviceModule::RecordProcess() {
@@ -187,8 +189,7 @@ void CustomAudioDeviceModule::RecordProcess() {
             cv.wait(lock, [&]() { return sources.size() > 0; });
           }
 
-
-          mixer->Mix(audio_recorder->RecordingChannels(), &frame);
+          mixer->Mix(1, &frame);
           cb->SetRecordingChannels(frame.num_channels());
           cb->SetRecordingSampleRate(frame.sample_rate_hz());
           cb->SetRecordedBuffer(frame.data(), frame.sample_rate_hz() / 100);

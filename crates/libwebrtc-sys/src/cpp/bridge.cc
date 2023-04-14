@@ -144,19 +144,17 @@ std::unique_ptr<AudioDeviceModule> custom_audio_device_module_proxy_upcast(std::
 
 // Creates a new `AudioSource` from microphone.
 std::unique_ptr<AudioSource> create_source_microphone(AudioSourceManager& manager) {
-  std::cout << 422 << std::endl;
-  auto source = rtc::scoped_refptr<DesktopAudioSource>(new DesktopAudioSource());
-  std::cout << 421 << std::endl;
-  // manager.AddSource(source);
-  std::cout << 42 << std::endl;
   return std::make_unique<AudioSource>(manager.CreateMicrophoneSource());
+}
+
+// Creates a new `AudioSource` from system.
+std::unique_ptr<AudioSource> create_source_system(AudioSourceManager& manager) {
+  return std::make_unique<AudioSource>(manager.CreateSystemSource());
 }
 
 // Adds `AudioSource` to `AudioSourceManager`.
 void add_source(AudioSourceManager& manager, const AudioSource& source) {
-  std::cout << 100 << std::endl;
-  // manager.AddSource(source);
-  std::cout << 200 << std::endl;
+  manager.AddSource(source);
 }
 
 // Removes `AudioSource` from `AudioSourceManager`.

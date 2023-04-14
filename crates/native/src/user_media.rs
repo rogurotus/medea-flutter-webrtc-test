@@ -308,8 +308,10 @@ impl Webrtc {
         } else {
             let src =
                 Arc::new(self.peer_connection_factory.create_audio_source()?);
-            let source = self.audio_device_module.create_source();
+            let source = self.audio_device_module.create_source_microphone();
+            let source2 = self.audio_device_module.create_source_system();
             self.audio_device_module.add_source(&source);
+            self.audio_device_module.add_source(&source2);
             self.audio_source.replace((Arc::clone(&src), source));
             src
         };
@@ -665,8 +667,12 @@ impl AudioDeviceModule {
         }
     }
 
-    pub fn create_source(&mut self) -> sys::AudioSource {
-        self.inner.create_source()
+    pub fn create_source_microphone(&mut self) -> sys::AudioSource {
+        self.inner.create_source_microphone()
+    }
+
+    pub fn create_source_system(&mut self) -> sys::AudioSource {
+        self.inner.create_source_system()
     }
 
     pub fn add_source(&mut self, source: &sys::AudioSource) {

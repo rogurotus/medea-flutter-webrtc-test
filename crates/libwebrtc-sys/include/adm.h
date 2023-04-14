@@ -39,9 +39,10 @@
 #include "linux_microphone_module.h"
 #endif
 
-#if defined(WEBRTC_WIN)
+// #if defined(true) // WEBRTC_WIN
 #include "windows_microphone_module.h"
-#endif
+#include "windows_system_audio_module.h"
+// #endif
 
 #if defined(WEBRTC_MAC)
 #include "macos_microphone_module.h"
@@ -113,6 +114,8 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   
   // Audio capture module.
   std::unique_ptr<MicrophoneModuleInterface> audio_recorder;
+  std::unique_ptr<SystemModuleInterface> system_recorder;
+  
 
   rtc::PlatformThread ptrThreadRec;
   std::condition_variable cv;

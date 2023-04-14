@@ -1,4 +1,5 @@
 #include "custom_audio.h"
+#include <iostream>
 
 // Overwrites `audio_frame`. The data_ field is overwritten with
 // 10 ms of new audio (either 1 or 2 interleaved channels) at
@@ -6,8 +7,14 @@
 webrtc::AudioMixer::Source::AudioFrameInfo AudioSource::GetAudioFrameWithInfo(
     int sample_rate_hz,
     webrtc::AudioFrame* audio_frame) {
+  std::this_thread::sleep_until(now + std::chrono::milliseconds(10));
+
   std::unique_lock<std::mutex> lock(mutex_);
+  if (mute && !frame_available_) {
+    return webrtc::AudioMixer::Source::AudioFrameInfo::kMuted;
+  }
   cv_.wait(lock, [&]() { return frame_available_; });
+
   auto* source = frame_.data();
   if (frame_.sample_rate_hz() != sample_rate_hz) {
     render_resampler_.InitializeIfNeeded(frame_.sample_rate_hz(),
@@ -23,6 +30,7 @@ webrtc::AudioMixer::Source::AudioFrameInfo AudioSource::GetAudioFrameWithInfo(
                            webrtc::AudioFrame::SpeechType::kNormalSpeech,
                            webrtc::AudioFrame::VADActivity::kVadActive);
   frame_available_ = false;
+  now = std::chrono::system_clock::now();
   return webrtc::AudioMixer::Source::AudioFrameInfo::kNormal;
 };
 
@@ -49,3 +57,7 @@ int AudioSource::Ssrc() const {
 int AudioSource::PreferredSampleRate() const {
   return frame_.sample_rate_hz();
 };
+
+void AudioSource::SetMute(bool mute) {
+  this->mute = mute;
+}

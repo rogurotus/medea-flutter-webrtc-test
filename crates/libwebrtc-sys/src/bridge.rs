@@ -1242,6 +1242,11 @@ pub(crate) mod webrtc {
             manager: Pin<&mut AudioSourceManager>,
         ) -> UniquePtr<AudioSource>;
 
+        /// Creates a new [`AudioSource`] from microphone.
+        pub fn create_source_system(
+            manager: Pin<&mut AudioSourceManager>,
+        ) -> UniquePtr<AudioSource>;
+
         /// Adds [`AudioSource`] to [`AudioSourceManager`].
         pub fn add_source(
             manager: Pin<&mut AudioSourceManager>,

@@ -34,7 +34,6 @@
 #include "audio_source_manager_proxy.h"
 #include "adm.h"
 
-#include "desktop.h"
 
 namespace bridge {
 
@@ -132,6 +131,9 @@ std::unique_ptr<AudioSourceManager> create_source_manager(const CustomAudioDevic
 
 // Creates a new `AudioSource` from microphone.
 std::unique_ptr<AudioSource> create_source_microphone(AudioSourceManager& manager);
+
+// Creates a new `AudioSource` from system.
+std::unique_ptr<AudioSource> create_source_system(AudioSourceManager& manager);
 
 // Adds `AudioSource` to `AudioSourceManager`.
 void add_source(AudioSourceManager& manager, const AudioSource& source);
