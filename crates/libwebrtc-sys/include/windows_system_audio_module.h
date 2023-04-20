@@ -418,7 +418,7 @@ class SystemModule : public SystemModuleInterface {
   static ComPtr<IMMDevice> InitDevice(IMMDeviceEnumerator* enumerator);
   bool ProcessCaptureData();
   static DWORD WINAPI CaptureThread(LPVOID param);
-  static DWORD WINAPI MuteThread(LPVOID param);
+  static DWORD WINAPI ReconnectThread(LPVOID param);
   std::string GetDeviceName(IMMDevice* device);
   static speaker_layout SystemModule::ConvertSpeakerLayout(DWORD layout,
                                                            WORD channels);

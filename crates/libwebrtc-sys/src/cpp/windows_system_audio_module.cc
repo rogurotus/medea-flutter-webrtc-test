@@ -178,6 +178,13 @@ SystemModule::SystemModule() {
   captureThread =
       CreateThread(nullptr, 0, SystemModule::CaptureThread, this, 0, nullptr);
 
+    if (!reconnectThread.Valid()) {
+      ResetEvent(reconnectExitSignal);
+      reconnectThread = CreateThread(nullptr, 0,
+                  SystemModule::ReconnectThread,
+                  this, 0, nullptr);
+    }
+
   if (!captureThread.Valid()) {
     enumerator->UnregisterEndpointNotificationCallback(notify);
     throw "Failed to create capture thread";
@@ -245,9 +252,9 @@ void SystemModule::SetRecordingSource(int id)
 {
 	const bool restart = process_id != id;
   process_id = id;
+  std::cout << "process_id" << process_id << " - " << id << std::endl;
   
-	if (true) {
-    std::cout << "SetEvent" << process_id << std::endl;
+	if (restart) {
 		SetEvent(restartSignal);
   }
 }
@@ -292,6 +299,7 @@ ComPtr<IAudioClient> SystemModule::InitClient( SourceType type, DWORD process_id
 		audioclientActivationParams.ActivationType =
 			AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK;
 
+    std::cout << "HERE 22" << std::endl;
 		audioclientActivationParams.ProcessLoopbackParams
 			.TargetProcessId = process_id;
 
@@ -375,153 +383,159 @@ WASAPIActivateAudioInterfaceCompletionHandler::ActivateCompleted(
 	return hr;
 }
 
-DWORD WINAPI SystemModule::MuteThread(LPVOID param) {
-  os_set_thread_name("win-wasapi: mute thread");
-  SystemModule* source = (SystemModule*)param;
-  while (true) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(11));
-    // if (source->source.get() != nullptr) {
-    //     source->source->SetMute(true);
-    // } 
+
+DWORD WINAPI SystemModule::CaptureThread(LPVOID param)
+{
+	os_set_thread_name("win-wasapi: capture thread");
+
+	const HRESULT hr = CoInitializeEx(0, COINIT_MULTITHREADED);
+	const bool com_initialized = SUCCEEDED(hr);
+	if (!com_initialized) {
+		blog(LOG_ERROR,
+		     "[WASAPISource::CaptureThread]"
+		     " CoInitializeEx failed: 0x%08X",
+		     hr);
+	}
+
+	DWORD unused = 0;
+	const HANDLE handle = AvSetMmThreadCharacteristics("Audio", &unused);
+
+	SystemModule *source = (SystemModule *)param;
+
+	const HANDLE inactive_sigs[] = {
+		source->exitSignal,
+		source->stopSignal,
+		source->initSignal,
+	};
+
+	const HANDLE active_sigs[] = {
+		source->exitSignal,
+		source->stopSignal,
+		source->receiveSignal,
+		source->restartSignal,
+	};
+
+	DWORD sig_count = _countof(inactive_sigs);
+	const HANDLE *sigs = inactive_sigs;
+
+	bool exit = false;
+	while (!exit) {
+		bool idle = false;
+		bool stop = false;
+		bool reconnect = false;
+		do {
+			/* Windows 7 does not seem to wake up for LOOPBACK */
+			const DWORD dwMilliseconds =
+				((sigs == active_sigs) &&
+				 (source->sourceType != SourceType::Input))
+					? 10
+					: INFINITE;
+
+      // std::cout << (sigs == active_sigs) << "pre-RAZ - " << dwMilliseconds << std::endl;
+			const DWORD ret = WaitForMultipleObjects(
+				sig_count, sigs, false, dwMilliseconds);
+      // std::cout << "RAZ - " << ret << std::endl;
+			switch (ret) {
+			case WAIT_OBJECT_0: {
+				exit = true;
+				stop = true;
+				idle = true;
+				break;
+			}
+
+			case WAIT_OBJECT_0 + 1:
+				stop = true;
+				idle = true;
+				break;
+
+			case WAIT_OBJECT_0 + 2:
+			case WAIT_TIMEOUT:
+				if (sigs == inactive_sigs) {
+          std::cout << "MUST HERE" << std::endl;
+					assert(ret != WAIT_TIMEOUT);
+
+					if (source->Init()) {
+						sig_count =
+							_countof(active_sigs);
+						sigs = active_sigs;
+					} else {
+						if (source->reconnectDuration ==
+						    0) {
+							// blog(LOG_INFO,
+							//      "WASAPI: Device '%s' failed to start (source: %s)",
+							//      source->device_id
+							// 	     .c_str(),
+							//      obs_source_get_name(
+							// 	     source->source));
+						}
+						stop = true;
+						reconnect = true;
+						source->reconnectDuration =
+							RECONNECT_INTERVAL;
+					}
+				} else {
+					stop = !source->ProcessCaptureData();
+					if (stop) {
+						// blog(LOG_INFO,
+						//      "Device '%s' invalidated.  Retrying (source: %s)",
+						//      source->device_name.c_str(),
+						//      obs_source_get_name(
+						// 	     source->source));
+						stop = true;
+						reconnect = true;
+						source->reconnectDuration =
+							RECONNECT_INTERVAL;
+					}
+				}
+				break;
+
+			default:
+        std::cout << "def - " << ret << std::endl;
+				assert(sigs == active_sigs);
+				assert(ret == WAIT_OBJECT_0 + 3);
+				stop = true;
+				reconnect = true;
+				source->reconnectDuration = 0;
+				ResetEvent(source->restartSignal);
+			}
+		} while (!stop);
+
+    std::cout << "gde - " << 42 << std::endl;
+		sig_count = _countof(inactive_sigs);
+		sigs = inactive_sigs;
+
+		if (source->client) {
+			source->client->Stop();
+
+			source->capture.Clear();
+			source->client.Clear();
+		}
+
+		if (idle) {
+			SetEvent(source->idleSignal);
+		} else if (reconnect) {
+      std::cout << "gde - " << 222 << std::endl;
+			// blog(LOG_INFO,
+			//      "Device '%s' invalidated.  Retrying (source: %s)",
+			//      source->device_name.c_str(),
+			//      obs_source_get_name(source->source));
+			SetEvent(source->reconnectSignal);
+		}
+	}
+
+	if (handle) {
+    std::cout << "pre-DEAD" << std::endl;
+		AvRevertMmThreadCharacteristics(handle);
   }
-  return 0;
+
+	if (com_initialized) {
+    std::cout << "pre-DEAD2" << std::endl;
+		CoUninitialize();
+  }
+
+  std::cout << "DEAD" << std::endl;
+	return 0;
 }
-
-DWORD WINAPI SystemModule::CaptureThread(LPVOID param) {
-  os_set_thread_name("win-wasapi: capture thread");
-
-  const HRESULT hr = CoInitializeEx(0, COINIT_MULTITHREADED);
-  const bool com_initialized = SUCCEEDED(hr);
-  if (!com_initialized) {
-    // blog(LOG_ERROR,
-    //	"[WASAPISource::CaptureThread]"
-    //	" CoInitializeEx failed: 0x%08X",
-    //	hr);
-  }
-
-  DWORD unused = 0;
-  // const HANDLE handle = AvSetMmThreadCharacteristics(L"Audio", &unused);
-
-  SystemModule* source = (SystemModule*)param;
-
-  const HANDLE inactive_sigs[] = {
-      source->exitSignal,
-      source->stopSignal,
-      source->initSignal,
-  };
-
-  const HANDLE active_sigs[] = {
-      source->exitSignal,
-      source->stopSignal,
-      source->receiveSignal,
-      source->restartSignal,
-  };
-
-  DWORD sig_count = _countof(inactive_sigs);
-  const HANDLE* sigs = inactive_sigs;
-
-  bool exit = false;
-  while (!exit) {
-    bool idle = false;
-    bool stop = false;
-    bool reconnect = false;
-    do {
-      /* Windows 7 does not seem to wake up for LOOPBACK */
-      const DWORD dwMilliseconds =
-          ((sigs == active_sigs) && (true))  // todo TRUE?
-              ? 10
-              : INFINITE;
-
-      const DWORD ret =
-          WaitForMultipleObjects(sig_count, sigs, false, dwMilliseconds);
-      switch (ret) {
-        case WAIT_OBJECT_0: {
-          exit = true;
-          stop = true;
-          idle = true;
-          break;
-        }
-
-        case WAIT_OBJECT_0 + 1:
-          stop = true;
-          idle = true;
-          break;
-
-        case WAIT_OBJECT_0 + 2:
-        case WAIT_TIMEOUT:
-          if (sigs == inactive_sigs) {
-            assert(ret != WAIT_TIMEOUT);
-            if (source->Init()) {
-              sig_count = _countof(active_sigs);
-              sigs = active_sigs;
-            } else {
-              if (source->reconnectDuration == 0) {
-                // blog(LOG_INFO,
-                //	"WASAPI: Device '%s' failed to start (source: %s)",
-                //	source->device_id
-                //	.c_str(),
-                //	obs_source_get_name(
-                //		source->source));
-              }
-              stop = true;
-              reconnect = true;
-              source->reconnectDuration = RECONNECT_INTERVAL;
-            }
-          } else {
-            stop = !source->ProcessCaptureData();
-            if (stop) {
-              // blog(LOG_INFO,
-              //	"Device '%s' invalidated.  Retrying (source: %s)",
-              //	source->device_name.c_str(),
-              //	obs_source_get_name(
-              //		source->source));
-              stop = true;
-              reconnect = true;
-              source->reconnectDuration = RECONNECT_INTERVAL;
-            }
-          }
-          break;
-
-        default:
-          assert(sigs == active_sigs);
-          assert(ret == WAIT_OBJECT_0 + 3);
-          stop = true;
-          reconnect = true;
-          source->reconnectDuration = 0;
-          ResetEvent(source->restartSignal);
-      }
-    } while (!stop);
-
-    sig_count = _countof(inactive_sigs);
-    sigs = inactive_sigs;
-
-    if (source->client) {
-      source->client->Stop();
-
-      source->capture.Clear();
-      source->client.Clear();
-    }
-
-    if (idle) {
-      SetEvent(source->idleSignal);
-    } else if (reconnect) {
-      // blog(LOG_INFO,
-      //	"Device '%s' invalidated.  Retrying (source: %s)",
-      //	source->device_name.c_str(),
-      //	obs_source_get_name(source->source));
-      SetEvent(source->reconnectSignal);
-    }
-  }
-
-  // if (handle)
-  //	AvRevertMmThreadCharacteristics(handle);
-
-  if (com_initialized)
-    CoUninitialize();
-
-  return 0;
-}
-
 int32_t SystemModule::SetRecordingDevice(uint16_t index) {
   return 0;
 }
@@ -668,25 +682,6 @@ std::unique_ptr<std::vector<AudioSourceInfo>> SystemModule::EnumerateWindows() c
 
 void SystemModule::Initialize() {
 		device_name = "[VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK]";
-
-    auto class_ = "MozillaWindowClass";
-    auto title_ = "C++ inline member function in .cpp file - Stack Overflow — Mozilla Firefox";
-    auto exe_ = "firefox.exe";
-		hwnd = ms_find_window(INCLUDE_MINIMIZED, WINDOW_PRIORITY_EXE,
-				      class_, title_,
-				      exe_);
-
-		if (!hwnd) {
-			throw "Failed to find window";
-    }
-
-		DWORD dwProcessId = 0;
-		if (!GetWindowThreadProcessId(hwnd, &dwProcessId)) {
-			hwnd = NULL;
-			throw "Failed to get process id of window";
-		}
-
-		process_id = dwProcessId;
 	ResetEvent(receiveSignal);
 
 	ComPtr<IAudioClient> temp_client = InitClient(
@@ -698,6 +693,8 @@ void SystemModule::Initialize() {
 
   client = std::move(temp_client);
   capture = std::move(temp_capture);
+  std::cout << "AAAAAAA2" << process_id << std::endl;
+
 }
 
 
@@ -789,6 +786,46 @@ int32_t SystemModule::RecordingChannels() {
 
 void SystemModule::ResetSource() {
   source = nullptr;
+}
+
+DWORD WINAPI SystemModule::ReconnectThread(LPVOID param)
+{
+	os_set_thread_name("win-wasapi: reconnect thread");
+
+	SystemModule *source = (SystemModule *)param;
+
+	const HANDLE sigs[] = {
+		source->reconnectExitSignal,
+		source->reconnectSignal,
+	};
+
+	const HANDLE reconnect_sigs[] = {
+		source->reconnectExitSignal,
+		source->stopSignal,
+	};
+
+	bool exit = false;
+	while (!exit) {
+		const DWORD ret = WaitForMultipleObjects(_countof(sigs), sigs,
+							 false, INFINITE);
+		switch (ret) {
+		case WAIT_OBJECT_0:
+			exit = true;
+			break;
+		default:
+			assert(ret == (WAIT_OBJECT_0 + 1));
+			if (source->reconnectDuration > 0) {
+				WaitForMultipleObjects(
+					_countof(reconnect_sigs),
+					reconnect_sigs, false,
+					source->reconnectDuration);
+			}
+      std::cout << "BOOM" << std::endl;
+      SetEvent(source->initSignal);
+		}
+	}
+
+	return 0;
 }
 
 int SystemModule::StopRecording() {

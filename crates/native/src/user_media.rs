@@ -326,13 +326,11 @@ impl Webrtc {
             Some(audio_source) => {
                 match audio_source {
                     (src, None, None) => {
-                        println!("AAAAAAAAAAAAAAAAAAAA");
                         let microphone = self.audio_device_module.create_source_microphone();
                         let system = self.audio_device_module.create_source_system();
                         self.audio_device_module.add_source(&microphone);
                         self.audio_device_module.add_source(&system);
                         self.audio_source.replace((Arc::clone(&src), Some(microphone), Some(system)));
-                        println!("AAAAAAAAAAAAAAAAAAAA2");
                         src
                     }
                     (src, Some(d), None) => {
@@ -353,15 +351,15 @@ impl Webrtc {
                 }
             },
             None => {
-                println!("VVVVVVVVVVVVVVVVV");
                 let src =
-                Arc::new(self.peer_connection_factory.create_audio_source()?);
+                    Arc::new(self.peer_connection_factory.create_audio_source()?);
+
                 let microphone = self.audio_device_module.create_source_microphone();
                 let system = self.audio_device_module.create_source_system();
                 self.audio_device_module.add_source(&microphone);
                 self.audio_device_module.add_source(&system);
+
                 self.audio_source.replace((Arc::clone(&src),  Some(microphone), Some(system)));
-                println!("VVVVVVVVVVVVVVVVV2");
                 src
             },
         };

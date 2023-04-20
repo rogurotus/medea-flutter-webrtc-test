@@ -129,7 +129,7 @@ class _LoopbackState extends State<Loopback> {
     });
 
     print("pre-change");
-    await Future.delayed(Duration(seconds: 100));
+    await Future.delayed(Duration(seconds: 10));
     print("change");
     var caps2 = DeviceConstraints();
     var audio2 = AudioConstraints();
