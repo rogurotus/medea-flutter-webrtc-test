@@ -137,6 +137,16 @@ Future<List<MediaDisplayInfo>> enumerateDisplays() async {
   }
 }
 
+// todo
+Future<List<AudioSourceInfo>> enumerateSystemAudioSource() async {
+  if (isDesktop) {
+    return await api!.enumerateSystemAudioSource();
+  } else {
+    return List<AudioSourceInfo>.empty();
+  }
+}
+
+
 /// Returns list of local audio and video [NativeMediaStreamTrack]s based on the
 /// provided [DeviceConstraints].
 Future<List<NativeMediaStreamTrack>> getUserMedia(
@@ -215,7 +225,7 @@ Future<List<NativeMediaStreamTrack>> _getUserMediaFFI(
     DeviceConstraints constraints) async {
   var audioConstraints = constraints.audio.mandatory != null ||
           constraints.audio.optional != null
-      ? ffi.AudioConstraints(deviceId: constraints.audio.mandatory?.deviceId)
+      ? ffi.AudioConstraints(deviceId: constraints.audio.mandatory?.deviceId, systemId: constraints.audio.mandatory?.systemId)
       : null;
 
   var videoConstraints =

@@ -60,13 +60,14 @@ class _LoopbackState extends State<Loopback> {
   // Platform messages are asynchronous, so we initialize in an async method.
   void _makeCall() async {
     var caps = DeviceConstraints();
-    caps.audio.mandatory = AudioConstraints();
+    var audio = AudioConstraints();
+    audio.systemId = 13852;
+    caps.audio.mandatory = audio;
     caps.video.mandatory = DeviceVideoConstraints();
     caps.video.mandatory!.width = 640;
     caps.video.mandatory!.height = 480;
     caps.video.mandatory!.fps = 30;
 
-    try {
       _tracks = await getUserMedia(caps);
       await _localRenderer.setSrcObject(
           _tracks!.firstWhere((track) => track.kind() == MediaKind.video));
@@ -117,9 +118,7 @@ class _LoopbackState extends State<Loopback> {
 
       await atrans?.sender.replaceTrack(
           _tracks!.firstWhere((track) => track.kind() == MediaKind.audio));
-    } catch (e) {
-      print(e.toString());
-    }
+
     if (!mounted) return;
 
     _inCalling = true;
@@ -128,6 +127,23 @@ class _LoopbackState extends State<Loopback> {
         _microIsAvailable = value;
       });
     });
+
+    print("pre-change");
+    await Future.delayed(Duration(seconds: 100));
+    print("change");
+    var caps2 = DeviceConstraints();
+    var audio2 = AudioConstraints();
+    audio2.systemId = 1260;
+    caps2.audio.mandatory = audio2;
+    caps2.video.mandatory = DeviceVideoConstraints();
+    caps2.video.mandatory!.width = 640;
+    caps2.video.mandatory!.height = 480;
+    caps2.video.mandatory!.fps = 30;
+
+          _tracks = await getUserMedia(caps2);
+
+      await atrans?.sender.replaceTrack(
+          _tracks!.firstWhere((track) => track.kind() == MediaKind.audio));
   }
 
   void _hangUp() async {

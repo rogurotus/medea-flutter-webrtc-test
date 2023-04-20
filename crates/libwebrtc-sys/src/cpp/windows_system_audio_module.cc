@@ -45,22 +45,6 @@ void os_set_thread_name(const char* name)
 }
 
 
-size_t wchar_to_utf8(const wchar_t *in, size_t insize, char *out,
-					 size_t outsize, int flags)
-{
-	int i_insize = (int)insize;
-	int ret;
-
-	if (i_insize == 0)
-		i_insize = (int)wcslen(in);
-
-	ret = WideCharToMultiByte(CP_UTF8, 0, in, i_insize, out, (int)outsize,
-							  NULL, NULL);
-
-	UNUSED_PARAMETER(flags);
-	return (ret > 0) ? (size_t)ret : 0;
-}
-
 size_t os_wcs_to_utf8(const wchar_t *str, size_t len, char *dst,
 					  size_t dst_size)
 {
@@ -136,16 +120,13 @@ class WASAPINotify : public IMMNotificationClient {
 };
 
 SystemModule::SystemModule() {
-  // mmdevapi_module = LoadLibrary(L"Mmdevapi");
-  // if (mmdevapi_module)
-  // {
-  // 	activate_audio_interface_async =
-  // 		(PFN_ActivateAudioInterfaceAsync)GetProcAddress(
-  // 			mmdevapi_module, "ActivateAudioInterfaceAsync");
-  // }
 
-  // // UpdateSettings(BuildUpdateParams(settings));
-  // // LogSettings();
+	mmdevapi_module = LoadLibrary("Mmdevapi");
+	if (mmdevapi_module) {
+		activate_audio_interface_async =
+			(PFN_ActivateAudioInterfaceAsync)GetProcAddress(
+				mmdevapi_module, "ActivateAudioInterfaceAsync");
+	}
 
   idleSignal = CreateEvent(nullptr, true, false, nullptr);
   if (!idleSignal.Valid())
@@ -196,6 +177,7 @@ SystemModule::SystemModule() {
 
   captureThread =
       CreateThread(nullptr, 0, SystemModule::CaptureThread, this, 0, nullptr);
+
   if (!captureThread.Valid()) {
     enumerator->UnregisterEndpointNotificationCallback(notify);
     throw "Failed to create capture thread";
@@ -233,42 +215,177 @@ ComPtr<IMMDevice> SystemModule::InitDevice(IMMDeviceEnumerator *enumerator)
 		return device;
 	}
 
-ComPtr<IAudioClient> SystemModule::InitClient(
-		IMMDevice *device,
-		int& channels, int& format,
-		uint32_t &samples_per_sec)
-	{
-		WAVEFORMATEXTENSIBLE wfextensible;
-		CoTaskMemPtr<WAVEFORMATEX> wfex;
-		const WAVEFORMATEX *pFormat;
-		HRESULT res;
-		ComPtr<IAudioClient> client;
-
-		res = device->Activate(__uuidof(IAudioClient), CLSCTX_ALL,
-							   nullptr, (void **)client.Assign());
-		if (FAILED(res))
-			throw HRError("Failed to activate client context", res);
-
-		res = client->GetMixFormat(&wfex);
-		if (FAILED(res))
-			throw HRError("Failed to get mix format", res);
-
-		pFormat = wfex.Get();
-
-		SystemModule::InitFormat(pFormat, channels, format, samples_per_sec);
-
-		DWORD flags = AUDCLNT_STREAMFLAGS_EVENTCALLBACK;
-
-		// (type != SourceType::Input)
-		flags |= AUDCLNT_STREAMFLAGS_LOOPBACK;
-
-		res = client->Initialize(AUDCLNT_SHAREMODE_SHARED, flags,
-								 BUFFER_TIME_100NS, 0, pFormat, nullptr);
-		if (FAILED(res))
-			throw HRError("Failed to initialize audio client", res);
-
-		return client;
+static DWORD GetSpeakerChannelMask(speaker_layout layout)
+{
+	switch (layout) {
+	case SPEAKERS_STEREO:
+		return KSAUDIO_SPEAKER_STEREO;
+	case SPEAKERS_2POINT1:
+		return KSAUDIO_SPEAKER_2POINT1;
+	case SPEAKERS_4POINT0:
+		return KSAUDIO_SPEAKER_SURROUND;
+	case SPEAKERS_4POINT1:
+		return OBS_KSAUDIO_SPEAKER_4POINT1;
+	case SPEAKERS_5POINT1:
+		return KSAUDIO_SPEAKER_5POINT1_SURROUND;
+	case SPEAKERS_7POINT1:
+		return KSAUDIO_SPEAKER_7POINT1_SURROUND;
 	}
+
+	return (DWORD)layout;
+}
+
+static int GetChannels(speaker_layout layout)
+{
+	return (int)layout;
+}
+
+
+void SystemModule::SetRecordingSource(int id)
+{
+	const bool restart = process_id != id;
+  process_id = id;
+  
+	if (true) {
+    std::cout << "SetEvent" << process_id << std::endl;
+		SetEvent(restartSignal);
+  }
+}
+
+
+ComPtr<IAudioClient> SystemModule::InitClient( SourceType type, DWORD process_id,
+	PFN_ActivateAudioInterfaceAsync activate_audio_interface_async,
+	speaker_layout& channels, int& format,
+	uint32_t &samples_per_sec)
+	{
+
+  std::cout << "INIT AAAAAA" << process_id << std::endl;
+	WAVEFORMATEXTENSIBLE wfextensible;
+	CoTaskMemPtr<WAVEFORMATEX> wfex;
+	const WAVEFORMATEX *pFormat;
+	HRESULT res;
+	ComPtr<IAudioClient> client;
+
+		if (activate_audio_interface_async == NULL) {
+			throw "ActivateAudioInterfaceAsync is not available";
+    }
+
+		const WORD nChannels = (WORD)3; // todo get from device
+		const DWORD nSamplesPerSec = 48000;
+		constexpr WORD wBitsPerSample = 32;
+		const WORD nBlockAlign = nChannels * wBitsPerSample / 8;
+
+		WAVEFORMATEX &wf = wfextensible.Format;
+		wf.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+		wf.nChannels = nChannels;
+		wf.nSamplesPerSec = nSamplesPerSec;
+		wf.nAvgBytesPerSec = nSamplesPerSec * nBlockAlign;
+		wf.nBlockAlign = nBlockAlign;
+		wf.wBitsPerSample = wBitsPerSample;
+		wf.cbSize = sizeof(wfextensible) - sizeof(format);
+		wfextensible.Samples.wValidBitsPerSample = wBitsPerSample;
+		wfextensible.dwChannelMask =
+			GetSpeakerChannelMask(speaker_layout::SPEAKERS_2POINT1);
+		wfextensible.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+
+		AUDIOCLIENT_ACTIVATION_PARAMS audioclientActivationParams;
+		audioclientActivationParams.ActivationType =
+			AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK;
+
+		audioclientActivationParams.ProcessLoopbackParams
+			.TargetProcessId = process_id;
+
+		audioclientActivationParams.ProcessLoopbackParams
+			.ProcessLoopbackMode =
+			PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE;
+		PROPVARIANT activateParams{};
+		activateParams.vt = VT_BLOB;
+		activateParams.blob.cbSize =
+			sizeof(audioclientActivationParams);
+		activateParams.blob.pBlobData =
+			reinterpret_cast<BYTE *>(&audioclientActivationParams);
+
+		{
+			Microsoft::WRL::ComPtr<
+				WASAPIActivateAudioInterfaceCompletionHandler>
+				handler = Microsoft::WRL::Make<
+					WASAPIActivateAudioInterfaceCompletionHandler>();
+			ComPtr<IActivateAudioInterfaceAsyncOperation> asyncOp;
+			res = activate_audio_interface_async(
+				VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK,
+				__uuidof(IAudioClient), &activateParams,
+				handler.Get(), &asyncOp);
+
+			if (FAILED(res))
+       {
+				throw HRError(
+					"Failed to get activate audio client",
+					res);
+       }
+
+			res = handler->GetActivateResult(client.Assign());
+			if (FAILED(res)) {
+				throw HRError("Async activation failed", res);
+      }
+
+		}
+
+		pFormat = &wf;
+
+    InitFormat(pFormat, channels, format, samples_per_sec);
+
+    DWORD flags = AUDCLNT_STREAMFLAGS_EVENTCALLBACK;
+    flags |= AUDCLNT_STREAMFLAGS_LOOPBACK;
+    res = client->Initialize(AUDCLNT_SHAREMODE_SHARED, flags,
+          BUFFER_TIME_100NS, 0, pFormat, nullptr);
+    if (FAILED(res))
+      throw HRError("Failed to initialize audio client", res);
+
+    return client;
+	}
+
+
+WASAPIActivateAudioInterfaceCompletionHandler::
+	WASAPIActivateAudioInterfaceCompletionHandler()
+{
+	activationSignal = CreateEvent(nullptr, false, false, nullptr);
+	if (!activationSignal.Valid())
+		throw "Could not create receive signal";
+}
+
+HRESULT
+WASAPIActivateAudioInterfaceCompletionHandler::GetActivateResult(
+	IAudioClient **client)
+{
+	WaitForSingleObject(activationSignal, INFINITE);
+	*client = static_cast<IAudioClient *>(unknown);
+	return activationResult;
+}
+
+HRESULT
+WASAPIActivateAudioInterfaceCompletionHandler::ActivateCompleted(
+	IActivateAudioInterfaceAsyncOperation *activateOperation)
+{
+	HRESULT hr, hr_activate;
+	hr = activateOperation->GetActivateResult(&hr_activate, &unknown);
+	hr = SUCCEEDED(hr) ? hr_activate : hr;
+	activationResult = hr;
+
+	SetEvent(activationSignal);
+	return hr;
+}
+
+DWORD WINAPI SystemModule::MuteThread(LPVOID param) {
+  os_set_thread_name("win-wasapi: mute thread");
+  SystemModule* source = (SystemModule*)param;
+  while (true) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(11));
+    // if (source->source.get() != nullptr) {
+    //     source->source->SetMute(true);
+    // } 
+  }
+  return 0;
+}
 
 DWORD WINAPI SystemModule::CaptureThread(LPVOID param) {
   os_set_thread_name("win-wasapi: capture thread");
@@ -409,33 +526,26 @@ int32_t SystemModule::SetRecordingDevice(uint16_t index) {
   return 0;
 }
 
-int32_t SystemModule::EnumerateDevice(uint16_t index) {
-  return 0;
+void SystemModule::ConvertBuffer(std::vector<int8_t>& data) {
 }
 
-void SystemModule::ConvertBuffer(std::vector<int8_t>& data) {
-  auto data_ptr = (float*)data.data();
-  
-  release_capture_buffer.clear();
-  int k = 0;
-  for (int i; i < channels; ++i) {
-    for (int j = i; j < data.size() / format; j += channels, ++k) {
-      float inSample = data_ptr[j];
-      int16_t outSample;
-
+void SortBuffer(std::vector<int16_t>& output, float* data, int channels) {
+  for (int i = 0; i < channels; ++i) {
+    int k = i;
+    for (int j = 480 * i; k< 480*channels; ++j, k+=channels) {
+      float inSample = data[k];
       if (inSample >= 0) {
-        outSample = (int16_t)lrintf(inSample * 32767);
+          output[j] = (int16_t) lrintf(inSample * 32767.0);
       } else {
-        outSample = (int16_t)lrintf(inSample * 32768);
+          output[j] = (int16_t) lrintf(inSample * 32768.0);
       }
-      std::cout << outSample;
-      release_capture_buffer.push_back(outSample);
     }
   }
 }
 
 bool SystemModule::ProcessCaptureData() {
   if (source) {
+    int channels = GetChannels(speakers);
     if (stop) {
       return false;
     }
@@ -461,10 +571,8 @@ bool SystemModule::ProcessCaptureData() {
 
       if (!captureSize) 
       {
-        source->SetMute(true);
+        source->SetMute();
         break;
-      } else {
-        source->SetMute(false);
       }
 
       res = capture->GetBuffer(&buffer, &frames, &flags, &pos, &ts);
@@ -478,45 +586,16 @@ bool SystemModule::ProcessCaptureData() {
           return false;
       }
 
-      for (int i = 0; i < frames * format * channels; ++i) {
-        // std::cout << "ADD - " << i << std::endl;
-        capture_buffer.push_back(buffer[i]);
+      float* data = (float*) buffer;
+      for (int i = 0; i < frames * channels; ++i) {
+        capture_buffer.push_back(data[i]);
         
-        // std::cout << "WTF " << capture_buffer.size() << " - " << ((sampleRate / 100) * format * channels) << std::endl;
-        if (capture_buffer.size() == ((sampleRate / 100) * format * channels)) {
-
-          float* a2 = (float*)capture_buffer.data();
-              std::vector<int16_t> res;
-              for (int i = 0; i< 480 * 2; i += 2) {
-                  float inSample = a2[i];
-                  int16_t outSample;
-
-                  if (inSample >= 0) {
-                      outSample = (int16_t) lrintf(inSample * 32767.0);
-                  } else {
-                      outSample = (int16_t) lrintf(inSample * 32768.0);
-                  }
-                  res.push_back(outSample);
-              }
-              for (int i = 1; i< 480 * 2; i += 2) {
-                  float inSample = a2[i];
-                  int16_t outSample;
-
-                  if (inSample >= 0) {
-                      outSample = (int16_t) lrintf(inSample * 32767.0);
-                  } else {
-                      outSample = (int16_t) lrintf(inSample * 32768.0);
-                  }
-                  res.push_back(outSample);
-              }
-              source->UpdateFrame((const int16_t *)(res.data()), 480, 48000, 2);
+        if (capture_buffer.size() == ((sampleRate / 100) * channels)) {
+              SortBuffer(release_capture_buffer, capture_buffer.data(), channels);
+              source->UpdateFrame((const int16_t *)(release_capture_buffer.data()), 480, 48000, channels);
               capture_buffer.clear();
         }
-        // std::cout << "WTF " << (capture_buffer.size() == ((sampleRate / 100) * format * channels)) << std::endl;
-
       }
-      
-      // std::cout << "HERE4" << std::endl;
 
       capture->ReleaseBuffer(frames);
     }
@@ -554,81 +633,94 @@ int32_t SystemModule::Init() {
   return success;
 }
 
-std::string SystemModule::GetDeviceName(IMMDevice *device)
+std::string GetDeviceName(IMMDevice *device)
 {
 	std::string device_name;
 	ComPtr<IPropertyStore> store;
 	HRESULT res;
 
-	if (SUCCEEDED(device->OpenPropertyStore(STGM_READ, store.Assign())))
-	{
+	if (SUCCEEDED(device->OpenPropertyStore(STGM_READ, store.Assign()))) {
 		PROPVARIANT nameVar;
 
 		PropVariantInit(&nameVar);
 		res = store->GetValue(PKEY_Device_FriendlyName, &nameVar);
 
-		if (SUCCEEDED(res) && nameVar.pwszVal && *nameVar.pwszVal)
-		{
+		if (SUCCEEDED(res) && nameVar.pwszVal && *nameVar.pwszVal) {
 			size_t len = wcslen(nameVar.pwszVal);
 			size_t size;
 
 			size = os_wcs_to_utf8(nameVar.pwszVal, len, nullptr,
-								  0) +
-				   1;
+					      0) +
+			       1;
 			device_name.resize(size);
 			os_wcs_to_utf8(nameVar.pwszVal, len, &device_name[0],
-						   size);
+				       size);
 		}
 	}
 
 	return device_name;
 }
 
+std::unique_ptr<std::vector<AudioSourceInfo>> SystemModule::EnumerateWindows() const {
+  return std::make_unique<std::vector<AudioSourceInfo>>(ms_fill_window_list(window_search_mode::INCLUDE_MINIMIZED));
+}
+
+
 void SystemModule::Initialize() {
-  ComPtr<IMMDevice> device;
+		device_name = "[VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK]";
 
-  // get default output device
-  device = InitDevice(enumerator);
+    auto class_ = "MozillaWindowClass";
+    auto title_ = "C++ inline member function in .cpp file - Stack Overflow — Mozilla Firefox";
+    auto exe_ = "firefox.exe";
+		hwnd = ms_find_window(INCLUDE_MINIMIZED, WINDOW_PRIORITY_EXE,
+				      class_, title_,
+				      exe_);
 
-  device_name = GetDeviceName(device);
-  // std::cout << "NAME - " << device_name << std::endl;
+		if (!hwnd) {
+			throw "Failed to find window";
+    }
 
-  ResetEvent(receiveSignal);
+		DWORD dwProcessId = 0;
+		if (!GetWindowThreadProcessId(hwnd, &dwProcessId)) {
+			hwnd = NULL;
+			throw "Failed to get process id of window";
+		}
 
-  ComPtr<IAudioClient> temp_client =
-      InitClient(device, channels, format, sampleRate);
+		process_id = dwProcessId;
+	ResetEvent(receiveSignal);
 
-  // spec magic (sourceType == SourceType::DeviceOutput)
-  ClearBuffer(device);
+	ComPtr<IAudioClient> temp_client = InitClient(
+		sourceType, process_id, activate_audio_interface_async,
+		speakers, format, sampleRate);
 
   ComPtr<IAudioCaptureClient> temp_capture =
       InitCapture(temp_client, receiveSignal);
 
   client = std::move(temp_client);
   capture = std::move(temp_capture);
-
-  // blog(LOG_INFO, "WASAPI: Device '%s' [%" PRIu32 " Hz] initialized",
-  //	device_name.c_str(), sampleRate);
 }
 
 
-int SystemModule::ConvertSpeakerLayout(DWORD layout, WORD channels) {
-  switch (layout) {
-    case KSAUDIO_SPEAKER_2POINT1:
-      return 3;
-    case KSAUDIO_SPEAKER_SURROUND:
-      return 4;
-    case KSAUDIO_SPEAKER_5POINT1_SURROUND:
-      return 6;
-    case KSAUDIO_SPEAKER_7POINT1_SURROUND:
-      return 8;
-  }
+speaker_layout SystemModule::ConvertSpeakerLayout(DWORD layout, WORD channels)
+{
+	switch (layout) {
+	case KSAUDIO_SPEAKER_2POINT1:
+		return SPEAKERS_2POINT1;
+	case KSAUDIO_SPEAKER_SURROUND:
+		return SPEAKERS_4POINT0;
+	case OBS_KSAUDIO_SPEAKER_4POINT1:
+		return SPEAKERS_4POINT1;
+	case KSAUDIO_SPEAKER_5POINT1_SURROUND:
+		return SPEAKERS_5POINT1;
+	case KSAUDIO_SPEAKER_7POINT1_SURROUND:
+		return SPEAKERS_7POINT1;
+	}
 
-  return channels;
+	return (speaker_layout)channels;
 }
 
 void SystemModule::InitFormat(const WAVEFORMATEX* wfex,
-                              int& channels,
+                              speaker_layout& channels,
                               int& format,
                               uint32_t& sampleRate) {
   DWORD layout = 0;
@@ -692,7 +784,7 @@ SystemSource::~SystemSource() {
 }
 
 int32_t SystemModule::RecordingChannels() {
-  return channels;
+  return GetChannels(speakers);
 }
 
 void SystemModule::ResetSource() {

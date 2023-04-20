@@ -2,6 +2,16 @@
 #pragma once
 #include "custom_audio.h"
 
+class AudioSourceInfo {
+  public:
+  AudioSourceInfo(int id, std::string title);
+  int GetId() const;
+  std::string GetTitle() const;
+  private:
+  int id;
+  std::string title;
+};
+
 
 class SystemModuleInterface;
 
@@ -30,10 +40,11 @@ virtual int32_t Terminate() = 0;
 // virtual int32_t SystemVolume(uint32_t* volume) const = 0;
 
 // Settings.
-virtual int32_t SetRecordingDevice(uint16_t index) = 0;
+virtual void SetRecordingSource(int id) = 0;
 
 // enumerate outputs
-virtual int32_t EnumerateDevice(uint16_t index) = 0;
+virtual std::unique_ptr<std::vector<AudioSourceInfo>> EnumerateWindows() const = 0;
+
 
 // System source.
 virtual rtc::scoped_refptr<AudioSource> CreateSource() = 0;

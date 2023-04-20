@@ -33,7 +33,7 @@ class AudioSource : public rtc::RefCountedObject<RefCountedAudioSource> {
                    int channels);
 
   // todo
-  void SetMute(bool mute);
+  void SetMute();
 
  private:
   webrtc::AudioFrame frame_;
@@ -42,7 +42,9 @@ class AudioSource : public rtc::RefCountedObject<RefCountedAudioSource> {
 
   std::mutex mutex_;
   std::condition_variable cv_;
-  bool frame_available_ = false;
-  std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
-  bool mute = false;
+  std::atomic<bool> frame_available_ = false;
+  std::atomic<bool> mute_ = false;
+
+  std::atomic<bool> pre_mute_ = false;
+  std::chrono::time_point<std::chrono::system_clock> mute_clock_;
 };

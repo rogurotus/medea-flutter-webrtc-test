@@ -7,14 +7,10 @@
 webrtc::AudioMixer::Source::AudioFrameInfo AudioSource::GetAudioFrameWithInfo(
     int sample_rate_hz,
     webrtc::AudioFrame* audio_frame) {
-  std::this_thread::sleep_until(now + std::chrono::milliseconds(10));
 
   std::unique_lock<std::mutex> lock(mutex_);
-  if (mute && !frame_available_) {
-    return webrtc::AudioMixer::Source::AudioFrameInfo::kMuted;
-  }
-  cv_.wait(lock, [&]() { return frame_available_; });
-
+  cv_.wait(lock, [&]() { return frame_available_.load() || mute_.load(); });
+  if (frame_available_.load()) {
   auto* source = frame_.data();
   if (frame_.sample_rate_hz() != sample_rate_hz) {
     render_resampler_.InitializeIfNeeded(frame_.sample_rate_hz(),
@@ -29,9 +25,14 @@ webrtc::AudioMixer::Source::AudioFrameInfo AudioSource::GetAudioFrameWithInfo(
                            sample_rate_hz,
                            webrtc::AudioFrame::SpeechType::kNormalSpeech,
                            webrtc::AudioFrame::VADActivity::kVadActive);
-  frame_available_ = false;
-  now = std::chrono::system_clock::now();
+
+  frame_available_.store(false);
+  mute_.store(false);
+  pre_mute_.store(false);
   return webrtc::AudioMixer::Source::AudioFrameInfo::kNormal;
+  } else {
+    return webrtc::AudioMixer::Source::AudioFrameInfo::kMuted;
+  }
 };
 
 // Updates the audio frame data.
@@ -39,11 +40,11 @@ void AudioSource::UpdateFrame(const int16_t* source,
                               int size,
                               int sample_rate,
                               int channels) {
-  std::unique_lock<std::mutex> lock(mutex_);
   frame_.UpdateFrame(0, source, size, sample_rate,
                      webrtc::AudioFrame::SpeechType::kNormalSpeech,
                      webrtc::AudioFrame::VADActivity::kVadActive, channels);
-  frame_available_ = true;
+  mute_.store(false);
+  frame_available_.store(true);
   cv_.notify_all();
 }
 
@@ -58,6 +59,15 @@ int AudioSource::PreferredSampleRate() const {
   return frame_.sample_rate_hz();
 };
 
-void AudioSource::SetMute(bool mute) {
-  this->mute = mute;
+void AudioSource::SetMute() {
+  // todo вынести на сторону захвата
+  if (pre_mute_.load()) {
+    if ((std::chrono::system_clock::now() - mute_clock_) >= std::chrono::milliseconds(10)) {
+      mute_.store(true);
+      cv_.notify_all();
+    }
+  } else {
+    pre_mute_.store(true);
+    mute_clock_ = std::chrono::system_clock::now();
+  }
 }

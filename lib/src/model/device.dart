@@ -1,4 +1,5 @@
 import '/src/api/bridge.g.dart' as ffi;
+export '/src/api/bridge.g.dart' show AudioSourceInfo;
 
 /// Media device kind.
 enum MediaDeviceKind {

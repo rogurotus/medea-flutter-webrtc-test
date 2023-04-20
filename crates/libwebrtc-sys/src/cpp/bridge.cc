@@ -944,4 +944,25 @@ std::unique_ptr<std::string> display_source_title(const DisplaySource& source) {
   return std::make_unique<std::string>(source.title);
 }
 
+// todo
+std::unique_ptr<std::vector<AudioSourceInfo>> enumerate_audio_source(const AudioSourceManager& manager) {
+  return manager.EnumerateWindows();
+}
+
+// todo
+void set_audio_source(AudioSourceManager& manager, int64_t id) {
+  manager.SetRecordingSource(id);
+}
+
+// todo
+int64_t system_source_id(const AudioSourceInfo& source) {
+  return source.GetId();
+}
+
+// todo
+std::unique_ptr<std::string> system_source_title(const AudioSourceInfo& source) {
+  return std::make_unique<std::string>(source.GetTitle());
+}
+
+
 }  // namespace bridge

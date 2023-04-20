@@ -109,6 +109,7 @@ using MediaStreamTrackInterface =
 using CustomAudioDeviceModule = rtc::scoped_refptr<::CustomAudioDeviceModule>;
 using AudioSource = rtc::scoped_refptr<::AudioSource>;
 using AudioSourceManager = ::AudioSourceManager;
+using AudioSourceInfo = ::AudioSourceInfo;
 
 
 // Creates a new proxied `AudioDeviceModule` for the given `AudioLayer`.
@@ -134,6 +135,18 @@ std::unique_ptr<AudioSource> create_source_microphone(AudioSourceManager& manage
 
 // Creates a new `AudioSource` from system.
 std::unique_ptr<AudioSource> create_source_system(AudioSourceManager& manager);
+
+// todo
+std::unique_ptr<std::vector<AudioSourceInfo>> enumerate_audio_source(const AudioSourceManager& manager);
+
+// todo
+void set_audio_source(AudioSourceManager& manager, int64_t id);
+
+// todo
+int64_t system_source_id(const AudioSourceInfo& source);
+
+// todo
+std::unique_ptr<std::string> system_source_title(const AudioSourceInfo& source);
 
 // Adds `AudioSource` to `AudioSourceManager`.
 void add_source(AudioSourceManager& manager, const AudioSource& source);

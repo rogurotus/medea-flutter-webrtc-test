@@ -197,6 +197,22 @@ pub struct AudioSource(UniquePtr<webrtc::AudioSource>);
 unsafe impl Send for webrtc::TaskQueueFactory {}
 unsafe impl Sync for webrtc::TaskQueueFactory {}
 
+// todo
+pub struct AudioSourceInfo {
+    id: i64,
+    title: String,
+}
+
+impl AudioSourceInfo {
+    pub fn id(&self) -> i64 {
+        self.id
+    }
+
+    pub fn title(&self) -> String {
+        self.title.clone()
+    }
+}
+
 /// Available audio devices manager that is responsible for driving input
 /// (microphone) and output (speaker) audio in WebRTC.
 ///
@@ -247,6 +263,20 @@ impl AudioDeviceModule {
             ),
             UniquePtr::null(),
         )
+    }
+
+    pub fn set_system_audio_source(&mut self, id: i64) {
+        webrtc::set_audio_source(self.1.pin_mut(), id);
+    }
+
+    pub fn enumerate_audio_source(&self) -> Vec<AudioSourceInfo> {
+        webrtc::enumerate_audio_source(&self.1)
+            .into_iter()
+            .map(|info| AudioSourceInfo {
+                id: webrtc::system_source_id(info),
+                title: webrtc::system_source_title(info).to_string(),
+            })
+            .collect()
     }
 
     /// Initializes the current [`AudioDeviceModule`].

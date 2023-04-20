@@ -61,6 +61,15 @@ rtc::scoped_refptr<AudioSource> CustomAudioDeviceModule::CreateSystemSource() {
   return system;
 }
 
+std::unique_ptr<std::vector<AudioSourceInfo>> CustomAudioDeviceModule::EnumerateWindows() const {
+  return system_recorder->EnumerateWindows();
+}
+
+void CustomAudioDeviceModule::SetRecordingSource(int id) {
+  system_recorder->SetRecordingSource(id);
+};
+
+
 rtc::scoped_refptr<AudioSource>
 CustomAudioDeviceModule::CreateMicrophoneSource() {
   auto microphone = audio_recorder->CreateSource();
@@ -171,6 +180,7 @@ CustomAudioDeviceModule::CustomAudioDeviceModule(
     : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory),
       audio_recorder(std::move(
           std::unique_ptr<MicrophoneModuleInterface>(new MicrophoneModule()))),
+
       system_recorder(std::move(
           std::unique_ptr<SystemModuleInterface>(new SystemModule()))) {
 }
@@ -189,7 +199,7 @@ void CustomAudioDeviceModule::RecordProcess() {
             cv.wait(lock, [&]() { return sources.size() > 0; });
           }
 
-          mixer->Mix(1, &frame);
+          mixer->Mix(2, &frame);
           cb->SetRecordingChannels(frame.num_channels());
           cb->SetRecordingSampleRate(frame.sample_rate_hz());
           cb->SetRecordedBuffer(frame.data(), frame.sample_rate_hz() / 100);

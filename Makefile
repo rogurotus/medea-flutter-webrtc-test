@@ -293,7 +293,7 @@ endif
 		--skip-add-mod-to-lib \
 		--no-build-runner \
 		--dart-format-line-length=80
-	flutter pub run build_runner build --delete-conflicting-outputs
+
 
 
 # Lint Rust sources with Clippy.

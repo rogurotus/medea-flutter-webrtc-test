@@ -142,6 +142,13 @@ pub(crate) mod webrtc {
         first: String,
         second: String,
     }
+
+    /// todo
+    pub struct WindowInfo {
+        title: String,
+        id: i64,
+    }
+
     // TODO: Remove once `cxx` crate allows using pointers to opaque types in
     //       vectors: https://github.com/dtolnay/cxx/issues/741
     /// Wrapper for an [`RtpEncodingParameters`] usable in Rust/C++ vectors.
@@ -1222,6 +1229,7 @@ pub(crate) mod webrtc {
         pub type AudioLayer;
         pub type AudioSourceManager;
         pub type AudioSource;
+        pub type AudioSourceInfo;
 
         /// Creates a new [`AudioSourceManager`]
         /// for the given [`CustomAudioDeviceModule`].
@@ -1229,6 +1237,22 @@ pub(crate) mod webrtc {
             adm: &CustomAudioDeviceModule,
             worker_thread: Pin<&mut Thread>,
         ) -> UniquePtr<AudioSourceManager>;
+
+        // todo
+        pub fn enumerate_audio_source(
+            manager: &AudioSourceManager,
+        ) -> UniquePtr<CxxVector<AudioSourceInfo>>;
+
+        // todo
+        pub fn system_source_id(manager: &AudioSourceInfo) -> i64;
+
+        // todo
+        pub fn system_source_title(
+            manager: &AudioSourceInfo,
+        ) -> UniquePtr<CxxString>;
+
+        // todo
+        pub fn set_audio_source(manager: Pin<&mut AudioSourceManager>, id: i64);
 
         /// Creates a new proxied [`AudioDeviceModule`]
         /// from the provided [`CustomAudioDeviceModule`].

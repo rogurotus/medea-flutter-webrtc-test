@@ -48,12 +48,18 @@
 #include "macos_microphone_module.h"
 #endif
 
+
+
 class AudioSourceManager {
   public:
   // Creates a `AudioSource` from a microphone.
   virtual rtc::scoped_refptr<AudioSource> CreateMicrophoneSource() = 0;
   // Creates a `AudioSource` from a system audio.
   virtual rtc::scoped_refptr<AudioSource> CreateSystemSource() = 0;
+  // todo
+  virtual std::unique_ptr<std::vector<AudioSourceInfo>> EnumerateWindows() const = 0;
+  // todo
+  virtual void SetRecordingSource(int id) = 0;
   // Adds `AudioSource` to `AudioSourceManager`.
   virtual void AddSource(rtc::scoped_refptr<AudioSource> source) = 0;
   // Removes `AudioSource` to `AudioSourceManager`.
@@ -96,6 +102,8 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   // AudioSourceManager interface.
   rtc::scoped_refptr<AudioSource> CreateMicrophoneSource() override;
   rtc::scoped_refptr<AudioSource>  CreateSystemSource() override;
+  std::unique_ptr<std::vector<AudioSourceInfo>> EnumerateWindows() const override;
+  void SetRecordingSource(int id) override;
   void AddSource(rtc::scoped_refptr<AudioSource>  source) override;
   void RemoveSource(rtc::scoped_refptr<AudioSource>  source) override;
 

@@ -161,6 +161,12 @@ impl From<sys::TrackKind> for TrackKind {
     }
 }
 
+// todo
+pub struct AudioSourceInfo {
+    pub id: i64,
+    pub title: String,
+}
+
 /// Fields of [`RtcStatsType::RtcInboundRtpStreamStats`] variant.
 pub enum RtcInboundRtpStreamMediaType {
     /// `audio` media type fields.
@@ -1636,6 +1642,9 @@ pub struct AudioConstraints {
     ///           changing device will affect all previously obtained audio
     ///           tracks.
     pub device_id: Option<String>,
+
+    // todo
+    pub system_id: Option<i64>,
 }
 
 /// Representation of a single media track within a [`MediaStream`].
@@ -1863,6 +1872,15 @@ pub fn is_fake_media() -> bool {
 /// microphones, cameras, headsets, and so forth.
 pub fn enumerate_devices() -> anyhow::Result<Vec<MediaDeviceInfo>> {
     WEBRTC.lock().unwrap().enumerate_devices()
+}
+
+// todo
+pub fn enumerate_system_audio_source() -> Vec<AudioSourceInfo> {
+    WEBRTC
+        .lock()
+        .unwrap()
+        .audio_device_module
+        .enumerate_system_audio_source()
 }
 
 /// Returns a list of all available displays that can be used for screen
