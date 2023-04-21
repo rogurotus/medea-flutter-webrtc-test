@@ -964,5 +964,15 @@ std::unique_ptr<std::string> system_source_title(const AudioSourceInfo& source) 
   return std::make_unique<std::string>(source.GetTitle());
 }
 
+// todo
+void set_system_audio_source_level(AudioSourceManager& manager, float level) {
+  manager.SetSystemAudioLevel(level);
+}
+
+// todo
+float get_system_audio_source_level(const AudioSourceManager& manager) {
+  return manager.GetSystemAudioLevel();
+}
+
 
 }  // namespace bridge

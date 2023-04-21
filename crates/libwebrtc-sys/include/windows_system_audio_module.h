@@ -28,112 +28,51 @@
 #include <Audioclient.h>
 #include <RTWorkQ.h>
 #include <functional>
-// #include "adm.h"
+#include <audioclientactivationparams.h>
+#include <functiondiscoverykeys.h>
+#include "system_audio_module.h"
+#include <setupapi.h>  
+#include <initguid.h>  // Put this in to get rid of linker errors.  
+#include <devpkey.h>  // Property keys defined here are now defined inline.
 
-struct HRError {
-  const char* str;
-  HRESULT hr;
+#include <wrl/implements.h>
+#include "win-help.h"
 
-  inline HRError(const char* str, HRESULT hr) : str(str), hr(hr) {}
-};
-
-template <typename T>
-class CoTaskMemPtr {
-  T* ptr;
-
-  inline void Clear() {
-    if (ptr)
-      CoTaskMemFree(ptr);
-  }
-
- public:
-  inline CoTaskMemPtr() : ptr(NULL) {}
-  inline CoTaskMemPtr(T* ptr_) : ptr(ptr_) {}
-  inline ~CoTaskMemPtr() { Clear(); }
-
-  inline operator T*() const { return ptr; }
-  inline T* operator->() const { return ptr; }
-
-  inline const T* Get() const { return ptr; }
-
-  inline CoTaskMemPtr& operator=(T* val) {
-    Clear();
-    ptr = val;
-    return *this;
-  }
-
-  inline T** operator&() {
-    Clear();
-    ptr = NULL;
-    return &ptr;
-  }
-};
+#ifdef _WIN32
+#include <Unknwn.h>
+#endif
 
 #if defined(_MSC_VER) && defined(_M_X64)
 #include <intrin.h>
 #endif
 
-class WinHandle {
-  HANDLE handle = INVALID_HANDLE_VALUE;
+#define OBS_KSAUDIO_SPEAKER_4POINT1 \
+  (KSAUDIO_SPEAKER_SURROUND | SPEAKER_LOW_FREQUENCY)
+#define RECONNECT_INTERVAL 3000
+#define BUFFER_TIME_100NS (5 * 10000000)
+typedef HRESULT(STDAPICALLTYPE* PFN_ActivateAudioInterfaceAsync)(
+    LPCWSTR,
+    REFIID,
+    PROPVARIANT*,
+    IActivateAudioInterfaceCompletionHandler*,
+    IActivateAudioInterfaceAsyncOperation**);
 
-  inline void Clear() {
-    if (handle && handle != INVALID_HANDLE_VALUE)
-      CloseHandle(handle);
-  }
-
- public:
-  inline WinHandle() {}
-  inline WinHandle(HANDLE handle_) : handle(handle_) {}
-  inline ~WinHandle() { Clear(); }
-
-  inline operator HANDLE() const { return handle; }
-
-  inline WinHandle& operator=(HANDLE handle_) {
-    if (handle_ != handle) {
-      Clear();
-      handle = handle_;
-    }
-
-    return *this;
-  }
-
-  inline HANDLE* operator&() { return &handle; }
-
-  inline bool Valid() const { return handle && handle != INVALID_HANDLE_VALUE; }
-};
-
-class WinModule {
-  HMODULE handle = NULL;
-
-  inline void Clear() {
-    if (handle)
-      FreeLibrary(handle);
-  }
-
- public:
-  inline WinModule() {}
-  inline WinModule(HMODULE handle_) : handle(handle_) {}
-  inline ~WinModule() { Clear(); }
-
-  inline operator HMODULE() const { return handle; }
-
-  inline WinModule& operator=(HMODULE handle_) {
-    if (handle_ != handle) {
-      Clear();
-      handle = handle_;
-    }
-
-    return *this;
-  }
-
-  inline HMODULE* operator&() { return &handle; }
-
-  inline bool Valid() const { return handle != NULL; }
-};
-
-#ifdef _WIN32
-#include <Unknwn.h>
-#endif
+typedef HRESULT(STDAPICALLTYPE* PFN_RtwqUnlockWorkQueue)(DWORD);
+typedef HRESULT(STDAPICALLTYPE* PFN_RtwqLockSharedWorkQueue)(PCWSTR usageClass,
+                                                             LONG basePriority,
+                                                             DWORD* taskId,
+                                                             DWORD* id);
+typedef HRESULT(STDAPICALLTYPE* PFN_RtwqCreateAsyncResult)(IUnknown*,
+                                                           IRtwqAsyncCallback*,
+                                                           IUnknown*,
+                                                           IRtwqAsyncResult**);
+typedef HRESULT(STDAPICALLTYPE* PFN_RtwqPutWorkItem)(DWORD,
+                                                     LONG,
+                                                     IRtwqAsyncResult*);
+typedef HRESULT(STDAPICALLTYPE* PFN_RtwqPutWaitingWorkItem)(HANDLE,
+                                                            LONG,
+                                                            IRtwqAsyncResult*,
+                                                            RTWQWORKITEM_KEY*);
 
 /* Oh no I have my own com pointer class, the world is ending, how dare you
  * write your own! */
@@ -254,8 +193,75 @@ class ComPtr {
   inline bool operator!() const { return !ptr; }
 };
 
-#ifdef _WIN32
+struct HRError {
+  const char* str;
+  HRESULT hr;
 
+  inline HRError(const char* str, HRESULT hr) : str(str), hr(hr) {}
+};
+
+
+class WinHandle {
+  HANDLE handle = INVALID_HANDLE_VALUE;
+
+  inline void Clear() {
+    if (handle && handle != INVALID_HANDLE_VALUE)
+      CloseHandle(handle);
+  }
+
+ public:
+  inline WinHandle() {}
+  inline WinHandle(HANDLE handle_) : handle(handle_) {}
+  inline ~WinHandle() { Clear(); }
+
+  inline operator HANDLE() const { return handle; }
+
+  inline WinHandle& operator=(HANDLE handle_) {
+    if (handle_ != handle) {
+      Clear();
+      handle = handle_;
+    }
+
+    return *this;
+  }
+
+  inline HANDLE* operator&() { return &handle; }
+
+  inline bool Valid() const { return handle && handle != INVALID_HANDLE_VALUE; }
+};
+
+class WinModule {
+  HMODULE handle = NULL;
+
+  inline void Clear() {
+    if (handle)
+      FreeLibrary(handle);
+  }
+
+ public:
+  inline WinModule() {}
+  inline WinModule(HMODULE handle_) : handle(handle_) {}
+  inline ~WinModule() { Clear(); }
+
+  inline operator HMODULE() const { return handle; }
+
+  inline WinModule& operator=(HMODULE handle_) {
+    if (handle_ != handle) {
+      Clear();
+      handle = handle_;
+    }
+
+    return *this;
+  }
+
+  inline HMODULE* operator&() { return &handle; }
+
+  inline bool Valid() const { return handle != NULL; }
+};
+
+
+
+#ifdef _WIN32
 template <class T>
 class ComQIPtr : public ComPtr<T> {
  public:
@@ -270,47 +276,10 @@ class ComQIPtr : public ComPtr<T> {
     return *this;
   }
 };
-
 #endif
 
-#define RECONNECT_INTERVAL 3000
-#define UNUSED_PARAMETER(param) (void)param
-#define BUFFER_TIME_100NS (5 * 10000000)
-#define MAX_AV_PLANES 8
 
-typedef HRESULT(STDAPICALLTYPE* PFN_ActivateAudioInterfaceAsync)(
-    LPCWSTR,
-    REFIID,
-    PROPVARIANT*,
-    IActivateAudioInterfaceCompletionHandler*,
-    IActivateAudioInterfaceAsyncOperation**);
 
-typedef HRESULT(STDAPICALLTYPE* PFN_RtwqUnlockWorkQueue)(DWORD);
-typedef HRESULT(STDAPICALLTYPE* PFN_RtwqLockSharedWorkQueue)(PCWSTR usageClass,
-                                                             LONG basePriority,
-                                                             DWORD* taskId,
-                                                             DWORD* id);
-typedef HRESULT(STDAPICALLTYPE* PFN_RtwqCreateAsyncResult)(IUnknown*,
-                                                           IRtwqAsyncCallback*,
-                                                           IUnknown*,
-                                                           IRtwqAsyncResult**);
-typedef HRESULT(STDAPICALLTYPE* PFN_RtwqPutWorkItem)(DWORD,
-                                                     LONG,
-                                                     IRtwqAsyncResult*);
-typedef HRESULT(STDAPICALLTYPE* PFN_RtwqPutWaitingWorkItem)(HANDLE,
-                                                            LONG,
-                                                            IRtwqAsyncResult*,
-                                                            RTWQWORKITEM_KEY*);
-
-size_t os_wcs_to_utf8(const wchar_t* str,
-                      size_t len,
-                      char* dst,
-                      size_t dst_size);
-uint64_t os_gettime_ns(void);
-static inline uint64_t get_clockfreq(void);
-
-#define OBS_KSAUDIO_SPEAKER_4POINT1 \
-  (KSAUDIO_SPEAKER_SURROUND | SPEAKER_LOW_FREQUENCY)
 
 enum class SourceType {
   Input,
@@ -328,16 +297,6 @@ enum speaker_layout {
   SPEAKERS_5POINT1,     /**< Channels: FL, FR, FC, LFE, RL, RR */
   SPEAKERS_7POINT1 = 8, /**< Channels: FL, FR, FC, LFE, RL, RR, SL, SR */
 };
-
-#include <audioclientactivationparams.h>
-#include <functiondiscoverykeys.h>
-#include "system_audio_module.h"
-#include <setupapi.h>  
-#include <initguid.h>  // Put this in to get rid of linker errors.  
-#include <devpkey.h>  // Property keys defined here are now defined inline.
-
-#include <wrl/implements.h>
-#include "win-help.h"
 
 class WASAPIActivateAudioInterfaceCompletionHandler
 	: public Microsoft::WRL::RuntimeClass<
@@ -367,13 +326,6 @@ class SystemModule : public SystemModuleInterface {
   int32_t Init();
   int32_t Terminate();
 
-  // System control.
-  // int32_t SetSystemMute(bool enable);
-  // int32_t SystemMute(bool* enabled) const;
-  // bool SystemIsInitialized ();
-  // int32_t SetSystemVolume(uint32_t volume);
-  // int32_t SystemVolume(uint32_t* volume) const;
-
   // Settings.
   int32_t SetRecordingDevice(uint16_t index);
 
@@ -388,6 +340,9 @@ class SystemModule : public SystemModuleInterface {
   int32_t StartRecording();
   int32_t RecordingChannels();
 
+
+  void SetSystemAudioLevel(float level);
+  float GetSystemAudioLevel() const;
 
   void Initialize();
   static void InitFormat(const WAVEFORMATEX* wfex,
@@ -413,7 +368,6 @@ class SystemModule : public SystemModuleInterface {
   ComPtr<IAudioClient> client;
   ComPtr<IAudioCaptureClient> capture;
 
-  
   WinModule mmdevapi_module;
   PFN_ActivateAudioInterfaceAsync activate_audio_interface_async = NULL;
 
@@ -441,6 +395,7 @@ class SystemModule : public SystemModuleInterface {
 
   bool stop = false;
 
+  float audio_multiplier = 1.0;
   std::vector<float> capture_buffer;
   std::vector<int16_t> release_capture_buffer = std::vector<int16_t>(480 * 8);
 };

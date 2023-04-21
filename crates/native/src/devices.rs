@@ -296,6 +296,25 @@ impl Webrtc {
         self.audio_device_module.set_microphone_volume(level)
     }
 
+
+    // todo
+    pub fn enumerate_system_audio_source(&mut self) -> Vec<api::AudioSourceInfo> {
+        self
+            .audio_device_module
+            .enumerate_system_audio_source()
+    }
+
+    // todo
+    pub fn set_system_audio_capture_multiplier(&mut self, level: f32) {
+        self.audio_device_module.set_system_audio_capture_multiplier(level);
+    }
+
+    // todo
+    pub fn system_audio_capture_multiplier(&mut self) -> f32 {
+        self.audio_device_module.system_audio_capture_multiplier()
+    }
+
+
     /// Indicates if the microphone is available to set volume.
     pub fn microphone_volume_is_available(&mut self) -> anyhow::Result<bool> {
         self.audio_device_module.microphone_volume_is_available()

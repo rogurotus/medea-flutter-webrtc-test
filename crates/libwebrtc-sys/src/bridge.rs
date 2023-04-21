@@ -1252,6 +1252,12 @@ pub(crate) mod webrtc {
         ) -> UniquePtr<CxxString>;
 
         // todo
+        pub fn set_system_audio_source_level(manager: Pin<&mut AudioSourceManager>, level: f32);
+
+        // todo
+        pub fn get_system_audio_source_level(manager: &AudioSourceManager) -> f32;
+
+        // todo
         pub fn set_audio_source(manager: Pin<&mut AudioSourceManager>, id: i64);
 
         /// Creates a new proxied [`AudioDeviceModule`]

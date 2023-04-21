@@ -312,57 +312,84 @@ impl Webrtc {
         }
 
 
+        let mut system = None;
         let system_id = caps.system_id.map(|v| AudioDeviceId(v.to_string()));
         if system_id.is_some() && (system_id.as_ref() != self.audio_device_module.current_system_id.as_ref())
         {
-            println!("OK {:?}", system_id);
             self.audio_device_module.set_system_audio_source(caps.system_id.unwrap());
             self.audio_device_module.current_system_id = Some(system_id.unwrap());
-        } else {
-            println!("WTF {:?}", system_id);
+            let system_audio = self.audio_device_module.create_source_system();
+            self.audio_device_module.add_source(&system_audio);
+            system = Some(system_audio);
         }
 
-        let src: Arc<sys::AudioSourceInterface> = match self.audio_source.take() {
-            Some(audio_source) => {
-                match audio_source {
-                    (src, None, None) => {
-                        let microphone = self.audio_device_module.create_source_microphone();
-                        let system = self.audio_device_module.create_source_system();
-                        self.audio_device_module.add_source(&microphone);
-                        self.audio_device_module.add_source(&system);
-                        self.audio_source.replace((Arc::clone(&src), Some(microphone), Some(system)));
-                        src
-                    }
-                    (src, Some(d), None) => {
-                        let system = self.audio_device_module.create_source_system();
-                        self.audio_device_module.add_source(&system);
-                        self.audio_source.replace((Arc::clone(&src), Some(d), Some(self.audio_device_module.create_source_system())));
-                        src
-                    }
-                    (src, None, Some(s)) => {
-                        let microphone = self.audio_device_module.create_source_microphone();
-                        self.audio_device_module.add_source(&microphone);
-                        self.audio_source.replace((Arc::clone(&src), Some(microphone), Some(s)));
-                        src
-                    }
-                    (src, Some(d), Some(s)) => {
-                        src
-                    }
+        let src = if let Some(source) = self.audio_source.take() {
+            match source {
+                (src, None, _) => {
+                    let microphone = self.audio_device_module.create_source_microphone();
+                    self.audio_device_module.add_source(&microphone);
+                    self.audio_source.replace((Arc::clone(&src), Some(microphone), system));
+                    src
                 }
-            },
-            None => {
-                let src =
-                    Arc::new(self.peer_connection_factory.create_audio_source()?);
+                (src, Some(microphone), None) => {
+                    self.audio_source.replace((Arc::clone(&src), Some(microphone), system));
+                    src
+                }
+                (src, Some(d), Some(s)) => {
+                    src
+                }
+            }
+        } else {
+            let src =
+                Arc::new(self.peer_connection_factory.create_audio_source()?);
 
-                let microphone = self.audio_device_module.create_source_microphone();
-                let system = self.audio_device_module.create_source_system();
-                self.audio_device_module.add_source(&microphone);
-                self.audio_device_module.add_source(&system);
+            let microphone = self.audio_device_module.create_source_microphone();
+            self.audio_device_module.add_source(&microphone);
 
-                self.audio_source.replace((Arc::clone(&src),  Some(microphone), Some(system)));
-                src
-            },
+            self.audio_source.replace((Arc::clone(&src),  Some(microphone), system));
+            src
         };
+
+
+        // Some(audio_source) => {
+        //     match audio_source {
+        //         (src, None, None) => {
+        //             let microphone = self.audio_device_module.create_source_microphone();
+        //             let system = self.audio_device_module.create_source_system();
+        //             self.audio_device_module.add_source(&microphone);
+        //             self.audio_device_module.add_source(&system);
+        //             self.audio_source.replace((Arc::clone(&src), Some(microphone), Some(system)));
+        //             src
+        //         }
+        //         (src, Some(d), None) => {
+        //             let system = self.audio_device_module.create_source_system();
+        //             self.audio_device_module.add_source(&system);
+        //             self.audio_source.replace((Arc::clone(&src), Some(d), Some(self.audio_device_module.create_source_system())));
+        //             src
+        //         }
+        //         (src, None, Some(s)) => {
+        //             let microphone = self.audio_device_module.create_source_microphone();
+        //             self.audio_device_module.add_source(&microphone);
+        //             self.audio_source.replace((Arc::clone(&src), Some(microphone), Some(s)));
+        //             src
+        //         }
+        //         (src, Some(d), Some(s)) => {
+        //             src
+        //         }
+        //     }
+        // },
+        // None => {
+        //     let src =
+        //         Arc::new(self.peer_connection_factory.create_audio_source()?);
+
+        //     let microphone = self.audio_device_module.create_source_microphone();
+        //     let system = self.audio_device_module.create_source_system();
+        //     self.audio_device_module.add_source(&microphone);
+        //     self.audio_device_module.add_source(&system);
+
+        //     self.audio_source.replace((Arc::clone(&src),  Some(microphone), Some(system)));
+        //     src
+        // },
 
         Ok(src)
     }
@@ -883,6 +910,16 @@ impl AudioDeviceModule {
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         self.inner.set_microphone_volume(volume as u32)
+    }
+
+    // todo
+    pub fn set_system_audio_capture_multiplier(&mut self, level: f32) {
+        self.inner.set_system_audio_capture_multiplier(level);
+    }
+
+    // todo
+    pub fn system_audio_capture_multiplier(&self) -> f32 {
+        self.inner.system_audio_capture_multiplier()
     }
 
     /// Indicates if the microphone is available to set volume.

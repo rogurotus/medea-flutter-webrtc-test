@@ -1879,7 +1879,6 @@ pub fn enumerate_system_audio_source() -> Vec<AudioSourceInfo> {
     WEBRTC
         .lock()
         .unwrap()
-        .audio_device_module
         .enumerate_system_audio_source()
 }
 
@@ -2204,6 +2203,17 @@ pub fn clone_track(
     kind: MediaType,
 ) -> anyhow::Result<MediaStreamTrack> {
     WEBRTC.lock().unwrap().clone_track(track_id, kind)
+}
+
+
+// todo
+pub fn set_system_audio_capture_multiplier(level: f32) {
+    WEBRTC.lock().unwrap().audio_device_module.set_system_audio_capture_multiplier(level);
+}
+
+// todo
+pub fn system_audio_capture_multiplier() -> f32 {
+    WEBRTC.lock().unwrap().audio_device_module.system_audio_capture_multiplier()
 }
 
 /// Registers an observer to the [`MediaStreamTrack`] events.

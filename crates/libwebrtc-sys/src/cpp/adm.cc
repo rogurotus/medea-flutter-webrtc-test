@@ -76,20 +76,23 @@ CustomAudioDeviceModule::CreateMicrophoneSource() {
   return microphone;
 }
 
+void CustomAudioDeviceModule::SetSystemAudioLevel(float level) {
+  system_recorder->SetSystemAudioLevel(level);
+}
+
+float CustomAudioDeviceModule::GetSystemAudioLevel() const {
+  return system_recorder->GetSystemAudioLevel();
+}
+
 void CustomAudioDeviceModule::AddSource(
     rtc::scoped_refptr<AudioSource> source) {
   {
-    std::cout << "WTF " << 100 << std::endl;
     std::unique_lock<std::mutex> lock(source_mutex);
     sources.push_back(source);
   }
-  std::cout << "WTF " << 200 << std::endl;
   cv.notify_all();
-  std::cout << "WTF " << 300 << std::endl;
   auto a = source.get();
-  std::cout << "WTF " << 350 << std::endl;
   mixer->AddSource(a);
-  std::cout << "WTF " << 400 << std::endl;
 }
 
 void CustomAudioDeviceModule::RemoveSource(

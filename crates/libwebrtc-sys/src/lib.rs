@@ -557,6 +557,16 @@ impl AudioDeviceModule {
 
         Ok(volume)
     }
+
+    // todo
+    pub fn set_system_audio_capture_multiplier(&mut self, level: f32) {
+        webrtc::set_system_audio_source_level(self.1.pin_mut(), level);
+    }
+
+    // todo
+    pub fn system_audio_capture_multiplier(&self) -> f32 {
+        return webrtc::get_system_audio_source_level(&self.1);
+    }
 }
 
 unsafe impl Send for webrtc::AudioDeviceModule {}

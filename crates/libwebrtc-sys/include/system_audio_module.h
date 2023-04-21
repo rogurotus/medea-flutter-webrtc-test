@@ -41,6 +41,8 @@ virtual int32_t Terminate() = 0;
 
 // Settings.
 virtual void SetRecordingSource(int id) = 0;
+virtual void SetSystemAudioLevel(float level) = 0;
+virtual float GetSystemAudioLevel() const = 0;
 
 // enumerate outputs
 virtual std::unique_ptr<std::vector<AudioSourceInfo>> EnumerateWindows() const = 0;

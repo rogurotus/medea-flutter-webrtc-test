@@ -146,6 +146,12 @@ void set_audio_source(AudioSourceManager& manager, int64_t id);
 int64_t system_source_id(const AudioSourceInfo& source);
 
 // todo
+void set_system_audio_source_level(AudioSourceManager& manager, float level);
+
+// todo
+float get_system_audio_source_level(const AudioSourceManager& manager);
+
+// todo
 std::unique_ptr<std::string> system_source_title(const AudioSourceInfo& source);
 
 // Adds `AudioSource` to `AudioSourceManager`.

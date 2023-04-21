@@ -254,6 +254,15 @@ abstract class FlutterWebrtcNative {
 
   FlutterRustBridgeTaskConstMeta get kCloneTrackConstMeta;
 
+  Future<void> setSystemAudioCaptureMultiplier(
+      {required double level, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kSetSystemAudioCaptureMultiplierConstMeta;
+
+  Future<double> systemAudioCaptureMultiplier({dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kSystemAudioCaptureMultiplierConstMeta;
+
   /// Registers an observer to the [`MediaStreamTrack`] events.
   Stream<TrackEvent> registerTrackObserver(
       {required String trackId, required MediaType kind, dynamic hint});
@@ -2402,6 +2411,43 @@ class FlutterWebrtcNativeImpl implements FlutterWebrtcNative {
         argNames: ["trackId", "kind"],
       );
 
+  Future<void> setSystemAudioCaptureMultiplier(
+      {required double level, dynamic hint}) {
+    var arg0 = api2wire_f32(level);
+    return _platform.executeNormal(FlutterRustBridgeTask(
+      callFfi: (port_) =>
+          _platform.inner.wire_set_system_audio_capture_multiplier(port_, arg0),
+      parseSuccessData: _wire2api_unit,
+      constMeta: kSetSystemAudioCaptureMultiplierConstMeta,
+      argValues: [level],
+      hint: hint,
+    ));
+  }
+
+  FlutterRustBridgeTaskConstMeta
+      get kSetSystemAudioCaptureMultiplierConstMeta =>
+          const FlutterRustBridgeTaskConstMeta(
+            debugName: "set_system_audio_capture_multiplier",
+            argNames: ["level"],
+          );
+
+  Future<double> systemAudioCaptureMultiplier({dynamic hint}) {
+    return _platform.executeNormal(FlutterRustBridgeTask(
+      callFfi: (port_) =>
+          _platform.inner.wire_system_audio_capture_multiplier(port_),
+      parseSuccessData: _wire2api_f32,
+      constMeta: kSystemAudioCaptureMultiplierConstMeta,
+      argValues: [],
+      hint: hint,
+    ));
+  }
+
+  FlutterRustBridgeTaskConstMeta get kSystemAudioCaptureMultiplierConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "system_audio_capture_multiplier",
+        argNames: [],
+      );
+
   Stream<TrackEvent> registerTrackObserver(
       {required String trackId, required MediaType kind, dynamic hint}) {
     var arg0 = _platform.api2wire_String(trackId);
@@ -2565,6 +2611,10 @@ class FlutterWebrtcNativeImpl implements FlutterWebrtcNative {
 
   CandidateType _wire2api_candidate_type(dynamic raw) {
     return CandidateType.values[raw];
+  }
+
+  double _wire2api_f32(dynamic raw) {
+    return raw as double;
   }
 
   double _wire2api_f64(dynamic raw) {
@@ -3058,6 +3108,11 @@ bool api2wire_bool(bool raw) {
 @protected
 int api2wire_bundle_policy(BundlePolicy raw) {
   return api2wire_i32(raw.index);
+}
+
+@protected
+double api2wire_f32(double raw) {
+  return raw;
 }
 
 @protected
@@ -3968,6 +4023,37 @@ class FlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
               ffi.Int32)>>('wire_clone_track');
   late final _wire_clone_track = _wire_clone_trackPtr
       .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>, int)>();
+
+  void wire_set_system_audio_capture_multiplier(
+    int port_,
+    double level,
+  ) {
+    return _wire_set_system_audio_capture_multiplier(
+      port_,
+      level,
+    );
+  }
+
+  late final _wire_set_system_audio_capture_multiplierPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64, ffi.Float)>>(
+          'wire_set_system_audio_capture_multiplier');
+  late final _wire_set_system_audio_capture_multiplier =
+      _wire_set_system_audio_capture_multiplierPtr
+          .asFunction<void Function(int, double)>();
+
+  void wire_system_audio_capture_multiplier(
+    int port_,
+  ) {
+    return _wire_system_audio_capture_multiplier(
+      port_,
+    );
+  }
+
+  late final _wire_system_audio_capture_multiplierPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+          'wire_system_audio_capture_multiplier');
+  late final _wire_system_audio_capture_multiplier =
+      _wire_system_audio_capture_multiplierPtr.asFunction<void Function(int)>();
 
   void wire_register_track_observer(
     int port_,

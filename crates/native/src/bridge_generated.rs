@@ -213,6 +213,15 @@ fn wire_clone_track_impl(port_: MessagePort, track_id: impl Wire2Api<String> + U
         move |task_callback| clone_track(api_track_id, api_kind)
     })
 }
+fn wire_set_system_audio_capture_multiplier_impl(port_: MessagePort, level: impl Wire2Api<f32> + UnwindSafe) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(WrapInfo { debug_name: "set_system_audio_capture_multiplier", port: Some(port_), mode: FfiCallMode::Normal }, move || {
+        let api_level = level.wire2api();
+        move |task_callback| Ok(set_system_audio_capture_multiplier(api_level))
+    })
+}
+fn wire_system_audio_capture_multiplier_impl(port_: MessagePort) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(WrapInfo { debug_name: "system_audio_capture_multiplier", port: Some(port_), mode: FfiCallMode::Normal }, move || move |task_callback| Ok(system_audio_capture_multiplier()))
+}
 fn wire_register_track_observer_impl(port_: MessagePort, track_id: impl Wire2Api<String> + UnwindSafe, kind: impl Wire2Api<MediaType> + UnwindSafe) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(WrapInfo { debug_name: "register_track_observer", port: Some(port_), mode: FfiCallMode::Stream }, move || {
         let api_track_id = track_id.wire2api();
@@ -274,6 +283,11 @@ impl Wire2Api<BundlePolicy> for i32 {
             2 => BundlePolicy::MaxCompat,
             _ => unreachable!("Invalid variant for BundlePolicy: {}", self),
         }
+    }
+}
+impl Wire2Api<f32> for f32 {
+    fn wire2api(self) -> f32 {
+        self
     }
 }
 impl Wire2Api<i32> for i32 {

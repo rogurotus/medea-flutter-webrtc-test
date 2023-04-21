@@ -162,6 +162,16 @@ pub extern "C" fn wire_clone_track(port_: i64, track_id: *mut wire_uint_8_list, 
 }
 
 #[no_mangle]
+pub extern "C" fn wire_set_system_audio_capture_multiplier(port_: i64, level: f32) {
+    wire_set_system_audio_capture_multiplier_impl(port_, level)
+}
+
+#[no_mangle]
+pub extern "C" fn wire_system_audio_capture_multiplier(port_: i64) {
+    wire_system_audio_capture_multiplier_impl(port_)
+}
+
+#[no_mangle]
 pub extern "C" fn wire_register_track_observer(port_: i64, track_id: *mut wire_uint_8_list, kind: i32) {
     wire_register_track_observer_impl(port_, track_id, kind)
 }
