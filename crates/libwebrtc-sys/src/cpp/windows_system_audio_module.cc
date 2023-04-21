@@ -2,123 +2,6 @@
 #include "windows_system_audio_module.h"
 
 
-static inline uint64_t util_mul_div64(uint64_t num, uint64_t mul, uint64_t div)
-{
-#if defined(_MSC_VER) && defined(_M_X64)
-	unsigned __int64 high;
-	const unsigned __int64 low = _umul128(num, mul, &high);
-	unsigned __int64 rem;
-	return _udiv128(high, low, div, &rem);
-#else
-	const uint64_t rem = num % div;
-	return (num / div) * mul + (rem * mul) / div;
-#endif
-}
-
-static inline long os_atomic_dec_long(volatile long* val)
-{
-	return _InterlockedDecrement(val);
-}
-
-static inline long os_atomic_inc_long(volatile long* val)
-{
-	return _InterlockedIncrement(val);
-}
-
-
-void os_set_thread_name(const char* name)
-{
-#if defined(__APPLE__)
-	pthread_setname_np(name);
-#elif defined(__FreeBSD__)
-	pthread_set_name_np(pthread_self(), name);
-#elif defined(__GLIBC__) && !defined(__MINGW32__)
-	if (strlen(name) <= 15) {
-		pthread_setname_np(pthread_self(), name);
-	}
-	else {
-		char* thread_name = bstrdup_n(name, 15);
-		pthread_setname_np(pthread_self(), thread_name);
-		bfree(thread_name);
-	}
-#endif
-}
-
-
-size_t os_wcs_to_utf8(const wchar_t *str, size_t len, char *dst,
-					  size_t dst_size)
-{
-	size_t in_len;
-	size_t out_len;
-
-	if (!str)
-		return 0;
-
-	in_len = (len != 0) ? len : wcslen(str);
-	out_len = dst ? (dst_size - 1) : wchar_to_utf8(str, in_len, NULL, 0, 0);
-
-	if (dst)
-	{
-		if (!dst_size)
-			return 0;
-
-		if (out_len)
-			out_len =
-				wchar_to_utf8(str, in_len, dst, out_len + 1, 0);
-
-		dst[out_len] = 0;
-	}
-
-	return out_len;
-}
-
-
-
-class WASAPINotify : public IMMNotificationClient {
-  long refs = 0; /* auto-incremented to 1 by ComPtr */
-  SystemModule* source;
-
- public:
-  WASAPINotify(SystemModule* source_) : source(source_) {}
-
-  STDMETHODIMP_(ULONG)
-  AddRef() { return (ULONG)os_atomic_inc_long(&refs); }
-
-  STDMETHODIMP_(ULONG)
-  STDMETHODCALLTYPE Release() {
-    long val = os_atomic_dec_long(&refs);
-    if (val == 0)
-      delete this;
-    return (ULONG)val;
-  }
-
-  STDMETHODIMP QueryInterface(REFIID riid, void** ptr) {
-    if (riid == IID_IUnknown) {
-      *ptr = (IUnknown*)this;
-    } else if (riid == __uuidof(IMMNotificationClient)) {
-      *ptr = (IMMNotificationClient*)this;
-    } else {
-      *ptr = nullptr;
-      return E_NOINTERFACE;
-    }
-
-    os_atomic_inc_long(&refs);
-    return S_OK;
-  }
-
-  STDMETHODIMP OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR id) {
-    // source->SetDefaultDevice(flow, role, id);
-    return S_OK;
-  }
-
-  STDMETHODIMP OnDeviceAdded(LPCWSTR) { return S_OK; }
-  STDMETHODIMP OnDeviceRemoved(LPCWSTR) { return S_OK; }
-  STDMETHODIMP OnDeviceStateChanged(LPCWSTR, DWORD) { return S_OK; }
-  STDMETHODIMP OnPropertyValueChanged(LPCWSTR, const PROPERTYKEY) {
-    return S_OK;
-  }
-};
-
 SystemModule::SystemModule() {
 
 	mmdevapi_module = LoadLibrary("Mmdevapi");
@@ -160,21 +43,6 @@ SystemModule::SystemModule() {
   if (!reconnectSignal.Valid())
     throw "Could not create reconnect signal";
 
-  notify = new WASAPINotify(this);
-  if (!notify)
-    throw "Could not create WASAPINotify";
-
-  CoInitialize(0);  // todo??
-
-  HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr,
-                                CLSCTX_ALL, IID_PPV_ARGS(enumerator.Assign()));
-  if (FAILED(hr))
-    throw HRError("Failed to create enumerator", hr);
-
-  hr = enumerator->RegisterEndpointNotificationCallback(notify);
-  if (FAILED(hr))
-    throw HRError("Failed to register endpoint callback", hr);
-
   captureThread =
       CreateThread(nullptr, 0, SystemModule::CaptureThread, this, 0, nullptr);
 
@@ -186,7 +54,6 @@ SystemModule::SystemModule() {
     }
 
   if (!captureThread.Valid()) {
-    enumerator->UnregisterEndpointNotificationCallback(notify);
     throw "Failed to create capture thread";
   }
 
@@ -205,22 +72,8 @@ int32_t SystemModule::StartRecording()
 
 SystemModule::~SystemModule()
 {
-  enumerator->UnregisterEndpointNotificationCallback(notify);
   StopRecording();
 }
-
-	// init default output device
-ComPtr<IMMDevice> SystemModule::InitDevice(IMMDeviceEnumerator *enumerator)
-	{
-		ComPtr<IMMDevice> device;
-
-		const bool input = false;
-		HRESULT res = enumerator->GetDefaultAudioEndpoint(eRender, eConsole, device.Assign());
-		if (FAILED(res))
-			throw HRError("Failed GetDefaultAudioEndpoint", res);
-
-		return device;
-	}
 
 static DWORD GetSpeakerChannelMask(speaker_layout layout)
 {
@@ -252,7 +105,6 @@ void SystemModule::SetRecordingSource(int id)
 {
 	const bool restart = process_id != id;
   process_id = id;
-  std::cout << "process_id" << process_id << " - " << id << std::endl;
   
 	if (restart) {
 		SetEvent(restartSignal);
@@ -260,7 +112,7 @@ void SystemModule::SetRecordingSource(int id)
 }
 
 
-ComPtr<IAudioClient> SystemModule::InitClient( SourceType type, DWORD process_id,
+ComPtr<IAudioClient> SystemModule::InitClient(DWORD process_id,
 	PFN_ActivateAudioInterfaceAsync activate_audio_interface_async,
 	speaker_layout& channels, int& format,
 	uint32_t &samples_per_sec)
@@ -386,8 +238,6 @@ WASAPIActivateAudioInterfaceCompletionHandler::ActivateCompleted(
 
 DWORD WINAPI SystemModule::CaptureThread(LPVOID param)
 {
-	os_set_thread_name("win-wasapi: capture thread");
-
 	const HRESULT hr = CoInitializeEx(0, COINIT_MULTITHREADED);
 	const bool com_initialized = SUCCEEDED(hr);
 	if (!com_initialized) {
@@ -426,8 +276,7 @@ DWORD WINAPI SystemModule::CaptureThread(LPVOID param)
 		do {
 			/* Windows 7 does not seem to wake up for LOOPBACK */
 			const DWORD dwMilliseconds =
-				((sigs == active_sigs) &&
-				 (source->sourceType != SourceType::Input))
+				sigs == active_sigs
 					? 10
 					: INFINITE;
 
@@ -490,7 +339,6 @@ DWORD WINAPI SystemModule::CaptureThread(LPVOID param)
 				break;
 
 			default:
-        std::cout << "def - " << ret << std::endl;
 				assert(sigs == active_sigs);
 				assert(ret == WAIT_OBJECT_0 + 3);
 				stop = true;
@@ -500,7 +348,6 @@ DWORD WINAPI SystemModule::CaptureThread(LPVOID param)
 			}
 		} while (!stop);
 
-    std::cout << "gde - " << 42 << std::endl;
 		sig_count = _countof(inactive_sigs);
 		sigs = inactive_sigs;
 
@@ -514,7 +361,6 @@ DWORD WINAPI SystemModule::CaptureThread(LPVOID param)
 		if (idle) {
 			SetEvent(source->idleSignal);
 		} else if (reconnect) {
-      std::cout << "gde - " << 222 << std::endl;
 			// blog(LOG_INFO,
 			//      "Device '%s' invalidated.  Retrying (source: %s)",
 			//      source->device_name.c_str(),
@@ -524,23 +370,17 @@ DWORD WINAPI SystemModule::CaptureThread(LPVOID param)
 	}
 
 	if (handle) {
-    std::cout << "pre-DEAD" << std::endl;
 		AvRevertMmThreadCharacteristics(handle);
-  }
+ 	}
 
 	if (com_initialized) {
-    std::cout << "pre-DEAD2" << std::endl;
 		CoUninitialize();
   }
 
-  std::cout << "DEAD" << std::endl;
 	return 0;
 }
 int32_t SystemModule::SetRecordingDevice(uint16_t index) {
   return 0;
-}
-
-void SystemModule::ConvertBuffer(std::vector<int8_t>& data) {
 }
 
 void SortBuffer(std::vector<int16_t>& output, float* data, int channels) {
@@ -647,45 +487,15 @@ int32_t SystemModule::Init() {
   return success;
 }
 
-std::string GetDeviceName(IMMDevice *device)
-{
-	std::string device_name;
-	ComPtr<IPropertyStore> store;
-	HRESULT res;
-
-	if (SUCCEEDED(device->OpenPropertyStore(STGM_READ, store.Assign()))) {
-		PROPVARIANT nameVar;
-
-		PropVariantInit(&nameVar);
-		res = store->GetValue(PKEY_Device_FriendlyName, &nameVar);
-
-		if (SUCCEEDED(res) && nameVar.pwszVal && *nameVar.pwszVal) {
-			size_t len = wcslen(nameVar.pwszVal);
-			size_t size;
-
-			size = os_wcs_to_utf8(nameVar.pwszVal, len, nullptr,
-					      0) +
-			       1;
-			device_name.resize(size);
-			os_wcs_to_utf8(nameVar.pwszVal, len, &device_name[0],
-				       size);
-		}
-	}
-
-	return device_name;
-}
-
 std::unique_ptr<std::vector<AudioSourceInfo>> SystemModule::EnumerateWindows() const {
   return std::make_unique<std::vector<AudioSourceInfo>>(ms_fill_window_list(window_search_mode::INCLUDE_MINIMIZED));
 }
 
 
 void SystemModule::Initialize() {
-		device_name = "[VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK]";
 	ResetEvent(receiveSignal);
 
-	ComPtr<IAudioClient> temp_client = InitClient(
-		sourceType, process_id, activate_audio_interface_async,
+	ComPtr<IAudioClient> temp_client = InitClient(process_id, activate_audio_interface_async,
 		speakers, format, sampleRate);
 
   ComPtr<IAudioCaptureClient> temp_capture =
@@ -729,7 +539,7 @@ void SystemModule::InitFormat(const WAVEFORMATEX* wfex,
 
   /* WASAPI is always float */
   channels = ConvertSpeakerLayout(layout, wfex->nChannels);
-  format = 4;
+  format = 4; // float bytes
   sampleRate = wfex->nSamplesPerSec;
 }
 
@@ -790,8 +600,6 @@ void SystemModule::ResetSource() {
 
 DWORD WINAPI SystemModule::ReconnectThread(LPVOID param)
 {
-	os_set_thread_name("win-wasapi: reconnect thread");
-
 	SystemModule *source = (SystemModule *)param;
 
 	const HANDLE sigs[] = {
@@ -854,47 +662,4 @@ int SystemModule::StopRecording() {
 
   stop = true;
   return 0;
-}
-
-void SystemModule::ClearBuffer(IMMDevice* device) {
-  CoTaskMemPtr<WAVEFORMATEX> wfex;
-  HRESULT res;
-  LPBYTE buffer;
-  UINT32 frames;
-  ComPtr<IAudioClient> client;
-
-  res = device->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr,
-                         (void**)client.Assign());
-  if (FAILED(res))
-    throw HRError("Failed to activate client context", res);
-
-  res = client->GetMixFormat(&wfex);
-  if (FAILED(res))
-    throw HRError("Failed to get mix format", res);
-
-  res = client->Initialize(AUDCLNT_SHAREMODE_SHARED, 0, BUFFER_TIME_100NS, 0,
-                           wfex, nullptr);
-  if (FAILED(res))
-    throw HRError("Failed to initialize audio client", res);
-
-  /* Silent loopback fix. Prevents audio stream from stopping and */
-  /* messing up timestamps and other weird glitches during silence */
-  /* by playing a silent sample all over again. */
-
-  res = client->GetBufferSize(&frames);
-  if (FAILED(res))
-    throw HRError("Failed to get buffer size", res);
-
-  ComPtr<IAudioRenderClient> render;
-  res = client->GetService(IID_PPV_ARGS(render.Assign()));
-  if (FAILED(res))
-    throw HRError("Failed to get render client", res);
-
-  res = render->GetBuffer(frames, &buffer);
-  if (FAILED(res))
-    throw HRError("Failed to get buffer", res);
-
-  memset(buffer, 0, (size_t)frames * (size_t)wfex->nBlockAlign);
-
-  render->ReleaseBuffer(frames, 0);
 }

@@ -388,78 +388,41 @@ class SystemModule : public SystemModuleInterface {
   int32_t StartRecording();
   int32_t RecordingChannels();
 
-	struct UpdateParams {
-		std::string device_id;
-		bool useDeviceTiming;
-		bool isDefaultDevice;
-		window_priority priority;
-		std::string window_class;
-		std::string title;
-		std::string executable;
-	};
-
-	UpdateParams BuildUpdateParams();
-	void UpdateSettings(UpdateParams &&params);
 
   void Initialize();
-  static void ClearBuffer(IMMDevice* device);
   static void InitFormat(const WAVEFORMATEX* wfex,
                          speaker_layout& speakers,
                          int& format,
                          uint32_t& sampleRate);
   static ComPtr<IAudioClient> InitClient(
-      SourceType type,
       DWORD process_id,
       PFN_ActivateAudioInterfaceAsync activate_audio_interface_async,
       speaker_layout& speakers,
       int& format,
       uint32_t& samples_per_sec);
 
-  static ComPtr<IMMDevice> InitDevice(IMMDeviceEnumerator* enumerator);
   bool ProcessCaptureData();
   static DWORD WINAPI CaptureThread(LPVOID param);
   static DWORD WINAPI ReconnectThread(LPVOID param);
-  std::string GetDeviceName(IMMDevice* device);
   static speaker_layout SystemModule::ConvertSpeakerLayout(DWORD layout,
                                                            WORD channels);
   static ComPtr<IAudioCaptureClient> InitCapture(IAudioClient* client,
                                                  HANDLE receiveSignal);
 
-  void ConvertBuffer(std::vector<int8_t>& data);
 
-	window_priority priority;
-	std::string window_class;
-	std::string title;
-	std::string executable;
-
-
-  ComPtr<IMMNotificationClient> notify;
-  ComPtr<IMMDeviceEnumerator> enumerator;
   ComPtr<IAudioClient> client;
   ComPtr<IAudioCaptureClient> capture;
 
-  std::wstring default_id;
-  std::string device_id;
-  std::string device_name;
+  
   WinModule mmdevapi_module;
   PFN_ActivateAudioInterfaceAsync activate_audio_interface_async = NULL;
-  PFN_RtwqUnlockWorkQueue rtwq_unlock_work_queue = NULL;
-  PFN_RtwqLockSharedWorkQueue rtwq_lock_shared_work_queue = NULL;
-  PFN_RtwqCreateAsyncResult rtwq_create_async_result = NULL;
-  PFN_RtwqPutWorkItem rtwq_put_work_item = NULL;
-  PFN_RtwqPutWaitingWorkItem rtwq_put_waiting_work_item = NULL;
-  bool rtwq_supported = false;
 
-  HWND hwnd = NULL;
   DWORD process_id = 0;
-  bool useDeviceTiming = false;
-  bool isDefaultDevice = false;
 
   bool previouslyFailed = false;
-  WinHandle reconnectThread = NULL;
 
-  WinHandle captureThread;
-  WinHandle muteThread;
+  WinHandle reconnectThread = NULL;
+  WinHandle captureThread = NULL;
 
   WinHandle idleSignal;
   WinHandle stopSignal;
@@ -468,18 +431,16 @@ class SystemModule : public SystemModuleInterface {
   WinHandle reconnectExitSignal;
   WinHandle exitSignal;
   WinHandle initSignal;
+
   DWORD reconnectDuration = 0;
   WinHandle reconnectSignal;
 
   speaker_layout speakers;
   int format;  // byte size of frame.
   uint32_t sampleRate;
-  SourceType sourceType = SourceType::ProcessOutput;
 
-  uint64_t framesProcessed = 0;
   bool stop = false;
 
-  // std::vector<float> capture_buffer;
   std::vector<float> capture_buffer;
-  std::vector<int16_t> release_capture_buffer = std::vector<int16_t>(480 * 3);
+  std::vector<int16_t> release_capture_buffer = std::vector<int16_t>(480 * 8);
 };
