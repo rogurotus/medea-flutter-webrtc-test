@@ -60,14 +60,13 @@ class _LoopbackState extends State<Loopback> {
   // Platform messages are asynchronous, so we initialize in an async method.
   void _makeCall() async {
     var caps = DeviceConstraints();
-    var audio = AudioConstraints();
-    audio.systemId = 13288;
-    caps.audio.mandatory = audio;
+    caps.audio.mandatory = AudioConstraints();
     caps.video.mandatory = DeviceVideoConstraints();
     caps.video.mandatory!.width = 640;
     caps.video.mandatory!.height = 480;
     caps.video.mandatory!.fps = 30;
 
+    try {
       _tracks = await getUserMedia(caps);
       await _localRenderer.setSrcObject(
           _tracks!.firstWhere((track) => track.kind() == MediaKind.video));
@@ -118,7 +117,9 @@ class _LoopbackState extends State<Loopback> {
 
       await atrans?.sender.replaceTrack(
           _tracks!.firstWhere((track) => track.kind() == MediaKind.audio));
-
+    } catch (e) {
+      print(e.toString());
+    }
     if (!mounted) return;
 
     _inCalling = true;
@@ -127,38 +128,6 @@ class _LoopbackState extends State<Loopback> {
         _microIsAvailable = value;
       });
     });
-
-    print("pre-change");
-    await Future.delayed(Duration(seconds: 5));
-    print("change");
-    var caps2 = DeviceConstraints();
-    var audio2 = AudioConstraints();
-    audio2.systemId = 13040;
-    caps2.audio.mandatory = audio2;
-    caps2.video.mandatory = DeviceVideoConstraints();
-    caps2.video.mandatory!.width = 640;
-    caps2.video.mandatory!.height = 480;
-    caps2.video.mandatory!.fps = 30;
-
-          _tracks = await getUserMedia(caps2);
-
-      await atrans?.sender.replaceTrack(
-          _tracks!.firstWhere((track) => track.kind() == MediaKind.audio));
-
-    print("pre-change 2");
-    await Future.delayed(Duration(seconds: 5));
-    print("change 2");
-    var caps3 = DeviceConstraints();
-    caps3.audio.mandatory = AudioConstraints();
-    caps3.video.mandatory = DeviceVideoConstraints();
-    caps3.video.mandatory!.width = 640;
-    caps3.video.mandatory!.height = 480;
-    caps3.video.mandatory!.fps = 30;
-
-          _tracks = await getUserMedia(caps3);
-
-      await atrans?.sender.replaceTrack(
-          _tracks!.firstWhere((track) => track.kind() == MediaKind.audio));
   }
 
   void _hangUp() async {

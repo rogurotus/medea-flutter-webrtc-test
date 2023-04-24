@@ -49,7 +49,6 @@ class _GetUserMediaSampleState extends State<GetUserMediaSample> {
     var caps = DeviceConstraints();
     caps.audio.mandatory = AudioConstraints();
     caps.audio.mandatory!.deviceId = audioInputDevice;
-    caps.audio.mandatory!.systemId = 13852;
 
     caps.video.mandatory = DeviceVideoConstraints();
     caps.video.mandatory!.deviceId = videoInputDevice;
