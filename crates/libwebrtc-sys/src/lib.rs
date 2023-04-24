@@ -269,8 +269,8 @@ impl AudioDeviceModule {
         webrtc::set_audio_source(self.1.pin_mut(), id);
     }
 
-    pub fn enumerate_audio_source(&self) -> Vec<AudioSourceInfo> {
-        webrtc::enumerate_audio_source(&self.1)
+    pub fn enumerate_system_audio_source(&self) -> Vec<AudioSourceInfo> {
+        webrtc::enumerate_system_audio_source(&self.1)
             .into_iter()
             .map(|info| AudioSourceInfo {
                 id: webrtc::system_source_id(info),

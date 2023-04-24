@@ -61,8 +61,8 @@ rtc::scoped_refptr<AudioSource> CustomAudioDeviceModule::CreateSystemSource() {
   return system;
 }
 
-std::unique_ptr<std::vector<AudioSourceInfo>> CustomAudioDeviceModule::EnumerateWindows() const {
-  return system_recorder->EnumerateWindows();
+std::vector<AudioSourceInfo> CustomAudioDeviceModule::EnumerateSystemSource() const {
+  return system_recorder->EnumerateSystemSource();
 }
 
 void CustomAudioDeviceModule::SetRecordingSource(int id) {
@@ -89,10 +89,14 @@ void CustomAudioDeviceModule::AddSource(
   {
     std::unique_lock<std::mutex> lock(source_mutex);
     sources.push_back(source);
+    cv.notify_all();
   }
-  cv.notify_all();
   auto a = source.get();
-  mixer->AddSource(a);
+  try {
+    mixer->AddSource(a);
+  } catch (...) {
+    std::cout << "NONONO" <<std::endl;
+  }
 }
 
 void CustomAudioDeviceModule::RemoveSource(
@@ -202,11 +206,13 @@ void CustomAudioDeviceModule::RecordProcess() {
             cv.wait(lock, [&]() { return sources.size() > 0; });
           }
 
-          mixer->Mix(2, &frame);
+          mixer->Mix(std::max(audio_recorder->RecordingChannels(), system_recorder->RecordingChannels()), &frame);
           cb->SetRecordingChannels(frame.num_channels());
           cb->SetRecordingSampleRate(frame.sample_rate_hz());
           cb->SetRecordedBuffer(frame.data(), frame.sample_rate_hz() / 100);
           cb->DeliverRecordedData();
+
+          std::cout << sources.size()<< std::endl;
         }
       },
       "audio_device_module_rec_thread", attributes);

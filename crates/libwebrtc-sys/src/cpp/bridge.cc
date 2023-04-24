@@ -945,8 +945,8 @@ std::unique_ptr<std::string> display_source_title(const DisplaySource& source) {
 }
 
 // todo
-std::unique_ptr<std::vector<AudioSourceInfo>> enumerate_audio_source(const AudioSourceManager& manager) {
-  return manager.EnumerateWindows();
+std::unique_ptr<std::vector<AudioSourceInfo>> enumerate_system_audio_source(const AudioSourceManager& manager) {
+  return std::make_unique<std::vector<AudioSourceInfo>>(manager.EnumerateSystemSource());
 }
 
 // todo

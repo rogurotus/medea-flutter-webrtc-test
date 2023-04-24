@@ -68,15 +68,18 @@ WASAPIActivateAudioInterfaceCompletionHandler::ActivateCompleted(
   return hr;
 }
 
-void ReorderingBuffer(std::vector<int16_t>& output, float* data, int channels, float audio_multiplier) {
+void ReorderingBuffer(std::vector<int16_t>& output,
+                      float* data,
+                      int channels,
+                      float audio_multiplier) {
   for (int i = 0; i < channels; ++i) {
     int k = i;
     for (int j = 480 * i; k < 480 * channels; ++j, k += channels) {
       float inSample = data[k] * audio_multiplier;
-	  if (inSample > 1.0)
-	  	inSample = 1.0;
-	  if (inSample < -1.0)
-	  	inSample = -1.0;
+      if (inSample > 1.0)
+        inSample = 1.0;
+      if (inSample < -1.0)
+        inSample = -1.0;
 
       if (inSample >= 0) {
         output[j] = (int16_t)lrintf(inSample * 32767.0);
@@ -179,7 +182,7 @@ ComPtr<IAudioClient> SystemModule::InitClient(
     throw "ActivateAudioInterfaceAsync is not available";
   }
 
-  const WORD nChannels = (WORD)channels;  // todo get from device
+  const WORD nChannels = (WORD)channels;
   const DWORD nSamplesPerSec = 48000;
   constexpr WORD wBitsPerSample = 32;
   const WORD nBlockAlign = nChannels * wBitsPerSample / 8;
@@ -282,12 +285,6 @@ DWORD WINAPI SystemModule::ReconnectThread(LPVOID param) {
 DWORD WINAPI SystemModule::CaptureThread(LPVOID param) {
   const HRESULT hr = CoInitializeEx(0, COINIT_MULTITHREADED);
   const bool com_initialized = SUCCEEDED(hr);
-  if (!com_initialized) {
-    // blog(LOG_ERROR,
-    //      "[WASAPISource::CaptureThread]"
-    //      " CoInitializeEx failed: 0x%08X",
-    //      hr);
-  }
 
   DWORD unused = 0;
   const HANDLE handle = AvSetMmThreadCharacteristics("Audio", &unused);
@@ -318,7 +315,6 @@ DWORD WINAPI SystemModule::CaptureThread(LPVOID param) {
     do {
       /* Windows 7 does not seem to wake up for LOOPBACK */
       const DWORD dwMilliseconds = sigs == active_sigs ? 10 : INFINITE;
-
       const DWORD ret =
           WaitForMultipleObjects(sig_count, sigs, false, dwMilliseconds);
       switch (ret) {
@@ -337,21 +333,11 @@ DWORD WINAPI SystemModule::CaptureThread(LPVOID param) {
         case WAIT_OBJECT_0 + 2:
         case WAIT_TIMEOUT:
           if (sigs == inactive_sigs) {
-            std::cout << "MUST HERE" << std::endl;
             assert(ret != WAIT_TIMEOUT);
-
             if (source->Init()) {
               sig_count = _countof(active_sigs);
               sigs = active_sigs;
             } else {
-              if (source->reconnectDuration == 0) {
-                // blog(LOG_INFO,
-                //      "WASAPI: Device '%s' failed to start (source: %s)",
-                //      source->device_id
-                // 	     .c_str(),
-                //      obs_source_get_name(
-                // 	     source->source));
-              }
               stop = true;
               reconnect = true;
               source->reconnectDuration = RECONNECT_INTERVAL;
@@ -359,11 +345,6 @@ DWORD WINAPI SystemModule::CaptureThread(LPVOID param) {
           } else {
             stop = !source->ProcessCaptureData();
             if (stop) {
-              // blog(LOG_INFO,
-              //      "Device '%s' invalidated.  Retrying (source: %s)",
-              //      source->device_name.c_str(),
-              //      obs_source_get_name(
-              // 	     source->source));
               stop = true;
               reconnect = true;
               source->reconnectDuration = RECONNECT_INTERVAL;
@@ -394,10 +375,6 @@ DWORD WINAPI SystemModule::CaptureThread(LPVOID param) {
     if (idle) {
       SetEvent(source->idleSignal);
     } else if (reconnect) {
-      // blog(LOG_INFO,
-      //      "Device '%s' invalidated.  Retrying (source: %s)",
-      //      source->device_name.c_str(),
-      //      obs_source_get_name(source->source));
       SetEvent(source->reconnectSignal);
     }
   }
@@ -431,11 +408,6 @@ bool SystemModule::ProcessCaptureData() {
       res = capture->GetNextPacketSize(&captureSize);
       if (FAILED(res)) {
         if (res != AUDCLNT_E_DEVICE_INVALIDATED)
-          // blog(LOG_WARNING,
-          //      "[WASAPISource::ProcessCaptureData]"
-          //      " capture->GetNextPacketSize"
-          //      " failed: %lX",
-          //      res);
           return false;
       }
 
@@ -447,11 +419,6 @@ bool SystemModule::ProcessCaptureData() {
       res = capture->GetBuffer(&buffer, &frames, &flags, &pos, &ts);
       if (FAILED(res)) {
         if (res != AUDCLNT_E_DEVICE_INVALIDATED)
-          // blog(LOG_WARNING,
-          //      "[WASAPISource::ProcessCaptureData]"
-          //      " capture->GetBuffer"
-          //      " failed: %lX",
-          //      res);
           return false;
       }
 
@@ -528,6 +495,7 @@ ComPtr<IAudioCaptureClient> SystemModule::InitCapture(IAudioClient* client,
 ////////////////////////// API
 
 int32_t SystemModule::Terminate() {
+  SetEvent(exitSignal);
   return StopRecording();
 }
 
@@ -536,13 +504,13 @@ int32_t SystemModule::StartRecording() {
   return 0;
 }
 
-  void SystemModule::SetSystemAudioLevel(float level) {
-	audio_multiplier = level;
-  }
+void SystemModule::SetSystemAudioLevel(float level) {
+  audio_multiplier = level;
+}
 
-  float SystemModule::GetSystemAudioLevel() const {
-	return audio_multiplier;
-  }
+float SystemModule::GetSystemAudioLevel() const {
+  return audio_multiplier;
+}
 
 void SystemModule::SetRecordingSource(int id) {
   const bool restart = process_id != id;
@@ -553,27 +521,13 @@ void SystemModule::SetRecordingSource(int id) {
   }
 }
 
-int32_t SystemModule::Init() {
-  bool success = false;
+bool SystemModule::Init() {
+  bool success;
   try {
     Initialize();
     success = true;
-  } catch (HRError& error) {
-    if (!previouslyFailed) {
-      // blog(LOG_WARNING,
-      //	"[WASAPISource::TryInitialize]:[%s] %s: %lX",
-      //	device_name.empty() ? device_id.c_str()
-      //	: device_name.c_str(),
-      //	error.str, error.hr);
-    }
-  } catch (const char* error) {
-    if (!previouslyFailed) {
-      // blog(LOG_WARNING,
-      //	"[WASAPISource::TryInitialize]:[%s] %s",
-      //	device_name.empty() ? device_id.c_str()
-      //	: device_name.c_str(),
-      //	error);
-    }
+  } catch (...) {
+    success = false;
   }
 
   previouslyFailed = !success;
@@ -581,25 +535,6 @@ int32_t SystemModule::Init() {
 }
 
 int SystemModule::StopRecording() {
-  SetEvent(stopSignal);
-
-  if (reconnectThread.Valid()) {
-    WaitForSingleObject(idleSignal, INFINITE);
-  } else {
-    const HANDLE sigs[] = {reconnectSignal, idleSignal};
-    WaitForMultipleObjects(_countof(sigs), sigs, false, INFINITE);
-  }
-
-  SetEvent(exitSignal);
-
-  if (reconnectThread.Valid()) {
-    SetEvent(reconnectExitSignal);
-    WaitForSingleObject(reconnectThread, INFINITE);
-  }
-
-  WaitForSingleObject(captureThread, INFINITE);
-
-  stop = true;
   return 0;
 }
 
@@ -620,9 +555,8 @@ void SystemModule::ResetSource() {
   source = nullptr;
 }
 
-std::unique_ptr<std::vector<AudioSourceInfo>> SystemModule::EnumerateWindows()
-    const {
-  return std::make_unique<std::vector<AudioSourceInfo>>(ms_fill_window_list(window_search_mode::INCLUDE_MINIMIZED));
+std::vector<AudioSourceInfo> SystemModule::EnumerateSystemSource() const {
+  return ms_fill_window_list(window_search_mode::INCLUDE_MINIMIZED);
 }
 
 ///////////////////////

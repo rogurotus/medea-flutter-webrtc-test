@@ -254,14 +254,13 @@ abstract class FlutterWebrtcNative {
 
   FlutterRustBridgeTaskConstMeta get kCloneTrackConstMeta;
 
-  Future<void> setSystemAudioCaptureMultiplier(
-      {required double level, dynamic hint});
+  Future<void> setSystemAudioVolume({required double level, dynamic hint});
 
-  FlutterRustBridgeTaskConstMeta get kSetSystemAudioCaptureMultiplierConstMeta;
+  FlutterRustBridgeTaskConstMeta get kSetSystemAudioVolumeConstMeta;
 
-  Future<double> systemAudioCaptureMultiplier({dynamic hint});
+  Future<double> systemAudioVolume({dynamic hint});
 
-  FlutterRustBridgeTaskConstMeta get kSystemAudioCaptureMultiplierConstMeta;
+  FlutterRustBridgeTaskConstMeta get kSystemAudioVolumeConstMeta;
 
   /// Registers an observer to the [`MediaStreamTrack`] events.
   Stream<TrackEvent> registerTrackObserver(
@@ -2411,40 +2410,37 @@ class FlutterWebrtcNativeImpl implements FlutterWebrtcNative {
         argNames: ["trackId", "kind"],
       );
 
-  Future<void> setSystemAudioCaptureMultiplier(
-      {required double level, dynamic hint}) {
+  Future<void> setSystemAudioVolume({required double level, dynamic hint}) {
     var arg0 = api2wire_f32(level);
     return _platform.executeNormal(FlutterRustBridgeTask(
       callFfi: (port_) =>
-          _platform.inner.wire_set_system_audio_capture_multiplier(port_, arg0),
+          _platform.inner.wire_set_system_audio_volume(port_, arg0),
       parseSuccessData: _wire2api_unit,
-      constMeta: kSetSystemAudioCaptureMultiplierConstMeta,
+      constMeta: kSetSystemAudioVolumeConstMeta,
       argValues: [level],
       hint: hint,
     ));
   }
 
-  FlutterRustBridgeTaskConstMeta
-      get kSetSystemAudioCaptureMultiplierConstMeta =>
-          const FlutterRustBridgeTaskConstMeta(
-            debugName: "set_system_audio_capture_multiplier",
-            argNames: ["level"],
-          );
+  FlutterRustBridgeTaskConstMeta get kSetSystemAudioVolumeConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "set_system_audio_volume",
+        argNames: ["level"],
+      );
 
-  Future<double> systemAudioCaptureMultiplier({dynamic hint}) {
+  Future<double> systemAudioVolume({dynamic hint}) {
     return _platform.executeNormal(FlutterRustBridgeTask(
-      callFfi: (port_) =>
-          _platform.inner.wire_system_audio_capture_multiplier(port_),
+      callFfi: (port_) => _platform.inner.wire_system_audio_volume(port_),
       parseSuccessData: _wire2api_f32,
-      constMeta: kSystemAudioCaptureMultiplierConstMeta,
+      constMeta: kSystemAudioVolumeConstMeta,
       argValues: [],
       hint: hint,
     ));
   }
 
-  FlutterRustBridgeTaskConstMeta get kSystemAudioCaptureMultiplierConstMeta =>
+  FlutterRustBridgeTaskConstMeta get kSystemAudioVolumeConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
-        debugName: "system_audio_capture_multiplier",
+        debugName: "system_audio_volume",
         argNames: [],
       );
 
@@ -4024,36 +4020,35 @@ class FlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
   late final _wire_clone_track = _wire_clone_trackPtr
       .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>, int)>();
 
-  void wire_set_system_audio_capture_multiplier(
+  void wire_set_system_audio_volume(
     int port_,
     double level,
   ) {
-    return _wire_set_system_audio_capture_multiplier(
+    return _wire_set_system_audio_volume(
       port_,
       level,
     );
   }
 
-  late final _wire_set_system_audio_capture_multiplierPtr =
+  late final _wire_set_system_audio_volumePtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64, ffi.Float)>>(
-          'wire_set_system_audio_capture_multiplier');
-  late final _wire_set_system_audio_capture_multiplier =
-      _wire_set_system_audio_capture_multiplierPtr
-          .asFunction<void Function(int, double)>();
+          'wire_set_system_audio_volume');
+  late final _wire_set_system_audio_volume =
+      _wire_set_system_audio_volumePtr.asFunction<void Function(int, double)>();
 
-  void wire_system_audio_capture_multiplier(
+  void wire_system_audio_volume(
     int port_,
   ) {
-    return _wire_system_audio_capture_multiplier(
+    return _wire_system_audio_volume(
       port_,
     );
   }
 
-  late final _wire_system_audio_capture_multiplierPtr =
+  late final _wire_system_audio_volumePtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-          'wire_system_audio_capture_multiplier');
-  late final _wire_system_audio_capture_multiplier =
-      _wire_system_audio_capture_multiplierPtr.asFunction<void Function(int)>();
+          'wire_system_audio_volume');
+  late final _wire_system_audio_volume =
+      _wire_system_audio_volumePtr.asFunction<void Function(int)>();
 
   void wire_register_track_observer(
     int port_,

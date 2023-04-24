@@ -1239,7 +1239,7 @@ pub(crate) mod webrtc {
         ) -> UniquePtr<AudioSourceManager>;
 
         // todo
-        pub fn enumerate_audio_source(
+        pub fn enumerate_system_audio_source(
             manager: &AudioSourceManager,
         ) -> UniquePtr<CxxVector<AudioSourceInfo>>;
 
@@ -1252,10 +1252,15 @@ pub(crate) mod webrtc {
         ) -> UniquePtr<CxxString>;
 
         // todo
-        pub fn set_system_audio_source_level(manager: Pin<&mut AudioSourceManager>, level: f32);
+        pub fn set_system_audio_source_level(
+            manager: Pin<&mut AudioSourceManager>,
+            level: f32,
+        );
 
         // todo
-        pub fn get_system_audio_source_level(manager: &AudioSourceManager) -> f32;
+        pub fn get_system_audio_source_level(
+            manager: &AudioSourceManager,
+        ) -> f32;
 
         // todo
         pub fn set_audio_source(manager: Pin<&mut AudioSourceManager>, id: i64);

@@ -137,7 +137,7 @@ std::unique_ptr<AudioSource> create_source_microphone(AudioSourceManager& manage
 std::unique_ptr<AudioSource> create_source_system(AudioSourceManager& manager);
 
 // todo
-std::unique_ptr<std::vector<AudioSourceInfo>> enumerate_audio_source(const AudioSourceManager& manager);
+std::unique_ptr<std::vector<AudioSourceInfo>> enumerate_system_audio_source(const AudioSourceManager& manager);
 
 // todo
 void set_audio_source(AudioSourceManager& manager, int64_t id);

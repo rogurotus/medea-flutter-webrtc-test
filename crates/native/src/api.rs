@@ -1876,10 +1876,7 @@ pub fn enumerate_devices() -> anyhow::Result<Vec<MediaDeviceInfo>> {
 
 // todo
 pub fn enumerate_system_audio_source() -> Vec<AudioSourceInfo> {
-    WEBRTC
-        .lock()
-        .unwrap()
-        .enumerate_system_audio_source()
+    WEBRTC.lock().unwrap().enumerate_system_audio_source()
 }
 
 /// Returns a list of all available displays that can be used for screen
@@ -2205,15 +2202,14 @@ pub fn clone_track(
     WEBRTC.lock().unwrap().clone_track(track_id, kind)
 }
 
-
 // todo
-pub fn set_system_audio_capture_multiplier(level: f32) {
-    WEBRTC.lock().unwrap().audio_device_module.set_system_audio_capture_multiplier(level);
+pub fn set_system_audio_volume(level: f32) {
+    WEBRTC.lock().unwrap().set_system_audio_volume(level);
 }
 
 // todo
-pub fn system_audio_capture_multiplier() -> f32 {
-    WEBRTC.lock().unwrap().audio_device_module.system_audio_capture_multiplier()
+pub fn system_audio_volume() -> f32 {
+    WEBRTC.lock().unwrap().system_audio_volume()
 }
 
 /// Registers an observer to the [`MediaStreamTrack`] events.

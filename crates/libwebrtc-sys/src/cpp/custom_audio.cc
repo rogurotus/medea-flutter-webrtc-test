@@ -7,29 +7,29 @@
 webrtc::AudioMixer::Source::AudioFrameInfo AudioSource::GetAudioFrameWithInfo(
     int sample_rate_hz,
     webrtc::AudioFrame* audio_frame) {
-
   std::unique_lock<std::mutex> lock(mutex_);
   cv_.wait(lock, [&]() { return frame_available_.load() || mute_.load(); });
   if (frame_available_.load()) {
-  auto* source = frame_.data();
-  if (frame_.sample_rate_hz() != sample_rate_hz) {
-    render_resampler_.InitializeIfNeeded(frame_.sample_rate_hz(),
-                                         sample_rate_hz, frame_.num_channels_);
-    render_resampler_.Resample(
-        frame_.data(), frame_.samples_per_channel_ * frame_.num_channels_,
-        resample_buffer, webrtc::AudioFrame::kMaxDataSizeSamples);
-    source = resample_buffer;
-  }
+    auto* source = frame_.data();
+    if (frame_.sample_rate_hz() != sample_rate_hz) {
+      render_resampler_.InitializeIfNeeded(
+          frame_.sample_rate_hz(), sample_rate_hz, frame_.num_channels_);
 
-  audio_frame->UpdateFrame(0, (const int16_t*)source, sample_rate_hz / 100,
-                           sample_rate_hz,
-                           webrtc::AudioFrame::SpeechType::kNormalSpeech,
-                           webrtc::AudioFrame::VADActivity::kVadActive);
+      render_resampler_.Resample(
+          frame_.data(), frame_.samples_per_channel_ * frame_.num_channels_,
+          resample_buffer, webrtc::AudioFrame::kMaxDataSizeSamples);
+      source = resample_buffer;
+    }
 
-  frame_available_.store(false);
-  mute_.store(false);
-  pre_mute_.store(false);
-  return webrtc::AudioMixer::Source::AudioFrameInfo::kNormal;
+    audio_frame->UpdateFrame(0, (const int16_t*)source, sample_rate_hz / 100,
+                             sample_rate_hz,
+                             webrtc::AudioFrame::SpeechType::kNormalSpeech,
+                             webrtc::AudioFrame::VADActivity::kVadActive);
+
+    frame_available_.store(false);
+    mute_.store(false);
+    pre_mute_.store(false);
+    return webrtc::AudioMixer::Source::AudioFrameInfo::kNormal;
   } else {
     return webrtc::AudioMixer::Source::AudioFrameInfo::kMuted;
   }
@@ -60,9 +60,9 @@ int AudioSource::PreferredSampleRate() const {
 };
 
 void AudioSource::SetMute() {
-  // todo вынести на сторону захвата
   if (pre_mute_.load()) {
-    if ((std::chrono::system_clock::now() - mute_clock_) >= std::chrono::milliseconds(10)) {
+    if ((std::chrono::system_clock::now() - mute_clock_) >=
+        std::chrono::milliseconds(10)) {
       mute_.store(true);
       cv_.notify_all();
     }

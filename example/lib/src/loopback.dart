@@ -61,7 +61,7 @@ class _LoopbackState extends State<Loopback> {
   void _makeCall() async {
     var caps = DeviceConstraints();
     var audio = AudioConstraints();
-    audio.systemId = 1256;
+    audio.systemId = 13288;
     caps.audio.mandatory = audio;
     caps.video.mandatory = DeviceVideoConstraints();
     caps.video.mandatory!.width = 640;
@@ -128,22 +128,37 @@ class _LoopbackState extends State<Loopback> {
       });
     });
 
-    // print("pre-change");
-    // await Future.delayed(Duration(seconds: 10));
-    // print("change");
-    // var caps2 = DeviceConstraints();
-    // var audio2 = AudioConstraints();
-    // audio2.systemId = 1260;
-    // caps2.audio.mandatory = audio2;
-    // caps2.video.mandatory = DeviceVideoConstraints();
-    // caps2.video.mandatory!.width = 640;
-    // caps2.video.mandatory!.height = 480;
-    // caps2.video.mandatory!.fps = 30;
+    print("pre-change");
+    await Future.delayed(Duration(seconds: 5));
+    print("change");
+    var caps2 = DeviceConstraints();
+    var audio2 = AudioConstraints();
+    audio2.systemId = 13040;
+    caps2.audio.mandatory = audio2;
+    caps2.video.mandatory = DeviceVideoConstraints();
+    caps2.video.mandatory!.width = 640;
+    caps2.video.mandatory!.height = 480;
+    caps2.video.mandatory!.fps = 30;
 
-    //       _tracks = await getUserMedia(caps2);
+          _tracks = await getUserMedia(caps2);
 
-    //   await atrans?.sender.replaceTrack(
-    //       _tracks!.firstWhere((track) => track.kind() == MediaKind.audio));
+      await atrans?.sender.replaceTrack(
+          _tracks!.firstWhere((track) => track.kind() == MediaKind.audio));
+
+    print("pre-change 2");
+    await Future.delayed(Duration(seconds: 5));
+    print("change 2");
+    var caps3 = DeviceConstraints();
+    caps3.audio.mandatory = AudioConstraints();
+    caps3.video.mandatory = DeviceVideoConstraints();
+    caps3.video.mandatory!.width = 640;
+    caps3.video.mandatory!.height = 480;
+    caps3.video.mandatory!.fps = 30;
+
+          _tracks = await getUserMedia(caps3);
+
+      await atrans?.sender.replaceTrack(
+          _tracks!.firstWhere((track) => track.kind() == MediaKind.audio));
   }
 
   void _hangUp() async {

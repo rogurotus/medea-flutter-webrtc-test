@@ -57,7 +57,7 @@ class AudioSourceManager {
   // Creates a `AudioSource` from a system audio.
   virtual rtc::scoped_refptr<AudioSource> CreateSystemSource() = 0;
   // todo
-  virtual std::unique_ptr<std::vector<AudioSourceInfo>> EnumerateWindows() const = 0;
+  virtual std::vector<AudioSourceInfo> EnumerateSystemSource() const = 0;
   // todo
   virtual void SetRecordingSource(int id) = 0;
   // todo
@@ -106,7 +106,7 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   // AudioSourceManager interface.
   rtc::scoped_refptr<AudioSource> CreateMicrophoneSource() override;
   rtc::scoped_refptr<AudioSource>  CreateSystemSource() override;
-  std::unique_ptr<std::vector<AudioSourceInfo>> EnumerateWindows() const override;
+  std::vector<AudioSourceInfo> EnumerateSystemSource() const override;
   void SetRecordingSource(int id) override;
   void SetSystemAudioLevel(float level) override;
   float GetSystemAudioLevel() const override;

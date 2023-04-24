@@ -12,7 +12,6 @@ class AudioSourceInfo {
   std::string title;
 };
 
-
 class SystemModuleInterface;
 
 class SystemSource : public AudioSource {
@@ -29,32 +28,23 @@ class SystemModuleInterface {
 public:
 
 // Initialization and terminate.
-virtual int32_t Init() = 0;
+virtual bool Init() = 0;
 virtual int32_t Terminate() = 0;
-
-// System control.
-// virtual int32_t SetSystemMute(bool enable) = 0;
-// virtual int32_t SystemMute(bool* enabled) const = 0;
-// virtual bool SystemIsInitialized () = 0;
-// virtual int32_t SetSystemVolume(uint32_t volume) = 0;
-// virtual int32_t SystemVolume(uint32_t* volume) const = 0;
+virtual rtc::scoped_refptr<AudioSource> CreateSource() = 0;
+virtual void ResetSource() = 0;
 
 // Settings.
 virtual void SetRecordingSource(int id) = 0;
 virtual void SetSystemAudioLevel(float level) = 0;
 virtual float GetSystemAudioLevel() const = 0;
-
-// enumerate outputs
-virtual std::unique_ptr<std::vector<AudioSourceInfo>> EnumerateWindows() const = 0;
-
-
-// System source.
-virtual rtc::scoped_refptr<AudioSource> CreateSource() = 0;
-virtual void ResetSource() = 0;
 virtual int32_t StopRecording() = 0;
 virtual int32_t StartRecording() = 0;
 virtual int32_t RecordingChannels() = 0;
 
+// Enumerate system audio outputs.
+virtual std::vector<AudioSourceInfo> EnumerateSystemSource() const = 0;
+
+// System source.
 rtc::scoped_refptr<SystemSource> source = nullptr;
 };
 

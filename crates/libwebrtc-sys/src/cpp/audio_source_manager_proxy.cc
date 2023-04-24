@@ -26,10 +26,10 @@
     return call.Marshal(primary_thread_);
   }
 
-  std::unique_ptr<std::vector<AudioSourceInfo>> AudioSourceManagerProxy::EnumerateWindows() const {
-    TRACE_BOILERPLATE(EnumerateWindows);
-    webrtc::ConstMethodCall<AudioSourceManager, std::unique_ptr<std::vector<AudioSourceInfo>>>
-        call(adm.get(), &AudioSourceManager::EnumerateWindows);
+  std::vector<AudioSourceInfo> AudioSourceManagerProxy::EnumerateSystemSource() const {
+    TRACE_BOILERPLATE(EnumerateSystemSource);
+    webrtc::ConstMethodCall<AudioSourceManager, std::vector<AudioSourceInfo>>
+        call(adm.get(), &AudioSourceManager::EnumerateSystemSource);
     return call.Marshal(primary_thread_);
   }
 

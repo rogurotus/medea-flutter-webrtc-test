@@ -323,14 +323,15 @@ class SystemModule : public SystemModuleInterface {
   ~SystemModule();
 
   // Initialization and terminate.
-  int32_t Init();
+  bool Init();
   int32_t Terminate();
 
   // Settings.
   int32_t SetRecordingDevice(uint16_t index);
 
-  // enumerate outputs
-  std::unique_ptr<std::vector<AudioSourceInfo>> EnumerateWindows() const;
+  // enumerate source
+  std::vector<AudioSourceInfo> SystemModule::EnumerateSystemSource() const;
+
   void SetRecordingSource(int id);
 
   // System source.
@@ -389,7 +390,7 @@ class SystemModule : public SystemModuleInterface {
   DWORD reconnectDuration = 0;
   WinHandle reconnectSignal;
 
-  speaker_layout speakers;
+  speaker_layout speakers = SPEAKERS_UNKNOWN;
   int format;  // byte size of frame.
   uint32_t sampleRate;
 

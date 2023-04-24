@@ -146,6 +146,24 @@ Future<List<AudioSourceInfo>> enumerateSystemAudioSource() async {
   }
 }
 
+// todo
+Future<double> systemAudioVolume() async {
+  if (isDesktop) {
+    return await api!.systemAudioVolume();
+  } else {
+    throw 'Not supported';
+  }
+}
+
+// todo
+Future<void> setSystemAudioVolume(double volume) async {
+  if (isDesktop) {
+    return await api!.setSystemAudioVolume(level: volume);
+  } else {
+    throw 'Not supported';
+  }
+}
+
 
 /// Returns list of local audio and video [NativeMediaStreamTrack]s based on the
 /// provided [DeviceConstraints].
