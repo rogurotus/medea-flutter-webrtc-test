@@ -30,6 +30,7 @@ abstract class FlutterWebrtcNative {
 
   FlutterRustBridgeTaskConstMeta get kEnumerateDevicesConstMeta;
 
+  /// Enumerates possible system audio sources.
   Future<List<AudioSourceInfo>> enumerateSystemAudioSource({dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kEnumerateSystemAudioSourceConstMeta;
@@ -254,10 +255,12 @@ abstract class FlutterWebrtcNative {
 
   FlutterRustBridgeTaskConstMeta get kCloneTrackConstMeta;
 
+  /// Sets the volume of the system audio capture.
   Future<void> setSystemAudioVolume({required double level, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kSetSystemAudioVolumeConstMeta;
 
+  /// Returns the current volume of the system audio capture.
   Future<double> systemAudioVolume({dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kSystemAudioVolumeConstMeta;
@@ -307,6 +310,9 @@ class AudioConstraints {
   ///           changing device will affect all previously obtained audio
   ///           tracks.
   final String? deviceId;
+
+  /// Identifier of the system audio source generating the content of the
+  /// [`MediaStreamTrack`].
   final int? systemId;
 
   AudioConstraints({
@@ -315,8 +321,12 @@ class AudioConstraints {
   });
 }
 
+/// Information about system audio source.
 class AudioSourceInfo {
+  /// Unique id of system audio source.
   final int id;
+
+  /// Title of system audio source.
   final String title;
 
   AudioSourceInfo({

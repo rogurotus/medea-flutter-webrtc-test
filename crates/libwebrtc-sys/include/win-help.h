@@ -1,9 +1,7 @@
 #pragma once
 
-// #include "c99.h"
 #include <Windows.h>
 #include <Psapi.h>
-// #include "utf8.h"
 #include <stdio.h>
 #include <iostream>
 #include "system_audio_module.h"
@@ -25,6 +23,7 @@ struct dstr {
 	size_t len; /* number of characters, excluding null terminator */
 	size_t capacity;
 };
+
 inline void dstr_resize(dstr& dst, const size_t num);
 inline void dstr_free(dstr& dst);
 void dstr_copy(dstr& dst, const char *array);
@@ -34,7 +33,6 @@ inline bool dstr_is_empty(const dstr& str);
 
 void bfree(void *ptr);
 void *brealloc(void *ptr, size_t size);
-
 
 #define LOWER_HALFBYTE(x) ((x)&0xF)
 #define UPPER_HALFBYTE(x) (((x) >> 4) & 0xF)

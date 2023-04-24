@@ -296,22 +296,22 @@ impl Webrtc {
         self.audio_device_module.set_microphone_volume(level)
     }
 
-    // todo
+    /// Returns the current volume of the system audio capture.
     pub fn enumerate_system_audio_source(
         &mut self,
     ) -> Vec<api::AudioSourceInfo> {
         self.audio_device_module.enumerate_system_audio_source()
     }
 
-    // todo
+    /// Sets the volume of the system audio capture.
     pub fn set_system_audio_volume(&mut self, level: f32) {
         self.audio_device_module
-            .set_system_audio_capture_multiplier(level);
+            .set_system_audio_source_volume(level);
     }
 
-    // todo
+    /// Returns the current volume of the system audio capture.
     pub fn system_audio_volume(&mut self) -> f32 {
-        self.audio_device_module.system_audio_capture_multiplier()
+        self.audio_device_module.system_audio_source_volume()
     }
 
     /// Indicates if the microphone is available to set volume.

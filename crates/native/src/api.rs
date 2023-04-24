@@ -161,9 +161,11 @@ impl From<sys::TrackKind> for TrackKind {
     }
 }
 
-// todo
+/// Information about system audio source.
 pub struct AudioSourceInfo {
+    /// Unique id of system audio source.
     pub id: i64,
+    /// Title of system audio source.
     pub title: String,
 }
 
@@ -1643,7 +1645,8 @@ pub struct AudioConstraints {
     ///           tracks.
     pub device_id: Option<String>,
 
-    // todo
+    /// Identifier of the system audio source generating the content of the
+    /// [`MediaStreamTrack`].
     pub system_id: Option<i64>,
 }
 
@@ -1874,7 +1877,7 @@ pub fn enumerate_devices() -> anyhow::Result<Vec<MediaDeviceInfo>> {
     WEBRTC.lock().unwrap().enumerate_devices()
 }
 
-// todo
+/// Enumerates possible system audio sources.
 pub fn enumerate_system_audio_source() -> Vec<AudioSourceInfo> {
     WEBRTC.lock().unwrap().enumerate_system_audio_source()
 }
@@ -2202,12 +2205,12 @@ pub fn clone_track(
     WEBRTC.lock().unwrap().clone_track(track_id, kind)
 }
 
-// todo
+/// Sets the volume of the system audio capture.
 pub fn set_system_audio_volume(level: f32) {
     WEBRTC.lock().unwrap().set_system_audio_volume(level);
 }
 
-// todo
+/// Returns the current volume of the system audio capture.
 pub fn system_audio_volume() -> f32 {
     WEBRTC.lock().unwrap().system_audio_volume()
 }

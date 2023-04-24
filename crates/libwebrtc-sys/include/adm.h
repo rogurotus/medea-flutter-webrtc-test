@@ -33,16 +33,18 @@
 #endif
 
 #include "microphone_module.h"
+#include "system_audio_module.h"
+
 #if defined(WEBRTC_LINUX)
 #include "modules/audio_device/linux/audio_mixer_manager_pulse_linux.h"
 #include "modules/audio_device/linux/pulseaudiosymboltable_linux.h"
 #include "linux_microphone_module.h"
 #endif
 
-// #if defined(true) // WEBRTC_WIN
+#if defined(WEBRTC_WIN)
 #include "windows_microphone_module.h"
 #include "windows_system_audio_module.h"
-// #endif
+#endif
 
 #if defined(WEBRTC_MAC)
 #include "macos_microphone_module.h"
@@ -56,14 +58,14 @@ class AudioSourceManager {
   virtual rtc::scoped_refptr<AudioSource> CreateMicrophoneSource() = 0;
   // Creates a `AudioSource` from a system audio.
   virtual rtc::scoped_refptr<AudioSource> CreateSystemSource() = 0;
-  // todo
+  // Enumerates possible system audio sources.
   virtual std::vector<AudioSourceInfo> EnumerateSystemSource() const = 0;
-  // todo
+  // Sets the system audio source.
   virtual void SetRecordingSource(int id) = 0;
-  // todo
-  virtual void SetSystemAudioLevel(float level) = 0;
-  // todo
-  virtual float GetSystemAudioLevel() const = 0;
+  // Sets the volume of the system audio capture.
+  virtual void SetSystemAudioVolume(float volume) = 0;
+  // Returns the current volume of the system audio capture.
+  virtual float GetSystemAudioVolume() const = 0;
   // Adds `AudioSource` to `AudioSourceManager`.
   virtual void AddSource(rtc::scoped_refptr<AudioSource> source) = 0;
   // Removes `AudioSource` to `AudioSourceManager`.
@@ -108,8 +110,8 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   rtc::scoped_refptr<AudioSource>  CreateSystemSource() override;
   std::vector<AudioSourceInfo> EnumerateSystemSource() const override;
   void SetRecordingSource(int id) override;
-  void SetSystemAudioLevel(float level) override;
-  float GetSystemAudioLevel() const override;
+  void SetSystemAudioVolume(float level) override;
+  float GetSystemAudioVolume() const override;
   void AddSource(rtc::scoped_refptr<AudioSource>  source) override;
   void RemoveSource(rtc::scoped_refptr<AudioSource>  source) override;
 
@@ -130,8 +132,10 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   std::unique_ptr<MicrophoneModuleInterface> audio_recorder;
   std::unique_ptr<SystemModuleInterface> system_recorder;
   
-
+  // Thread for processing audio frames.
   rtc::PlatformThread ptrThreadRec;
+
+  // Used to wait for audio sources.
   std::condition_variable cv;
   bool quit = false;
 };

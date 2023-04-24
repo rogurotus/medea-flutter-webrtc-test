@@ -2,28 +2,39 @@
 #pragma once
 #include "custom_audio.h"
 
+
+// Audio source info.
 class AudioSourceInfo {
   public:
-  AudioSourceInfo(int id, std::string title);
-  int GetId() const;
-  std::string GetTitle() const;
+  AudioSourceInfo(int id, std::string title) : id(id), title(title) {}
+  // Returns audio source id.
+  int GetId() const {return id;}
+  // Returns audio source title.
+  std::string GetTitle() const {return title;}
   private:
+  // Audio source id.
   int id;
+  // Audio source title.
   std::string title;
 };
 
 class SystemModuleInterface;
 
+// System audio source.
 class SystemSource : public AudioSource {
  public:
   SystemSource(SystemModuleInterface* module);
   ~SystemSource();
 
  private:
+  // Audio system capture module.
   SystemModuleInterface* module;
+  // Used to control the module.
   static int sources_num;
 };
 
+
+// Interface to provide system audio capture.
 class SystemModuleInterface {
 public:
 

@@ -1,3 +1,4 @@
+#if WEBRTC_WIN
 
 #include "win-help.h"
 #include "dwmapi.h"
@@ -509,3 +510,4 @@ void bfree(void* ptr) {
     a_free(ptr);
   }
 }
+#endif

@@ -137,7 +137,7 @@ Future<List<MediaDisplayInfo>> enumerateDisplays() async {
   }
 }
 
-// todo
+/// Returns list of [AudioSourceInfo]s for the currently available system audio source.
 Future<List<AudioSourceInfo>> enumerateSystemAudioSource() async {
   if (isDesktop) {
     return await api!.enumerateSystemAudioSource();
@@ -146,7 +146,7 @@ Future<List<AudioSourceInfo>> enumerateSystemAudioSource() async {
   }
 }
 
-// todo
+/// Returns the current volume of the system audio capture.
 Future<double> systemAudioVolume() async {
   if (isDesktop) {
     return await api!.systemAudioVolume();
@@ -155,7 +155,7 @@ Future<double> systemAudioVolume() async {
   }
 }
 
-// todo
+/// Sets the system audio capture volume according to the specified [volume].
 Future<void> setSystemAudioVolume(double volume) async {
   if (isDesktop) {
     return await api!.setSystemAudioVolume(level: volume);

@@ -300,16 +300,14 @@ impl Webrtc {
         };
 
         if let Some(current_device_id) =
-        self.audio_device_module.current_device_id.clone()
+            self.audio_device_module.current_device_id.clone()
         {
-            if let Some(source) =
-                self.audio_source.1.remove(&current_device_id)
+            if let Some(source) = self.audio_source.1.remove(&current_device_id)
             {
                 self.audio_device_module.remove_source(&source);
             }
 
             if device_id != current_device_id {
-                
                 self.audio_device_module
                     .set_recording_device(device_id.clone(), device_index)?;
             }
@@ -340,7 +338,7 @@ impl Webrtc {
                 self.audio_device_module.current_system_id =
                     Some(system_id.clone());
                 let system_audio =
-                    self.audio_device_module.create_source_system();
+                    self.audio_device_module.create_system_audio_source();
 
                 self.audio_device_module.add_source(&system_audio);
                 self.audio_source.1.insert(system_id, system_audio);
@@ -665,7 +663,8 @@ pub struct AudioDeviceModule {
     /// from the audio input device.
     current_device_id: Option<AudioDeviceId>,
 
-    // todo
+    /// ID of the system audio source currently used by this
+    /// [`sys::AudioDeviceModule`].
     current_system_id: Option<AudioDeviceId>,
 }
 
@@ -719,10 +718,12 @@ impl AudioDeviceModule {
         }
     }
 
+    /// Sets the system audio source.
     pub fn set_system_audio_source(&mut self, id: i64) {
         self.inner.set_system_audio_source(id);
     }
 
+    /// Enumerates possible system audio sources.
     pub fn enumerate_system_audio_source(
         &mut self,
     ) -> Vec<api::AudioSourceInfo> {
@@ -736,18 +737,22 @@ impl AudioDeviceModule {
             .collect()
     }
 
+    /// Creates a new [`sys::AudioSource`] from microphone.
     pub fn create_source_microphone(&mut self) -> sys::AudioSource {
         self.inner.create_source_microphone()
     }
 
-    pub fn create_source_system(&mut self) -> sys::AudioSource {
-        self.inner.create_source_system()
+    /// Creates a new [`sys::AudioSource`] from microphone.
+    pub fn create_system_audio_source(&mut self) -> sys::AudioSource {
+        self.inner.create_system_audio_source()
     }
 
+    /// Adds [`sys::AudioSource`] to [`AudioDeviceModule`].
     pub fn add_source(&mut self, source: &sys::AudioSource) {
         self.inner.add_source(source);
     }
 
+    /// Removes [`sys::AudioSource`] to [`AudioDeviceModule`].
     pub fn remove_source(&mut self, source: &sys::AudioSource) {
         self.inner.remove_source(source);
     }
@@ -884,14 +889,14 @@ impl AudioDeviceModule {
         self.inner.set_microphone_volume(volume as u32)
     }
 
-    // todo
-    pub fn set_system_audio_capture_multiplier(&mut self, level: f32) {
-        self.inner.set_system_audio_capture_multiplier(level);
+    /// Sets the volume of the system audio capture.
+    pub fn set_system_audio_source_volume(&mut self, level: f32) {
+        self.inner.set_system_audio_source_volume(level);
     }
 
-    // todo
-    pub fn system_audio_capture_multiplier(&self) -> f32 {
-        self.inner.system_audio_capture_multiplier()
+    /// Returns the current volume of the system audio capture.
+    pub fn system_audio_source_volume(&self) -> f32 {
+        self.inner.system_audio_source_volume()
     }
 
     /// Indicates if the microphone is available to set volume.

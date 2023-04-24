@@ -33,17 +33,17 @@
     return call.Marshal(primary_thread_);
   }
 
-  void AudioSourceManagerProxy::SetSystemAudioLevel(float level) {
-    TRACE_BOILERPLATE(SetSystemAudioLevel);
+  void AudioSourceManagerProxy::SetSystemAudioVolume(float level) {
+    TRACE_BOILERPLATE(SetSystemAudioVolume);
     webrtc::MethodCall<AudioSourceManager, void, float>
-        call(adm.get(), &AudioSourceManager::SetSystemAudioLevel, std::move(level));
+        call(adm.get(), &AudioSourceManager::SetSystemAudioVolume, std::move(level));
     return call.Marshal(primary_thread_);
   }
 
-  float AudioSourceManagerProxy::GetSystemAudioLevel() const {
-    TRACE_BOILERPLATE(GetSystemAudioLevel);
+  float AudioSourceManagerProxy::GetSystemAudioVolume() const {
+    TRACE_BOILERPLATE(GetSystemAudioVolume);
     webrtc::ConstMethodCall<AudioSourceManager, float>
-        call(adm.get(), &AudioSourceManager::GetSystemAudioLevel);
+        call(adm.get(), &AudioSourceManager::GetSystemAudioVolume);
     return call.Marshal(primary_thread_);
   }
 

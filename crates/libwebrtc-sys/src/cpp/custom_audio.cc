@@ -59,7 +59,8 @@ int AudioSource::PreferredSampleRate() const {
   return frame_.sample_rate_hz();
 };
 
-void AudioSource::SetMute() {
+// Mutes the source until the next frame.
+void AudioSource::Mute() {
   if (pre_mute_.load()) {
     if ((std::chrono::system_clock::now() - mute_clock_) >=
         std::chrono::milliseconds(10)) {

@@ -75,4 +75,3 @@ PROXY_CONSTMETHOD0(int32_t, GetPlayoutUnderrunCount)
 #endif  // WEBRTC_IOS
 END_PROXY_MAP(AudioDeviceModule)
 }  // namespace webrtc
-

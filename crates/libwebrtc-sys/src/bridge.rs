@@ -143,12 +143,6 @@ pub(crate) mod webrtc {
         second: String,
     }
 
-    /// todo
-    pub struct WindowInfo {
-        title: String,
-        id: i64,
-    }
-
     // TODO: Remove once `cxx` crate allows using pointers to opaque types in
     //       vectors: https://github.com/dtolnay/cxx/issues/741
     /// Wrapper for an [`RtpEncodingParameters`] usable in Rust/C++ vectors.
@@ -1238,32 +1232,33 @@ pub(crate) mod webrtc {
             worker_thread: Pin<&mut Thread>,
         ) -> UniquePtr<AudioSourceManager>;
 
-        // todo
+        /// Enumerates possible system audio sources.
         pub fn enumerate_system_audio_source(
             manager: &AudioSourceManager,
         ) -> UniquePtr<CxxVector<AudioSourceInfo>>;
 
-        // todo
+        /// Returns [`AudioSourceInfo`] id.
         pub fn system_source_id(manager: &AudioSourceInfo) -> i64;
 
-        // todo
+        /// Returns [`AudioSourceInfo`] title.
         pub fn system_source_title(
             manager: &AudioSourceInfo,
         ) -> UniquePtr<CxxString>;
 
-        // todo
-        pub fn set_system_audio_source_level(
+        /// Sets the volume of the system audio capture.
+        pub fn set_system_audio_source_volume(
             manager: Pin<&mut AudioSourceManager>,
             level: f32,
         );
 
-        // todo
-        pub fn get_system_audio_source_level(
-            manager: &AudioSourceManager,
-        ) -> f32;
+        /// Returns the current volume of the system audio capture.
+        pub fn system_audio_source_volume(manager: &AudioSourceManager) -> f32;
 
-        // todo
-        pub fn set_audio_source(manager: Pin<&mut AudioSourceManager>, id: i64);
+        /// Sets the system audio source.
+        pub fn set_system_audio_source(
+            manager: Pin<&mut AudioSourceManager>,
+            id: i64,
+        );
 
         /// Creates a new proxied [`AudioDeviceModule`]
         /// from the provided [`CustomAudioDeviceModule`].
@@ -1278,7 +1273,7 @@ pub(crate) mod webrtc {
         ) -> UniquePtr<AudioSource>;
 
         /// Creates a new [`AudioSource`] from microphone.
-        pub fn create_source_system(
+        pub fn create_system_audio_source(
             manager: Pin<&mut AudioSourceManager>,
         ) -> UniquePtr<AudioSource>;
 

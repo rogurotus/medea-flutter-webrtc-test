@@ -134,24 +134,24 @@ std::unique_ptr<AudioSourceManager> create_source_manager(const CustomAudioDevic
 std::unique_ptr<AudioSource> create_source_microphone(AudioSourceManager& manager);
 
 // Creates a new `AudioSource` from system.
-std::unique_ptr<AudioSource> create_source_system(AudioSourceManager& manager);
+std::unique_ptr<AudioSource> create_system_audio_source(AudioSourceManager& manager);
 
-// todo
+// Enumerates possible system audio sources.
 std::unique_ptr<std::vector<AudioSourceInfo>> enumerate_system_audio_source(const AudioSourceManager& manager);
 
-// todo
-void set_audio_source(AudioSourceManager& manager, int64_t id);
+// Sets the system audio source.
+void set_system_audio_source(AudioSourceManager& manager, int64_t id);
 
-// todo
+// Returns `AudioSourceInfo` id.
 int64_t system_source_id(const AudioSourceInfo& source);
 
-// todo
-void set_system_audio_source_level(AudioSourceManager& manager, float level);
+// Sets the volume of the system audio capture.
+void set_system_audio_source_volume(AudioSourceManager& manager, float level);
 
-// todo
-float get_system_audio_source_level(const AudioSourceManager& manager);
+// Returns the current volume of the system audio capture.
+float system_audio_source_volume(const AudioSourceManager& manager);
 
-// todo
+// Returns `AudioSourceInfo` title.
 std::unique_ptr<std::string> system_source_title(const AudioSourceInfo& source);
 
 // Adds `AudioSource` to `AudioSourceManager`.

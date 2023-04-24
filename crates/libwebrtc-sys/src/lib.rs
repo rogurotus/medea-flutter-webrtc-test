@@ -197,17 +197,21 @@ pub struct AudioSource(UniquePtr<webrtc::AudioSource>);
 unsafe impl Send for webrtc::TaskQueueFactory {}
 unsafe impl Sync for webrtc::TaskQueueFactory {}
 
-// todo
+/// Information about system audio source.
 pub struct AudioSourceInfo {
+    /// Unique id of system audio source.
     id: i64,
+    /// Title of system audio source.
     title: String,
 }
 
 impl AudioSourceInfo {
+    /// Returns a `id` of this [`AudioSourceInfo`].
     pub fn id(&self) -> i64 {
         self.id
     }
 
+    /// Returns a `title` of this [`AudioSourceInfo`].
     pub fn title(&self) -> String {
         self.title.clone()
     }
@@ -265,10 +269,12 @@ impl AudioDeviceModule {
         )
     }
 
+    /// Sets the system audio source.
     pub fn set_system_audio_source(&mut self, id: i64) {
-        webrtc::set_audio_source(self.1.pin_mut(), id);
+        webrtc::set_system_audio_source(self.1.pin_mut(), id);
     }
 
+    /// Enumerates possible system audio sources.
     pub fn enumerate_system_audio_source(&self) -> Vec<AudioSourceInfo> {
         webrtc::enumerate_system_audio_source(&self.1)
             .into_iter()
@@ -299,12 +305,12 @@ impl AudioDeviceModule {
     }
 
     /// Creates a new [`AudioSource`] from microphone.
-    pub fn create_source_system(&mut self) -> AudioSource {
+    pub fn create_system_audio_source(&mut self) -> AudioSource {
         // Fake media.
         if self.1.is_null() {
             return AudioSource(UniquePtr::null());
         }
-        let result = webrtc::create_source_system(self.1.pin_mut());
+        let result = webrtc::create_system_audio_source(self.1.pin_mut());
         AudioSource(result)
     }
 
@@ -558,14 +564,14 @@ impl AudioDeviceModule {
         Ok(volume)
     }
 
-    // todo
-    pub fn set_system_audio_capture_multiplier(&mut self, level: f32) {
-        webrtc::set_system_audio_source_level(self.1.pin_mut(), level);
+    /// Sets the volume of the system audio capture.
+    pub fn set_system_audio_source_volume(&mut self, level: f32) {
+        webrtc::set_system_audio_source_volume(self.1.pin_mut(), level);
     }
 
-    // todo
-    pub fn system_audio_capture_multiplier(&self) -> f32 {
-        return webrtc::get_system_audio_source_level(&self.1);
+    /// Returns the current volume of the system audio capture.
+    pub fn system_audio_source_volume(&self) -> f32 {
+        return webrtc::system_audio_source_volume(&self.1);
     }
 }
 

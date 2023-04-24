@@ -5,16 +5,20 @@
 
 class MicrophoneModuleInterface;
 
+// Microphone audio source.
 class MicrophoneSource : public AudioSource {
  public:
   MicrophoneSource(MicrophoneModuleInterface* module);
   ~MicrophoneSource();
 
  private:
+  // Microphone capture module.
   MicrophoneModuleInterface* module;
+  // Used to control the module.
   static int sources_num;
 };
 
+// Interface to provide microphone audio capture.
 class MicrophoneModuleInterface {
 public:
 
@@ -43,7 +47,6 @@ virtual void ResetSource() = 0;
 virtual int32_t StopRecording() = 0;
 virtual int32_t StartRecording() = 0;
 virtual int32_t RecordingChannels() = 0;
-
 rtc::scoped_refptr<MicrophoneSource> source = nullptr;
 };
 

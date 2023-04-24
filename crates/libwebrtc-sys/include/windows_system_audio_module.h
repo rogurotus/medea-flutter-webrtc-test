@@ -18,7 +18,6 @@
 #include <windows.h>
 #include <iostream>
 #include <minwindef.h>
-#include "system_audio.h"
 #include <handleapi.h>
 #include <avrt.h>
 #include <combaseapi.h>

@@ -16,8 +16,8 @@ class AudioSourceManagerProxy : AudioSourceManager {
   void AddSource(rtc::scoped_refptr<AudioSource> source) override;
   void RemoveSource(rtc::scoped_refptr<AudioSource> source) override;
   void SetRecordingSource(int id) override;
-  void SetSystemAudioLevel(float level) override;
-  float GetSystemAudioLevel() const override;
+  void SetSystemAudioVolume(float level) override;
+  float GetSystemAudioVolume() const override;
  private:
   rtc::scoped_refptr<CustomAudioDeviceModule> adm;
   rtc::Thread* primary_thread_;

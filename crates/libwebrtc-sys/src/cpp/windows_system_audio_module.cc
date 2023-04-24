@@ -1,4 +1,5 @@
 
+#if WEBRTC_WIN
 #include "windows_system_audio_module.h"
 
 DWORD GetSpeakerChannelMask(speaker_layout layout) {
@@ -412,7 +413,7 @@ bool SystemModule::ProcessCaptureData() {
       }
 
       if (!captureSize) {
-        source->SetMute();
+        source->Mute();
         break;
       }
 
@@ -559,4 +560,4 @@ std::vector<AudioSourceInfo> SystemModule::EnumerateSystemSource() const {
   return ms_fill_window_list(window_search_mode::INCLUDE_MINIMIZED);
 }
 
-///////////////////////
+#endif
