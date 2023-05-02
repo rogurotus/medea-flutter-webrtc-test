@@ -49,6 +49,7 @@
 
 #if defined(WEBRTC_MAC)
 #include "macos_microphone_module.h"
+#include "macos_system_audio_module.h"
 #endif
 
 
