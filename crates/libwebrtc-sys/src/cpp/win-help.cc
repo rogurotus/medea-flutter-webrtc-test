@@ -207,7 +207,7 @@ std::vector<AudioSourceInfo> ms_fill_window_list(enum window_search_mode mode) {
     DWORD dwProcessId = 0;
     if (GetWindowThreadProcessId(window, &dwProcessId)) {
       ms_get_window_title(title, window);
-      AudioSourceInfo info(dwProcessId, std::string(title.array));
+      AudioSourceInfo info(dwProcessId, std::string(title.array), dwProcessId);
       result.push_back(info);
     }
 

@@ -1,3 +1,4 @@
+#if WEBRTC_LINUX
 
 #include "linux_system_audio_module.h"
 #include <iostream>
@@ -794,3 +795,5 @@ std::vector<AudioSourceInfo> SystemModule::EnumerateSystemSource() const {
 
   return result;
 };
+
+#endif
