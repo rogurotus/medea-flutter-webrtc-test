@@ -6,12 +6,6 @@
 #include "rtc_base/event.h"
 #include "rtc_base/synchronization/mutex.h"
 
-const int32_t WEBRTC_PA_NO_LATENCY_REQUIREMENTS = -1;
-const uint32_t WEBRTC_PA_ADJUST_LATENCY_PROTOCOL_VERSION = 13;
-const uint32_t WEBRTC_PA_LOW_CAPTURE_LATENCY_MSECS = 10;
-const uint32_t WEBRTC_PA_MSECS_PER_SEC = 1000;
-const uint32_t WEBRTC_PA_CAPTURE_BUFFER_EXTRA_MSECS = 750;
-
 class SystemModule : public SystemModuleInterface {
     public: 
     SystemModule();
