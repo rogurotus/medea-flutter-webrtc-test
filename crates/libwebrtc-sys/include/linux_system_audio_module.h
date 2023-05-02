@@ -1,4 +1,4 @@
-
+#pragma once
 
 #include "system_audio_module.h"
 #include <pulse/pulseaudio.h>

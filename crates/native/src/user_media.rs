@@ -53,11 +53,11 @@ impl Webrtc {
                     .create_audio_track(src)
                     .map_err(|err| api::GetMediaError::Audio(err.to_string()));
                 if let Err(err) = track {
-                    if Arc::get_mut(&mut self.audio_source.0.as_mut().unwrap())
+                    if Arc::get_mut(self.audio_source.0.as_mut().unwrap())
                         .is_some()
                     {
-                        for (_, source) in &self.audio_source.1 {
-                            self.audio_device_module.remove_source(&source);
+                        for source in self.audio_source.1.values() {
+                            self.audio_device_module.remove_source(source);
                         }
                         self.audio_source.1.clear();
                         self.audio_source.0.take();
@@ -90,7 +90,7 @@ impl Webrtc {
                 {
                     if let MediaTrackSource::Local(src) = track.source {
                         if Arc::strong_count(&src) == 2 {
-                            for (_, source) in &self.audio_source.1 {
+                            for source in self.audio_source.1.values() {
                                 self.audio_device_module.remove_source(source);
                             }
                             self.audio_source.1.clear();
@@ -895,6 +895,7 @@ impl AudioDeviceModule {
     }
 
     /// Returns the current volume of the system audio capture.
+    #[must_use]
     pub fn system_audio_source_volume(&self) -> f32 {
         self.inner.system_audio_source_volume()
     }

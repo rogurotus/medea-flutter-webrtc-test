@@ -207,11 +207,13 @@ pub struct AudioSourceInfo {
 
 impl AudioSourceInfo {
     /// Returns a `id` of this [`AudioSourceInfo`].
+    #[must_use]
     pub fn id(&self) -> i64 {
         self.id
     }
 
     /// Returns a `title` of this [`AudioSourceInfo`].
+    #[must_use]
     pub fn title(&self) -> String {
         self.title.clone()
     }
@@ -275,6 +277,7 @@ impl AudioDeviceModule {
     }
 
     /// Enumerates possible system audio sources.
+    #[must_use]
     pub fn enumerate_system_audio_source(&self) -> Vec<AudioSourceInfo> {
         webrtc::enumerate_system_audio_source(&self.1)
             .into_iter()
@@ -570,8 +573,9 @@ impl AudioDeviceModule {
     }
 
     /// Returns the current volume of the system audio capture.
+    #[must_use]
     pub fn system_audio_source_volume(&self) -> f32 {
-        return webrtc::system_audio_source_volume(&self.1);
+        webrtc::system_audio_source_volume(&self.1)
     }
 }
 

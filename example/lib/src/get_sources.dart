@@ -35,7 +35,6 @@ class _GetSourcesSampleState extends State<GetSourcesSample> {
             'Kind: ${MediaDeviceKind.videoinput}\nTitle: ${display.title.toString()}\nId: ${display.deviceId}\n\n';
       }
       for (var system in systemAudioInfos) {
-        print('Title: ${system.title.toString()}\nId: ${system.id}\n\n');
         devicesInfo +=
             'Title: ${system.title.toString()}\nId: ${system.id}\n\n';
       }
