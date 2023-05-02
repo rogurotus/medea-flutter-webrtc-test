@@ -164,7 +164,6 @@ Future<void> setSystemAudioVolume(double volume) async {
   }
 }
 
-
 /// Returns list of local audio and video [NativeMediaStreamTrack]s based on the
 /// provided [DeviceConstraints].
 Future<List<NativeMediaStreamTrack>> getUserMedia(
@@ -241,10 +240,12 @@ Future<List<NativeMediaStreamTrack>> _getUserMediaChannel(
 /// FFI-based implementation of a [getUserMedia] function.
 Future<List<NativeMediaStreamTrack>> _getUserMediaFFI(
     DeviceConstraints constraints) async {
-  var audioConstraints = constraints.audio.mandatory != null ||
-          constraints.audio.optional != null
-      ? ffi.AudioConstraints(deviceId: constraints.audio.mandatory?.deviceId, systemId: constraints.audio.mandatory?.systemId)
-      : null;
+  var audioConstraints =
+      constraints.audio.mandatory != null || constraints.audio.optional != null
+          ? ffi.AudioConstraints(
+              deviceId: constraints.audio.mandatory?.deviceId,
+              systemId: constraints.audio.mandatory?.systemId)
+          : null;
 
   var videoConstraints =
       constraints.video.mandatory != null || constraints.video.optional != null

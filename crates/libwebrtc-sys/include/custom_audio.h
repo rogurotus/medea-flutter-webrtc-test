@@ -5,7 +5,6 @@
 #include "api/audio/audio_frame.h"
 #include "api/audio/audio_mixer.h"
 #include "common_audio/resampler/include/push_resampler.h"
-// #include "rtc_base/synchronization/mutex.h"
 
 class RefCountedAudioSource : public webrtc::AudioMixer::Source,
                               public rtc::RefCountInterface {};
@@ -35,6 +34,9 @@ class AudioSource : public rtc::RefCountedObject<RefCountedAudioSource> {
   // Mutes the source until the next frame.
   void Mute();
 
+  // Prepares an audio frame.
+  void FrameProcessing(int sample_rate_hz, webrtc::AudioFrame* audio_frame);
+
  private:
   // Current audio data.
   webrtc::AudioFrame frame_;
@@ -43,12 +45,10 @@ class AudioSource : public rtc::RefCountedObject<RefCountedAudioSource> {
   // Buffer for converted audio data.
   int16_t resample_buffer[webrtc::AudioFrame::kMaxDataSizeSamples];
 
-
   // Provides synchronization for sending audio frames.
   std::mutex mutex_;
   std::condition_variable cv_;
   std::atomic<bool> frame_available_ = false;
   std::atomic<bool> mute_ = false;
-  std::atomic<bool> pre_mute_ = false;
   std::chrono::time_point<std::chrono::system_clock> mute_clock_;
 };

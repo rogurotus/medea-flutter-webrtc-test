@@ -179,11 +179,8 @@ CustomAudioDeviceModule::CustomAudioDeviceModule(
     AudioLayer audio_layer,
     webrtc::TaskQueueFactory* task_queue_factory)
     : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory),
-      audio_recorder(std::move(
-          std::unique_ptr<MicrophoneModuleInterface>(new MicrophoneModule()))),
-
-      system_recorder(std::move(
-          std::unique_ptr<SystemModuleInterface>(new SystemModule()))) {}
+      audio_recorder(new MicrophoneModule()),
+      system_recorder(new SystemModule()) {}
 
 void CustomAudioDeviceModule::RecordProcess() {
   const auto attributes =
@@ -198,8 +195,8 @@ void CustomAudioDeviceModule::RecordProcess() {
             cv.wait(lock, [&]() { return sources.size() > 0; });
           }
 
-          mixer->Mix(std::max(audio_recorder->RecordingChannels(),
-                              system_recorder->RecordingChannels()),
+          mixer->Mix(std::max(system_recorder->RecordingChannels(),
+                              audio_recorder->RecordingChannels()),
                      &frame);
           cb->SetRecordingChannels(frame.num_channels());
           cb->SetRecordingSampleRate(frame.sample_rate_hz());

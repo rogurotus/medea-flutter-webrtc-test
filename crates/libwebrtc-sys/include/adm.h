@@ -38,6 +38,7 @@
 #if defined(WEBRTC_LINUX)
 #include "modules/audio_device/linux/audio_mixer_manager_pulse_linux.h"
 #include "modules/audio_device/linux/pulseaudiosymboltable_linux.h"
+#include "linux_system_audio_module.h"
 #include "linux_microphone_module.h"
 #endif
 
