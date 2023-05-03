@@ -299,18 +299,21 @@ impl Webrtc {
             );
         };
 
-        if let Some(current_device_id) =
-            self.audio_device_module.current_device_id.clone()
+        if Some(&device_id)
+            != self.audio_device_module.current_device_id.as_ref()
         {
-            if let Some(source) = self.audio_source.1.remove(&current_device_id)
+            if let Some(source) = self
+                .audio_device_module
+                .current_device_id
+                .as_ref()
+                .map(|id| self.audio_source.1.remove(id))
+                .flatten()
             {
                 self.audio_device_module.remove_source(&source);
             }
 
-            if device_id != current_device_id {
-                self.audio_device_module
-                    .set_recording_device(device_id.clone(), device_index)?;
-            }
+            self.audio_device_module
+                .set_recording_device(device_id.clone(), device_index)?;
         }
 
         let microphone_audio =
