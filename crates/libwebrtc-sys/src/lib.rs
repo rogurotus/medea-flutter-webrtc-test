@@ -318,7 +318,10 @@ impl AudioDeviceModule {
 
     /// Sets [`DynAudioLevelCallback`] to the [`AudioSourceManager`].
     pub fn set_audio_level_cb(&mut self, cb: Box<dyn AudioLevelCallback>) {
-        webrtc::set_audio_level_cb(self.1.pin_mut(), Box::new(cb));
+        // Not fake media.
+        if !self.1.is_null() {
+            webrtc::set_audio_level_cb(self.1.pin_mut(), Box::new(cb));
+        }
     }
 
     /// Creates a new [`AudioSource`] from microphone.
