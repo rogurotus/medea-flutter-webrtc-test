@@ -3,6 +3,7 @@
 #include "linux_microphone_module.h"
 #include "api/make_ref_counted.h"
 #include "rtc_base/logging.h"
+#include <iostream>
 
 WebRTCPulseSymbolTable* _GetPulseSymbolTable() {
   static WebRTCPulseSymbolTable* pulse_symbol_table =
@@ -29,6 +30,7 @@ int MicrophoneSource::sources_num = 0;
 MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
   this->module = module;
   if (sources_num == 0) {
+    std::cout << "MicrophoneSource" << std::endl;
     module->StartRecording();
   }
   ++sources_num;
@@ -37,6 +39,7 @@ MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
 MicrophoneSource::~MicrophoneSource() {
   --sources_num;
   if (sources_num == 0) {
+    std::cout << "~MicrophoneSource" << std::endl;
     module->StopRecording();
     module->ResetSource();
   }

@@ -2168,7 +2168,9 @@ pub fn microphone_volume() -> anyhow::Result<u32> {
 
 /// Disposes the specified [`MediaStreamTrack`].
 pub fn dispose_track(track_id: String, kind: MediaType) {
-    WEBRTC.lock().unwrap().dispose_track(track_id, kind);
+    println!("throw 42 {track_id} - {kind:?}");
+    WEBRTC.lock().unwrap().dispose_track(track_id.clone(), kind);
+    println!("throw 43 {track_id} - {kind:?}");
 }
 
 /// Returns the [readyState][0] property of the [`MediaStreamTrack`] by its ID
