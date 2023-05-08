@@ -8,7 +8,7 @@ use crate::{
     AddIceCandidateCallback, CreateSdpCallback, IceCandidateInterface,
     OnFrameCallback, PeerConnectionEventsHandler, RTCStatsCollectorCallback,
     RtpReceiverInterface, RtpTransceiverInterface, SetDescriptionCallback,
-    TrackEventCallback,
+    TrackEventCallback, AudioLevelCallback,
 };
 
 /// [`CreateSdpCallback`] transferable to the C++ side.
@@ -16,6 +16,9 @@ type DynCreateSdpCallback = Box<dyn CreateSdpCallback>;
 
 /// [`SetDescriptionCallback`] transferable to the C++ side.
 type DynSetDescriptionCallback = Box<dyn SetDescriptionCallback>;
+
+// todo
+type DynAudioLevelCallback = Box<dyn AudioLevelCallback>;
 
 /// [`OnFrameCallback`] transferable to the C++ side.
 type DynOnFrameCallback = Box<dyn OnFrameCallback>;
@@ -1267,6 +1270,12 @@ pub(crate) mod webrtc {
             worker_thread: Pin<&mut Thread>,
         ) -> UniquePtr<AudioDeviceModule>;
 
+        // todo
+        pub fn set_audio_level_cb(
+            source: Pin<&mut AudioSourceManager>,
+            cb: Box<DynAudioLevelCallback>
+        );
+
         /// Creates a new [`AudioSource`] from microphone.
         pub fn create_source_microphone(
             manager: Pin<&mut AudioSourceManager>,
@@ -2495,6 +2504,14 @@ pub(crate) mod webrtc {
         );
     }
 
+
+    extern "Rust" {
+        pub type DynAudioLevelCallback;
+
+        // todo
+        fn on_audio_level_change(cb: &mut DynAudioLevelCallback, level: f32);
+    }
+
     extern "Rust" {
         pub type DynTrackEventCallback;
 
@@ -2690,6 +2707,15 @@ pub fn set_description_fail(
     error: &CxxString,
 ) {
     cb.fail(error);
+}
+
+// todo
+#[allow(clippy::boxed_local)]
+pub fn on_audio_level_change(
+    mut cb: &mut DynAudioLevelCallback,
+    level: f32,
+) {
+    cb.on_audio_level(level);
 }
 
 /// Forwards the given [`webrtc::VideoFrame`] the the provided

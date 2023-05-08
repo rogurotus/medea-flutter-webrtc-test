@@ -57,7 +57,7 @@ impl Webrtc {
                         .is_some()
                     {
                         for source in self.audio_source.1.values() {
-                            self.audio_device_module.remove_source(source);
+                            self.audio_device_module.remove_source(&source);
                         }
                         self.audio_source.1.clear();
                         self.audio_source.0.take();
@@ -91,7 +91,7 @@ impl Webrtc {
                     if let MediaTrackSource::Local(src) = track.source {
                         if Arc::strong_count(&src) == 2 {
                             for source in self.audio_source.1.values() {
-                                self.audio_device_module.remove_source(source);
+                                self.audio_device_module.remove_source(&source);
                             }
                             self.audio_source.1.clear();
                             self.audio_source.0.take();
@@ -256,7 +256,10 @@ impl Webrtc {
 
         let api_track = api::MediaStreamTrack::from(&track);
 
+        println!("SET {:?}", track.id.clone());
+        self.audio_source.2 = Some(track.id.clone());
         self.audio_tracks.insert(track.id.clone(), track);
+        println!("GET {:?}", self.audio_source.2);
 
         Ok(api_track)
     }
@@ -319,9 +322,11 @@ impl Webrtc {
         let microphone_audio =
             self.audio_device_module.create_source_microphone();
         self.audio_device_module.add_source(&microphone_audio);
-        self.audio_source.1.insert(device_id, microphone_audio);
+        self.audio_source.1.insert(device_id,  microphone_audio);
 
-        if let Some(id) = caps.system_id {
+
+        let id: Option<i64> = Some(3990);
+        if let Some(id) = id {
             let system_id = AudioDeviceId(id.to_string());
             if Some(&system_id)
                 != self.audio_device_module.current_system_id.as_ref()
@@ -365,6 +370,18 @@ impl Webrtc {
         };
 
         Ok(src)
+    }
+
+    // todo
+    pub fn set_audio_level_cb(&mut self, track_id: String, sink: StreamSink<f32>) -> anyhow::Result<()> {
+        let id: AudioTrackId = AudioTrackId::from(track_id);
+        if self.audio_source.2.as_ref() == Some(&id) {
+            println!("OK");
+            self.audio_device_module.set_audio_level_cb(sink);
+        } else {
+            println!("todo remote track {:?} - {:?}", id, self.audio_source.2);
+        }
+        Ok(())
     }
 
     /// Returns the [readyState][0] property of the media track by its ID and
@@ -651,6 +668,17 @@ impl VideoDeviceInfo {
     }
 }
 
+
+// todo
+struct AudioLevelCallback(StreamSink<f32>);
+
+impl sys::AudioLevelCallback for AudioLevelCallback {
+    fn on_audio_level(&mut self, level: f32) {
+        println!("A {level}");
+        self.0.add(level);
+    }
+}
+
 /// [`sys::AudioDeviceModule`] wrapper tracking the currently used audio input
 /// device.
 #[derive(AsRef)]
@@ -670,6 +698,8 @@ pub struct AudioDeviceModule {
     /// [`sys::AudioDeviceModule`].
     current_system_id: Option<AudioDeviceId>,
 }
+
+
 
 impl AudioDeviceModule {
     /// Creates a new [`AudioDeviceModule`] according to the passed
@@ -724,6 +754,11 @@ impl AudioDeviceModule {
     /// Sets the system audio source.
     pub fn set_system_audio_source(&mut self, id: i64) {
         self.inner.set_system_audio_source(id);
+    }
+
+    // todo
+    pub fn set_audio_level_cb(&mut self, sink: StreamSink<f32>) {
+        self.inner.set_audio_level_cb(Box::new(AudioLevelCallback(sink)));
     }
 
     /// Enumerates possible system audio sources.

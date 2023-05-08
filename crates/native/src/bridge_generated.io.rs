@@ -300,6 +300,14 @@ pub extern "C" fn wire_set_on_device_changed(port_: i64) {
 }
 
 #[no_mangle]
+pub extern "C" fn wire_set_on_audio_level_changed(
+    port_: i64,
+    track_id: *mut wire_uint_8_list,
+) {
+    wire_set_on_audio_level_changed_impl(port_, track_id)
+}
+
+#[no_mangle]
 pub extern "C" fn wire_create_video_sink(
     port_: i64,
     sink_id: i64,

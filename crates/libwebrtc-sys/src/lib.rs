@@ -53,6 +53,13 @@ pub trait SetDescriptionCallback {
     fn fail(&mut self, error: &CxxString);
 }
 
+// todo
+pub trait AudioLevelCallback {
+    // todo
+    fn on_audio_level(&mut self, level: f32);
+}
+
+
 /// Handler of [`VideoFrame`]s.
 pub trait OnFrameCallback {
     /// Called when the attached [`VideoTrackInterface`] produces a new
@@ -297,13 +304,19 @@ impl AudioDeviceModule {
         Ok(())
     }
 
+    // todo
+    pub fn set_audio_level_cb(&mut self, cb: Box<dyn AudioLevelCallback>) {
+        webrtc::set_audio_level_cb(self.1.pin_mut(), Box::new(cb));
+    }
+
     /// Creates a new [`AudioSource`] from microphone.
     pub fn create_source_microphone(&mut self) -> AudioSource {
         // Fake media.
         if self.1.is_null() {
             return AudioSource(UniquePtr::null());
         }
-        let result = webrtc::create_source_microphone(self.1.pin_mut());
+        let mut result = webrtc::create_source_microphone(self.1.pin_mut());
+
         AudioSource(result)
     }
 
@@ -313,7 +326,8 @@ impl AudioDeviceModule {
         if self.1.is_null() {
             return AudioSource(UniquePtr::null());
         }
-        let result = webrtc::create_system_audio_source(self.1.pin_mut());
+        let mut result = webrtc::create_system_audio_source(self.1.pin_mut());
+
         AudioSource(result)
     }
 

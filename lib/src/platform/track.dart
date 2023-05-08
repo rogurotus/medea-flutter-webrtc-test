@@ -1,5 +1,8 @@
 import '/src/model/track.dart';
 
+// todo
+typedef OnAudioLevelCallback = void Function(double);
+
 /// Representation of the `onEnded` callback.
 typedef OnEndedCallback = void Function();
 
@@ -41,6 +44,9 @@ abstract class MediaStreamTrack {
 
   /// Subscribes provided callback to the `onEnded` events of this [MediaStreamTrack].
   void onEnded(OnEndedCallback cb);
+
+  // todo
+  void onAudioLevel(OnAudioLevelCallback cb);
 
   /// Creates a new instance of [MediaStreamTrack], which will depend on the same
   /// media source as this [MediaStreamTrack].

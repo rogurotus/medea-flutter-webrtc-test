@@ -8,6 +8,7 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#include "libwebrtc-sys/src/bridge.rs.h"
 #include <iostream>
 
 #include <chrono>
@@ -19,6 +20,7 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/platform_thread.h"
+
 
 // Main initializaton and termination
 int32_t CustomAudioDeviceModule::Init() {
@@ -175,6 +177,21 @@ CustomAudioDeviceModule::CreateForTest(
   return audio_device;
 }
 
+float calculate_audio_level(int16_t* data, int size) {
+  double sum = 0.0;
+  for (int i = 0; i<size; ++i) {
+    sum += data[i] * data[i];
+  }
+  return std::sqrt(sum / size) / INT16_MAX;
+}
+
+
+// todo
+void CustomAudioDeviceModule::SetAudioLevelCallBack(rust::Box<bridge::DynAudioLevelCallback> cb) {
+  std::unique_lock<std::mutex> lock(audio_cb_mutex);
+  audio_level_cb = std::move(cb);
+}
+
 CustomAudioDeviceModule::CustomAudioDeviceModule(
     AudioLayer audio_layer,
     webrtc::TaskQueueFactory* task_queue_factory)
@@ -198,6 +215,17 @@ void CustomAudioDeviceModule::RecordProcess() {
           mixer->Mix(std::max(system_recorder->RecordingChannels(),
                               audio_recorder->RecordingChannels()),
                      &frame);
+
+          {
+            std::unique_lock<std::mutex> lock(audio_cb_mutex);
+            if (audio_level_cb) {
+              std::cout << "DA" << std::endl;
+              auto level = calculate_audio_level((int16_t*) frame.data(), frame.num_channels_ * frame.sample_rate_hz_ / 100);
+              std::cout << "DA - " << level << std::endl;
+              bridge::on_audio_level_change(**audio_level_cb, level);
+            }
+          }
+          
           cb->SetRecordingChannels(frame.num_channels());
           cb->SetRecordingSampleRate(frame.sample_rate_hz());
           cb->SetRecordedBuffer(frame.data(), frame.sample_rate_hz() / 100);

@@ -71,6 +71,14 @@ class _LoopbackState extends State<Loopback> {
       await _localRenderer.setSrcObject(
           _tracks!.firstWhere((track) => track.kind() == MediaKind.video));
 
+      _tracks!
+          .firstWhere((track) { 
+            print('${track.id()} - ${track.kind()}' );
+            return track.kind() == MediaKind.audio;})
+          .onAudioLevel((p0) {
+        print(p0);
+      });
+
       var server = IceServer(['stun:stun.l.google.com:19302']);
       _pc1 = await PeerConnection.create(IceTransportType.all, [server]);
       _pc2 = await PeerConnection.create(IceTransportType.all, [server]);

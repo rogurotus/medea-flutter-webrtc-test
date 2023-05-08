@@ -130,6 +130,12 @@ std::unique_ptr<AudioDeviceModule> custom_audio_device_module_proxy_upcast(std::
 // Creates a new `AudioSourceManager` for the given `CustomAudioDeviceModule`.
 std::unique_ptr<AudioSourceManager> create_source_manager(const CustomAudioDeviceModule& adm, Thread& worker_thread);
 
+// todo
+void set_audio_level_cb(
+    AudioSourceManager& source,
+    rust::Box<DynAudioLevelCallback> cb
+);
+
 // Creates a new `AudioSource` from microphone.
 std::unique_ptr<AudioSource> create_source_microphone(AudioSourceManager& manager);
 

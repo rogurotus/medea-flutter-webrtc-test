@@ -7,6 +7,7 @@
 #include "modules/audio_device/audio_device_impl.h"
 
 #include <memory>
+#include <optional>
 
 #include "api/media_stream_interface.h"
 #include "api/sequence_checker.h"
@@ -27,6 +28,8 @@
 #include "api/audio/audio_frame.h"
 
 #include "custom_audio.h"
+
+#include "rust/cxx.h"
 
 #if defined(WEBRTC_USE_X11)
 #include <X11/Xlib.h>
@@ -52,7 +55,9 @@
 #include "macos_system_audio_module.h"
 #endif
 
-
+namespace bridge {
+  struct DynAudioLevelCallback;
+}
 
 class AudioSourceManager {
   public:
@@ -72,6 +77,8 @@ class AudioSourceManager {
   virtual void AddSource(rtc::scoped_refptr<AudioSource> source) = 0;
   // Removes `AudioSource` to `AudioSourceManager`.
   virtual void RemoveSource(rtc::scoped_refptr<AudioSource> source) = 0;
+  // todo
+  virtual void SetAudioLevelCallBack(rust::Box<bridge::DynAudioLevelCallback> cb) = 0;
 };
 
 
@@ -116,6 +123,8 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   float GetSystemAudioVolume() const override;
   void AddSource(rtc::scoped_refptr<AudioSource>  source) override;
   void RemoveSource(rtc::scoped_refptr<AudioSource>  source) override;
+  void SetAudioLevelCallBack(rust::Box<bridge::DynAudioLevelCallback> cb) override;
+
 
   // Microphone mute control.
   int32_t MicrophoneMuteIsAvailable(bool* available) override;
@@ -140,4 +149,9 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   // Used to wait for audio sources.
   std::condition_variable cv;
   bool quit = false;
+
+  // Rust side callback.
+  std::mutex audio_cb_mutex;
+  std::optional<rust::Box<bridge::DynAudioLevelCallback>> audio_level_cb;
+
 };

@@ -50,6 +50,12 @@ abstract class NativeMediaStreamTrack extends MediaStreamTrack {
   /// [_eventChan] subscription to the [PeerConnection] events.
   late StreamSubscription<dynamic>? _eventSub;
 
+  // todo
+  OnAudioLevelCallback? _onAudioLevel;
+
+  // todo
+  late StreamSubscription<double>? _audioLevelSub;
+
   /// Listener for all the [MediaStreamTrack] events received from the native
   /// side.
   void eventListener(dynamic event) {
@@ -147,6 +153,11 @@ class _NativeMediaStreamTrackChannel extends NativeMediaStreamTrack {
   Future<MediaStreamTrack> clone() async {
     return NativeMediaStreamTrack.from(await _chan.invokeMethod('clone'));
   }
+
+  @override
+  void onAudioLevel(OnAudioLevelCallback cb) {
+    // TODO: implement onAudioLevel
+  }
 }
 
 /// FFI-based implementation of a [NativeMediaStreamTrack].
@@ -163,6 +174,13 @@ class _NativeMediaStreamTrackFFI extends NativeMediaStreamTrack {
         .listen((event) {
       if (_onEnded != null) {
         _onEnded!();
+      }
+    });
+    _audioLevelSub = api!
+        .setOnAudioLevelChanged(trackId: track.id.toString())
+        .listen((event) {
+      if (_onAudioLevel != null) {
+        _onAudioLevel!(event);
       }
     });
   }
@@ -216,5 +234,10 @@ class _NativeMediaStreamTrackFFI extends NativeMediaStreamTrack {
           .disposeTrack(trackId: _id, kind: ffi.MediaType.values[_kind.index]);
     }
     _stopped = true;
+  }
+
+  @override
+  void onAudioLevel(OnAudioLevelCallback cb) {
+    _onAudioLevel = cb;
   }
 }

@@ -58,6 +58,7 @@ struct Webrtc {
     audio_source: (
         Option<Arc<sys::AudioSourceInterface>>,
         HashMap<AudioDeviceId, sys::AudioSource>,
+        Option<AudioTrackId>,
     ),
     audio_tracks: Arc<DashMap<AudioTrackId, AudioTrack>>,
     video_sinks: HashMap<VideoSinkId, VideoSink>,
@@ -117,7 +118,7 @@ impl Webrtc {
             peer_connection_factory,
             video_sources: HashMap::new(),
             video_tracks: Arc::new(DashMap::new()),
-            audio_source: (None, HashMap::new()),
+            audio_source: (None, HashMap::new(), None),
             audio_tracks: Arc::new(DashMap::new()),
             peer_connections: HashMap::new(),
             video_sinks: HashMap::new(),

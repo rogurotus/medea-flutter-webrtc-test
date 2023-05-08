@@ -1,6 +1,8 @@
 #include "custom_audio.h"
 #include <iostream>
 #include <thread>
+#include <cmath>
+#include "libwebrtc-sys/src/bridge.rs.h"
 
 // Overwrites `audio_frame`. The data_ field is overwritten with
 // 10 ms of new audio (either 1 or 2 interleaved channels) at

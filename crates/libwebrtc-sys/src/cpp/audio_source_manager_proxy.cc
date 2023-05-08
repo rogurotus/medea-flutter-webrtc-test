@@ -70,3 +70,12 @@
         call(adm.get(), &AudioSourceManager::RemoveSource, std::move(source));
     return call.Marshal(primary_thread_);
   }
+
+
+  void AudioSourceManagerProxy::SetAudioLevelCallBack(rust::Box<bridge::DynAudioLevelCallback> cb) {
+    TRACE_BOILERPLATE(SetAudioLevelCallBack);
+    webrtc::MethodCall<AudioSourceManager, void,
+                       rust::Box<bridge::DynAudioLevelCallback>>
+        call(adm.get(), &AudioSourceManager::SetAudioLevelCallBack, std::move(cb));
+    return call.Marshal(primary_thread_);
+  };

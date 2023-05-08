@@ -18,6 +18,8 @@ class AudioSourceManagerProxy : AudioSourceManager {
   void SetRecordingSource(int id) override;
   void SetSystemAudioVolume(float level) override;
   float GetSystemAudioVolume() const override;
+  void SetAudioLevelCallBack(rust::Box<bridge::DynAudioLevelCallback> cb) override;
+
  private:
   rtc::scoped_refptr<CustomAudioDeviceModule> adm;
   rtc::Thread* primary_thread_;

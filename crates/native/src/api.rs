@@ -2236,6 +2236,11 @@ pub fn set_on_device_changed(cb: StreamSink<()>) -> anyhow::Result<()> {
     WEBRTC.lock().unwrap().set_on_device_changed(cb.into())
 }
 
+// todo
+pub fn set_on_audio_level_changed(track_id: String, cb: StreamSink<f32>) -> anyhow::Result<()> {
+    WEBRTC.lock().unwrap().set_audio_level_cb(track_id, cb.into())
+}
+
 /// Creates a new [`VideoSink`] attached to the specified video track.
 ///
 /// `callback_ptr` argument should be a pointer to an [`UniquePtr`] pointing to

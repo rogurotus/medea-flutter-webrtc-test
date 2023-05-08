@@ -450,7 +450,7 @@ int32_t SystemModule::ProcessRecordedData(int8_t* bufferData,
     RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
   if (source != nullptr) {
     ReorderingBuffer(release_capture_buffer, (int16_t*)bufferData, sample_rate_hz_, _recChannels,
-                     audio_multiplier);
+                     20);
     source->UpdateFrame(release_capture_buffer.data(), bufferSizeInSamples,
                         sample_rate_hz_, _recChannels);
   }

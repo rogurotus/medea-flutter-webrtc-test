@@ -14,7 +14,8 @@
 use crate::api::*;
 use core::panic::UnwindSafe;
 use flutter_rust_bridge::*;
-use std::{ffi::c_void, sync::Arc};
+use std::ffi::c_void;
+use std::sync::Arc;
 
 // Section: imports
 
@@ -678,6 +679,27 @@ fn wire_set_on_device_changed_impl(port_: MessagePort) {
         move || {
             move |task_callback| {
                 set_on_device_changed(task_callback.stream_sink())
+            }
+        },
+    )
+}
+fn wire_set_on_audio_level_changed_impl(
+    port_: MessagePort,
+    track_id: impl Wire2Api<String> + UnwindSafe,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "set_on_audio_level_changed",
+            port: Some(port_),
+            mode: FfiCallMode::Stream,
+        },
+        move || {
+            let api_track_id = track_id.wire2api();
+            move |task_callback| {
+                set_on_audio_level_changed(
+                    api_track_id,
+                    task_callback.stream_sink(),
+                )
             }
         },
     )
@@ -1397,8 +1419,7 @@ impl support::IntoDart for TrackState {
 // Section: executor
 
 support::lazy_static! {
-    pub static ref FLUTTER_RUST_BRIDGE_HANDLER: support::DefaultHandler =
-        Default::default();
+    pub static ref FLUTTER_RUST_BRIDGE_HANDLER: support::DefaultHandler = Default::default();
 }
 
 #[cfg(not(target_family = "wasm"))]
