@@ -67,4 +67,9 @@ class WebMediaStreamTrack extends MediaStreamTrack {
   Future<MediaStreamTrack> clone() async {
     return WebMediaStreamTrack(jsTrack.clone());
   }
+
+  @override
+  void onAudioLevel(OnAudioLevelCallback cb) {
+    // TODO: implement onAudioLevel
+  }
 }

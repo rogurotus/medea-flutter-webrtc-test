@@ -53,12 +53,24 @@ pub trait SetDescriptionCallback {
     fn fail(&mut self, error: &CxxString);
 }
 
-// todo
+/// Used to track local audio level.
 pub trait AudioLevelCallback {
-    // todo
-    fn on_audio_level(&mut self, level: f32);
+    /// Called when the audio volume changes.
+    fn on_audio_level(&self, level: f32);
 }
 
+/// Used to track remote audio level.
+pub trait AudioSinkCallback {
+    /// Called when an audio data is received.
+    fn on_data(
+        &self,
+        data: Vec<i16>,
+        bits_per_sample: i64,
+        sample_rate: i64,
+        number_of_channels: usize,
+        number_of_frames: usize,
+    );
+}
 
 /// Handler of [`VideoFrame`]s.
 pub trait OnFrameCallback {
@@ -304,7 +316,7 @@ impl AudioDeviceModule {
         Ok(())
     }
 
-    // todo
+    /// Sets [`DynAudioLevelCallback`] to the [`AudioSourceManager`].
     pub fn set_audio_level_cb(&mut self, cb: Box<dyn AudioLevelCallback>) {
         webrtc::set_audio_level_cb(self.1.pin_mut(), Box::new(cb));
     }
@@ -315,8 +327,7 @@ impl AudioDeviceModule {
         if self.1.is_null() {
             return AudioSource(UniquePtr::null());
         }
-        let mut result = webrtc::create_source_microphone(self.1.pin_mut());
-
+        let result = webrtc::create_source_microphone(self.1.pin_mut());
         AudioSource(result)
     }
 
@@ -326,8 +337,7 @@ impl AudioDeviceModule {
         if self.1.is_null() {
             return AudioSource(UniquePtr::null());
         }
-        let mut result = webrtc::create_system_audio_source(self.1.pin_mut());
-
+        let result = webrtc::create_system_audio_source(self.1.pin_mut());
         AudioSource(result)
     }
 
@@ -1623,6 +1633,7 @@ impl PeerConnectionFactoryInterface {
         Ok(AudioTrackInterface {
             inner,
             observers: Vec::new(),
+            sink: None,
         })
     }
 
@@ -1929,6 +1940,20 @@ impl TryFrom<MediaStreamTrackInterface> for VideoTrackInterface {
     }
 }
 
+/// [`AudioTrackInterface`] `on_data` callback.
+pub struct AudioTrackSinkInterface(UniquePtr<webrtc::AudioTrackSinkInterface>);
+
+impl AudioTrackSinkInterface {
+    /// Creates a new [`AudioTrackSinkInterface`].
+    #[must_use]
+    pub fn new(cb: Box<dyn AudioSinkCallback>) -> Self {
+        Self(webrtc::create_audio_sink(Box::new(cb)))
+    }
+}
+
+unsafe impl Send for webrtc::AudioTrackSinkInterface {}
+unsafe impl Sync for webrtc::AudioTrackSinkInterface {}
+
 /// Audio [`MediaStreamTrack`][1].
 ///
 /// [1]: https://w3.org/TR/mediacapture-streams#dom-mediastreamtrack
@@ -1939,6 +1964,10 @@ pub struct AudioTrackInterface {
     /// [`TrackEventObserver`]s subscribed to this [`AudioTrackInterface`] state
     /// changes.
     observers: Vec<TrackEventObserver>,
+
+    /// [`AudioTrackSinkInterface`] subscribe
+    /// to [`AudioTrackInterface`] receive data.
+    sink: Option<AudioTrackSinkInterface>,
 }
 
 impl AudioTrackInterface {
@@ -1973,6 +2002,12 @@ impl AudioTrackInterface {
     pub fn state(&self) -> TrackState {
         webrtc::audio_track_state(&self.inner)
     }
+
+    /// Sets [`AudioTrackSinkInterface`] for this [`AudioTrackInterface`].
+    pub fn set_sink(&mut self, sink: AudioTrackSinkInterface) {
+        webrtc::set_audio_track_sink(self.inner.pin_mut(), &sink.0);
+        self.sink.replace(sink);
+    }
 }
 
 impl Drop for AudioTrackInterface {
@@ -2003,6 +2038,7 @@ impl TryFrom<MediaStreamTrackInterface> for AudioTrackInterface {
             Ok(AudioTrackInterface {
                 inner,
                 observers: Vec::new(),
+                sink: None,
             })
         } else {
             bail!(

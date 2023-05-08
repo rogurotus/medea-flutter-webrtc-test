@@ -5,10 +5,11 @@ use cxx::{CxxString, CxxVector, UniquePtr};
 use derive_more::{Deref, DerefMut};
 
 use crate::{
-    AddIceCandidateCallback, CreateSdpCallback, IceCandidateInterface,
-    OnFrameCallback, PeerConnectionEventsHandler, RTCStatsCollectorCallback,
+    AddIceCandidateCallback, AudioLevelCallback, AudioSinkCallback,
+    CreateSdpCallback, IceCandidateInterface, OnFrameCallback,
+    PeerConnectionEventsHandler, RTCStatsCollectorCallback,
     RtpReceiverInterface, RtpTransceiverInterface, SetDescriptionCallback,
-    TrackEventCallback, AudioLevelCallback,
+    TrackEventCallback,
 };
 
 /// [`CreateSdpCallback`] transferable to the C++ side.
@@ -17,8 +18,11 @@ type DynCreateSdpCallback = Box<dyn CreateSdpCallback>;
 /// [`SetDescriptionCallback`] transferable to the C++ side.
 type DynSetDescriptionCallback = Box<dyn SetDescriptionCallback>;
 
-// todo
+/// [`AudioLevelCallback`] transferable to the C++ side.
 type DynAudioLevelCallback = Box<dyn AudioLevelCallback>;
+
+/// [`AudioSinkCallback`] transferable to the C++ side.
+type DynAudioSinkCallback = Box<dyn AudioSinkCallback>;
 
 /// [`OnFrameCallback`] transferable to the C++ side.
 type DynOnFrameCallback = Box<dyn OnFrameCallback>;
@@ -1270,10 +1274,11 @@ pub(crate) mod webrtc {
             worker_thread: Pin<&mut Thread>,
         ) -> UniquePtr<AudioDeviceModule>;
 
-        // todo
+        /// Sets [`DynAudioLevelCallback`]
+        /// to the provided [`AudioSourceManager`].
         pub fn set_audio_level_cb(
             source: Pin<&mut AudioSourceManager>,
-            cb: Box<DynAudioLevelCallback>
+            cb: Box<DynAudioLevelCallback>,
         );
 
         /// Creates a new [`AudioSource`] from microphone.
@@ -1485,6 +1490,13 @@ pub(crate) mod webrtc {
         include!("libwebrtc-sys/include/media_stream_track_interface.h");
 
         pub type MediaStreamTrackInterface;
+        pub type AudioTrackSinkInterface;
+
+        // Adds [`AudioTrackSinkInterface`] to [`AudioTrackInterface`].
+        pub fn set_audio_track_sink(track: Pin<&mut AudioTrackInterface>, sink: &AudioTrackSinkInterface);
+
+        // Creates a new [`AudioTrackSinkInterface`] for the given [`DynAudioSinkCallback`].
+        pub fn create_audio_sink(cb: Box<DynAudioSinkCallback>) -> UniquePtr<AudioTrackSinkInterface> ;
 
         /// Returns the `kind` of the provided [`MediaStreamTrackInterface`].
         #[must_use]
@@ -2504,12 +2516,22 @@ pub(crate) mod webrtc {
         );
     }
 
-
     extern "Rust" {
         pub type DynAudioLevelCallback;
+        pub type DynAudioSinkCallback;
 
-        // todo
+        /// Calls the on_audio_level [`DynAudioLevelCallback`].
         fn on_audio_level_change(cb: &mut DynAudioLevelCallback, level: f32);
+
+        /// Calls the on_data [`DynAudioSinkCallback`].
+        fn audio_sink_on_data(
+            cb: &mut DynAudioSinkCallback,
+            data: Vec<i16>,
+            bits_per_sample: i64,
+            sample_rate: i64,
+            number_of_channels: usize,
+            number_of_frames: usize,
+        );
     }
 
     extern "Rust" {
@@ -2709,13 +2731,29 @@ pub fn set_description_fail(
     cb.fail(error);
 }
 
-// todo
+/// Calls the `on_audio_level` [`DynAudioLevelCallback`].
 #[allow(clippy::boxed_local)]
-pub fn on_audio_level_change(
-    mut cb: &mut DynAudioLevelCallback,
-    level: f32,
-) {
+pub fn on_audio_level_change(cb: &mut DynAudioLevelCallback, level: f32) {
     cb.on_audio_level(level);
+}
+
+/// Calls the `on_data` [`DynAudioSinkCallback`].
+#[allow(clippy::boxed_local)]
+pub fn audio_sink_on_data(
+    cb: &mut DynAudioSinkCallback,
+    data: Vec<i16>,
+    bits_per_sample: i64,
+    sample_rate: i64,
+    number_of_channels: usize,
+    number_of_frames: usize,
+) {
+    cb.on_data(
+        data,
+        bits_per_sample,
+        sample_rate,
+        number_of_channels,
+        number_of_frames,
+    );
 }
 
 /// Forwards the given [`webrtc::VideoFrame`] the the provided

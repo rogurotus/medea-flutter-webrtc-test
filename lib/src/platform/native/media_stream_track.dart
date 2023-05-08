@@ -50,10 +50,10 @@ abstract class NativeMediaStreamTrack extends MediaStreamTrack {
   /// [_eventChan] subscription to the [PeerConnection] events.
   late StreamSubscription<dynamic>? _eventSub;
 
-  // todo
+  /// On audio level callback.
   OnAudioLevelCallback? _onAudioLevel;
 
-  // todo
+  /// Audio level subscription.
   late StreamSubscription<double>? _audioLevelSub;
 
   /// Listener for all the [MediaStreamTrack] events received from the native

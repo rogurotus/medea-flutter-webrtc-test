@@ -75,9 +75,9 @@ class AudioSourceManager {
   virtual float GetSystemAudioVolume() const = 0;
   // Adds `AudioSource` to `AudioSourceManager`.
   virtual void AddSource(rtc::scoped_refptr<AudioSource> source) = 0;
-  // Removes `AudioSource` to `AudioSourceManager`.
+  // Removes `AudioSource` from `AudioSourceManager`.
   virtual void RemoveSource(rtc::scoped_refptr<AudioSource> source) = 0;
-  // todo
+  // Sets `DynAudioLevelCallback` to `AudioSourceManager`.
   virtual void SetAudioLevelCallBack(rust::Box<bridge::DynAudioLevelCallback> cb) = 0;
 };
 
@@ -151,7 +151,7 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   bool quit = false;
 
   // Rust side callback.
-  std::mutex audio_cb_mutex;
   std::optional<rust::Box<bridge::DynAudioLevelCallback>> audio_level_cb;
+  std::mutex audio_cb_mutex;
 
 };

@@ -57,7 +57,7 @@ impl Webrtc {
                         .is_some()
                     {
                         for source in self.audio_source.1.values() {
-                            self.audio_device_module.remove_source(&source);
+                            self.audio_device_module.remove_source(source);
                         }
                         self.audio_source.1.clear();
                         self.audio_source.0.take();
@@ -91,7 +91,7 @@ impl Webrtc {
                     if let MediaTrackSource::Local(src) = track.source {
                         if Arc::strong_count(&src) == 2 {
                             for source in self.audio_source.1.values() {
-                                self.audio_device_module.remove_source(&source);
+                                self.audio_device_module.remove_source(source);
                             }
                             self.audio_source.1.clear();
                             self.audio_source.0.take();
@@ -256,10 +256,8 @@ impl Webrtc {
 
         let api_track = api::MediaStreamTrack::from(&track);
 
-        println!("SET {:?}", track.id.clone());
         self.audio_source.2 = Some(track.id.clone());
         self.audio_tracks.insert(track.id.clone(), track);
-        println!("GET {:?}", self.audio_source.2);
 
         Ok(api_track)
     }
@@ -309,8 +307,7 @@ impl Webrtc {
                 .audio_device_module
                 .current_device_id
                 .as_ref()
-                .map(|id| self.audio_source.1.remove(id))
-                .flatten()
+                .and_then(|id| self.audio_source.1.remove(id))
             {
                 self.audio_device_module.remove_source(&source);
             }
@@ -322,11 +319,9 @@ impl Webrtc {
         let microphone_audio =
             self.audio_device_module.create_source_microphone();
         self.audio_device_module.add_source(&microphone_audio);
-        self.audio_source.1.insert(device_id,  microphone_audio);
+        self.audio_source.1.insert(device_id, microphone_audio);
 
-
-        let id: Option<i64> = Some(3990);
-        if let Some(id) = id {
+        if let Some(id) = caps.system_id {
             let system_id = AudioDeviceId(id.to_string());
             if Some(&system_id)
                 != self.audio_device_module.current_system_id.as_ref()
@@ -372,14 +367,44 @@ impl Webrtc {
         Ok(src)
     }
 
-    // todo
-    pub fn set_audio_level_cb(&mut self, track_id: String, sink: StreamSink<f32>) -> anyhow::Result<()> {
+    /// Sets a callback for audio level tracking.
+    pub fn set_audio_level_cb(
+        &mut self,
+        track_id: String,
+        sink: StreamSink<f32>,
+    ) -> anyhow::Result<()> {
         let id: AudioTrackId = AudioTrackId::from(track_id);
         if self.audio_source.2.as_ref() == Some(&id) {
-            println!("OK");
             self.audio_device_module.set_audio_level_cb(sink);
+        } else if let Some(mut track) = self.audio_tracks.get_mut(&id) {
+            struct RemoteAudioLevelCalculator(StreamSink<f32>);
+            impl sys::AudioSinkCallback for RemoteAudioLevelCalculator {
+                #[allow(clippy::cast_precision_loss)]
+                fn on_data(
+                    &self,
+                    data: Vec<i16>,
+                    _: i64,
+                    _: i64,
+                    number_of_channels: usize,
+                    number_of_frames: usize,
+                ) {
+                    let sum = data
+                        .into_iter()
+                        .fold(0.0, |acc, v| acc + i32::from(v).pow(2) as f32);
+
+                    let res = (sum
+                        / (number_of_channels * number_of_frames) as f32)
+                        .sqrt()
+                        / f32::from(i16::MAX);
+                    self.0.add(res);
+                }
+            }
+            let sink = sys::AudioTrackSinkInterface::new(Box::new(
+                RemoteAudioLevelCalculator(sink),
+            ));
+            track.inner.set_sink(sink);
         } else {
-            println!("todo remote track {:?} - {:?}", id, self.audio_source.2);
+            bail!("Cannot find audio track with ID `{id}`");
         }
         Ok(())
     }
@@ -668,13 +693,12 @@ impl VideoDeviceInfo {
     }
 }
 
-
-// todo
+/// Wrapper around [`StreamSink<f32>`] implementing
+/// [`sys::AudioLevelCallback`].
 struct AudioLevelCallback(StreamSink<f32>);
 
 impl sys::AudioLevelCallback for AudioLevelCallback {
-    fn on_audio_level(&mut self, level: f32) {
-        println!("A {level}");
+    fn on_audio_level(&self, level: f32) {
         self.0.add(level);
     }
 }
@@ -698,8 +722,6 @@ pub struct AudioDeviceModule {
     /// [`sys::AudioDeviceModule`].
     current_system_id: Option<AudioDeviceId>,
 }
-
-
 
 impl AudioDeviceModule {
     /// Creates a new [`AudioDeviceModule`] according to the passed
@@ -756,9 +778,10 @@ impl AudioDeviceModule {
         self.inner.set_system_audio_source(id);
     }
 
-    // todo
+    /// Delegates sending audio level events to [`AudioLevelCallback`].
     pub fn set_audio_level_cb(&mut self, sink: StreamSink<f32>) {
-        self.inner.set_audio_level_cb(Box::new(AudioLevelCallback(sink)));
+        self.inner
+            .set_audio_level_cb(Box::new(AudioLevelCallback(sink)));
     }
 
     /// Enumerates possible system audio sources.

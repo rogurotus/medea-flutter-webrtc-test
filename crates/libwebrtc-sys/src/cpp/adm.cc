@@ -186,7 +186,7 @@ float calculate_audio_level(int16_t* data, int size) {
 }
 
 
-// todo
+// Sets `DynAudioLevelCallback` to `AudioSourceManager`.
 void CustomAudioDeviceModule::SetAudioLevelCallBack(rust::Box<bridge::DynAudioLevelCallback> cb) {
   std::unique_lock<std::mutex> lock(audio_cb_mutex);
   audio_level_cb = std::move(cb);
@@ -219,9 +219,7 @@ void CustomAudioDeviceModule::RecordProcess() {
           {
             std::unique_lock<std::mutex> lock(audio_cb_mutex);
             if (audio_level_cb) {
-              std::cout << "DA" << std::endl;
               auto level = calculate_audio_level((int16_t*) frame.data(), frame.num_channels_ * frame.sample_rate_hz_ / 100);
-              std::cout << "DA - " << level << std::endl;
               bridge::on_audio_level_change(**audio_level_cb, level);
             }
           }

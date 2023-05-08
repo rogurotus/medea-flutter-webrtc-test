@@ -111,6 +111,9 @@ using AudioSource = rtc::scoped_refptr<::AudioSource>;
 using AudioSourceManager = ::AudioSourceManager;
 using AudioSourceInfo = ::AudioSourceInfo;
 
+class RefCountedAudioSink : public webrtc::AudioTrackSinkInterface, public rtc::RefCountInterface {};
+using AudioTrackSinkInterface = rtc::scoped_refptr<RefCountedAudioSink>;
+
 
 // Creates a new proxied `AudioDeviceModule` for the given `AudioLayer`.
 std::unique_ptr<AudioDeviceModule> create_audio_device_module(
@@ -130,7 +133,7 @@ std::unique_ptr<AudioDeviceModule> custom_audio_device_module_proxy_upcast(std::
 // Creates a new `AudioSourceManager` for the given `CustomAudioDeviceModule`.
 std::unique_ptr<AudioSourceManager> create_source_manager(const CustomAudioDeviceModule& adm, Thread& worker_thread);
 
-// todo
+// Sets on new audio level callback to `AudioSourceManager`.
 void set_audio_level_cb(
     AudioSourceManager& source,
     rust::Box<DynAudioLevelCallback> cb
