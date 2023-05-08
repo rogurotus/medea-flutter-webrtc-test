@@ -146,6 +146,7 @@ class _NativeMediaStreamTrackChannel extends NativeMediaStreamTrack {
       }
       await _chan.invokeMethod('dispose');
       await _eventSub?.cancel();
+      await _audioLevelSub?.cancel();
     }
   }
 
