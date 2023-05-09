@@ -70,7 +70,8 @@ int AudioSource::Ssrc() const {
 // A way for this source to say that GetAudioFrameWithInfo called
 // with this sample rate or higher will not cause quality loss.
 int AudioSource::PreferredSampleRate() const {
-  return frame_.sample_rate_hz();
+  int rate = frame_.sample_rate_hz();
+  return rate == 0 ? 8000 : rate;
 };
 
 // Mutes the source until the next frame.

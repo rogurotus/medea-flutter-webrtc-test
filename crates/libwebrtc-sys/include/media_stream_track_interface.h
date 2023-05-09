@@ -35,7 +35,11 @@ media_stream_track_interface_downcast_audio_track(
     std::unique_ptr<MediaStreamTrackInterface> track);
 
 // Adds `AudioTrackSinkInterface` to an `AudioTrackInterface`.
-void set_audio_track_sink(
+void add_audio_track_sink(
+    AudioTrackInterface& track, const AudioTrackSinkInterface& sink);
+
+// Removes `AudioTrackSinkInterface` from a `AudioTrackInterface`.
+void remove_audio_track_sink(
     AudioTrackInterface& track, const AudioTrackSinkInterface& sink);
 
 // Creates a new `AudioTrackSinkInterface` for the given `DynAudioSinkCallback`.

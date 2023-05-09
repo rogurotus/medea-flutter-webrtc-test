@@ -89,18 +89,12 @@ impl Webrtc {
                     self.audio_tracks.remove(&AudioTrackId::from(track_id))
                 {
                     if let MediaTrackSource::Local(src) = track.source {
-                            println!("dispose_track - {}", Arc::strong_count(&src));
                             if Arc::strong_count(&src) == 2 {
-                            println!("dispose_track 3");
                             for source in self.audio_source.1.values() {
                                 self.audio_device_module.remove_source(source);
                             }
-                            println!("dispose_track 4");
                             self.audio_source.1.clear();
                             self.audio_source.0.take();
-                            println!("dispose_track 5");
-                            // TODO: We should make `AudioDeviceModule` to stop
-                            //       recording.
                         };
                     }
                     track.senders

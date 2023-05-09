@@ -30,7 +30,6 @@ int MicrophoneSource::sources_num = 0;
 MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
   this->module = module;
   if (sources_num == 0) {
-    std::cout << "MicrophoneSource" << std::endl;
     module->StartRecording();
   }
   ++sources_num;
@@ -39,7 +38,6 @@ MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
 MicrophoneSource::~MicrophoneSource() {
   --sources_num;
   if (sources_num == 0) {
-    std::cout << "~MicrophoneSource" << std::endl;
     module->StopRecording();
     module->ResetSource();
   }

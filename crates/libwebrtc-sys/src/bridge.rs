@@ -1493,7 +1493,10 @@ pub(crate) mod webrtc {
         pub type AudioTrackSinkInterface;
 
         // Adds [`AudioTrackSinkInterface`] to [`AudioTrackInterface`].
-        pub fn set_audio_track_sink(track: Pin<&mut AudioTrackInterface>, sink: &AudioTrackSinkInterface);
+        pub fn add_audio_track_sink(track: Pin<&mut AudioTrackInterface>, sink: &AudioTrackSinkInterface);
+
+        // Removes [`AudioTrackSinkInterface`] to [`AudioTrackInterface`].
+        pub fn remove_audio_track_sink(track: Pin<&mut AudioTrackInterface>, sink: &AudioTrackSinkInterface);
 
         // Creates a new [`AudioTrackSinkInterface`] for the given [`DynAudioSinkCallback`].
         pub fn create_audio_sink(cb: Box<DynAudioSinkCallback>) -> UniquePtr<AudioTrackSinkInterface> ;

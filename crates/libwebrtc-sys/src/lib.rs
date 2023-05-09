@@ -292,6 +292,10 @@ impl AudioDeviceModule {
 
     /// Sets the system audio source.
     pub fn set_system_audio_source(&mut self, id: i64) {
+        // Fake media.
+        if self.1.is_null() {
+            return;
+        }
         webrtc::set_system_audio_source(self.1.pin_mut(), id);
     }
 
@@ -318,10 +322,12 @@ impl AudioDeviceModule {
 
     /// Sets [`DynAudioLevelCallback`] to the [`AudioSourceManager`].
     pub fn set_audio_level_cb(&mut self, cb: Box<dyn AudioLevelCallback>) {
-        // Not fake media.
-        if !self.1.is_null() {
-            webrtc::set_audio_level_cb(self.1.pin_mut(), Box::new(cb));
+        // Fake media.
+        if self.1.is_null() {
+            return;
         }
+
+        webrtc::set_audio_level_cb(self.1.pin_mut(), Box::new(cb));
     }
 
     /// Creates a new [`AudioSource`] from microphone.
@@ -596,6 +602,11 @@ impl AudioDeviceModule {
 
     /// Sets the volume of the system audio capture.
     pub fn set_system_audio_source_volume(&mut self, level: f32) {
+        // Fake media.
+        if self.1.is_null() {
+            return;
+        }
+
         webrtc::set_system_audio_source_volume(self.1.pin_mut(), level);
     }
 
@@ -1636,7 +1647,7 @@ impl PeerConnectionFactoryInterface {
         Ok(AudioTrackInterface {
             inner,
             observers: Vec::new(),
-            sink: None,
+            sinks: Vec::new(),
         })
     }
 
@@ -1968,9 +1979,9 @@ pub struct AudioTrackInterface {
     /// changes.
     observers: Vec<TrackEventObserver>,
 
-    /// [`AudioTrackSinkInterface`] subscribe
-    /// to [`AudioTrackInterface`] receive data.
-    sink: Option<AudioTrackSinkInterface>,
+    /// [`AudioTrackSinkInterface`]s subscribed
+    /// to this [`AudioTrackInterface`] receive data.
+    sinks: Vec<AudioTrackSinkInterface>,
 }
 
 impl AudioTrackInterface {
@@ -2008,14 +2019,22 @@ impl AudioTrackInterface {
 
     /// Sets [`AudioTrackSinkInterface`] for this [`AudioTrackInterface`].
     pub fn set_sink(&mut self, sink: AudioTrackSinkInterface) {
-        webrtc::set_audio_track_sink(self.inner.pin_mut(), &sink.0);
-        self.sink.replace(sink);
+        webrtc::add_audio_track_sink(self.inner.pin_mut(), &sink.0);
+        self.sinks.push(sink);
     }
 }
 
 impl Drop for AudioTrackInterface {
     fn drop(&mut self) {
         let observers = mem::take(&mut self.observers);
+        let sinks = mem::take(&mut self.sinks);
+
+        for sink in sinks {
+            webrtc::remove_audio_track_sink(
+                self.inner.pin_mut(),
+                &sink.0,
+            );
+        }
 
         for mut obs in observers {
             webrtc::audio_track_unregister_observer(
@@ -2041,7 +2060,7 @@ impl TryFrom<MediaStreamTrackInterface> for AudioTrackInterface {
             Ok(AudioTrackInterface {
                 inner,
                 observers: Vec::new(),
-                sink: None,
+                sinks: Vec::new(),
             })
         } else {
             bail!(
