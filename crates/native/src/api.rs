@@ -2167,8 +2167,9 @@ pub fn microphone_volume() -> anyhow::Result<u32> {
 }
 
 /// Disposes the specified [`MediaStreamTrack`].
+#[allow(clippy::needless_pass_by_value)]
 pub fn dispose_track(track_id: String, kind: MediaType) {
-    WEBRTC.lock().unwrap().dispose_track(track_id.clone(), kind);
+    WEBRTC.lock().unwrap().dispose_track(track_id, kind);
 }
 
 /// Returns the [readyState][0] property of the [`MediaStreamTrack`] by its ID

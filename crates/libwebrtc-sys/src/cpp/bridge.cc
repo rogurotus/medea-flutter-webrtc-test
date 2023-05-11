@@ -142,7 +142,7 @@ std::unique_ptr<AudioDeviceModule> custom_audio_device_module_proxy_upcast(std::
   return std::make_unique<AudioDeviceModule>(proxied);
 }
 
-// todo
+// Sets on new audio level callback to `AudioSourceManager`.
 void set_audio_level_cb(
     AudioSourceManager& source,
     rust::Box<DynAudioLevelCallback> cb
