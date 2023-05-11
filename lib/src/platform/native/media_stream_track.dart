@@ -54,7 +54,7 @@ abstract class NativeMediaStreamTrack extends MediaStreamTrack {
   OnAudioLevelCallback? _onAudioLevel;
 
   /// Audio level subscription.
-  late StreamSubscription<double>? _audioLevelSub;
+  StreamSubscription<double>? _audioLevelSub;
 
   /// Listener for all the [MediaStreamTrack] events received from the native
   /// side.
