@@ -89,7 +89,7 @@ impl Webrtc {
                     self.audio_tracks.remove(&AudioTrackId::from(track_id))
                 {
                     if let MediaTrackSource::Local(src) = track.source {
-                            if Arc::strong_count(&src) == 2 {
+                        if Arc::strong_count(&src) == 2 {
                             for source in self.audio_source.1.values() {
                                 self.audio_device_module.remove_source(source);
                             }

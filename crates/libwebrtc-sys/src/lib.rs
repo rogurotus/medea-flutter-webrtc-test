@@ -2030,10 +2030,7 @@ impl Drop for AudioTrackInterface {
         let sinks = mem::take(&mut self.sinks);
 
         for sink in sinks {
-            webrtc::remove_audio_track_sink(
-                self.inner.pin_mut(),
-                &sink.0,
-            );
+            webrtc::remove_audio_track_sink(self.inner.pin_mut(), &sink.0);
         }
 
         for mut obs in observers {
