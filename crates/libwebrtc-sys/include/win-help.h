@@ -1,4 +1,5 @@
-#pragma once
+#ifndef WIN_HELP_H
+#define WIN_HELP_H
 
 #include <Windows.h>
 #include <Psapi.h>
@@ -57,3 +58,5 @@ void ms_get_window_title(dstr& name, HWND hwnd);
 int astrcmpi(const char *str1, const char *str2);
 int astrcmpi_n(const char *str1, const char *str2, size_t n);
 void *a_realloc(void *ptr, size_t size);
+
+#endif

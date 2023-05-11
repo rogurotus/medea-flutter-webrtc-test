@@ -1,4 +1,5 @@
-#pragma once
+#ifndef AUDIO_SOURCE_MANAGER_PROXY_H
+#define AUDIO_SOURCE_MANAGER_PROXY_H
 
 #include "adm.h"
 #include "pc/proxy.h"
@@ -24,3 +25,4 @@ class AudioSourceManagerProxy : AudioSourceManager {
   rtc::scoped_refptr<CustomAudioDeviceModule> adm;
   rtc::Thread* primary_thread_;
 };
+#endif

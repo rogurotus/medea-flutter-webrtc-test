@@ -1,4 +1,5 @@
-#pragma once
+#ifndef WINDOWS_MICROPHONE_SOURCE_H
+#define WINDOWS_MICROPHONE_SOURCE_H
 
 #include "custom_audio.h"
 #include "microphone_module.h"
@@ -152,3 +153,5 @@ class MicrophoneModule : public MicrophoneModuleInterface {
 
   // END Сopied from "audio_device_core_win.h"
 };
+
+#endif

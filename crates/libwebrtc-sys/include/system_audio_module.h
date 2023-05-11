@@ -1,5 +1,6 @@
 
-#pragma once
+#ifndef SYSTEM_SOURCE_H
+#define SYSTEM_SOURCE_H
 #include "custom_audio.h"
 
 // Audio source info.
@@ -78,3 +79,4 @@ class SystemModuleInterface {
   // System source.
   rtc::scoped_refptr<SystemSource> source = nullptr;
 };
+#endif

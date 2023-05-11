@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CUSTOM_AUDIO_DEVICE_MODULE_PROXY_H
+#define CUSTOM_AUDIO_DEVICE_MODULE_PROXY_H
 
 #include "modules/audio_device/include/audio_device.h"
 #include "pc/proxy.h"
@@ -75,3 +76,5 @@ PROXY_CONSTMETHOD0(int32_t, GetPlayoutUnderrunCount)
 #endif  // WEBRTC_IOS
 END_PROXY_MAP(AudioDeviceModule)
 }  // namespace webrtc
+
+#endif

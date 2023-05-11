@@ -14,7 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#pragma once
+#ifndef WINDOWS_SYSTEM_SOURCE_H
+#define WINDOWS_SYSTEM_SOURCE_H
+
 #include <windows.h>
 #include <iostream>
 #include <minwindef.h>
@@ -399,3 +401,5 @@ class SystemModule : public SystemModuleInterface {
   std::vector<float> capture_buffer;
   std::vector<int16_t> release_capture_buffer = std::vector<int16_t>(480 * 8);
 };
+
+#endif

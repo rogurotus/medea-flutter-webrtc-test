@@ -1,4 +1,5 @@
-#pragma once
+#ifndef VIDEO_SINK_H
+#define VIDEO_SINK_H
 
 #include <map>
 #include <memory>
@@ -33,3 +34,4 @@ class ForwardingVideoSink : public rtc::VideoSinkInterface<webrtc::VideoFrame> {
 };
 
 }  // namespace video_sink
+#endif

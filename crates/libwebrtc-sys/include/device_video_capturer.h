@@ -1,4 +1,5 @@
-#pragma once
+#ifndef DEVICE_VIDEO_CAPTURE_H
+#define DEVICE_VIDEO_CAPTURE_H
 
 #include <stddef.h>
 #include <memory>
@@ -62,3 +63,5 @@ class DeviceVideoCapturer : public rtc::AdaptedVideoTrackSource,
   // `VideoCaptureCapability` used to capture media.
   webrtc::VideoCaptureCapability capability_;
 };
+
+#endif

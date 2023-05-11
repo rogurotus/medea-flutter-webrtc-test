@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MEDIA_STREAM_TRACK_INTERFACE_H
+#define MEDIA_STREAM_TRACK_INTERFACE_H
 
 #include "bridge.h"
 #include "rust/cxx.h"
@@ -64,3 +65,5 @@ class AudioSink : public rtc::RefCountedObject<RefCountedAudioSink> {
 };
 
 }  // namespace bridge
+
+#endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef AUDIO_SOURCE_H
+#define AUDIO_SOURCE_H
 
 #include <condition_variable>
 #include <mutex>
@@ -52,3 +53,5 @@ class AudioSource : public rtc::RefCountedObject<RefCountedAudioSource> {
   std::atomic<bool> mute_ = false;
   std::chrono::time_point<std::chrono::system_clock> mute_clock_;
 };
+
+#endif

@@ -1,5 +1,5 @@
-#pragma once
-
+#ifndef CUSTOM_AUDIO_DEVICE_MODULE_H
+#define CUSTOM_AUDIO_DEVICE_MODULE_H
 
 #define WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE 1
 #include <iostream>
@@ -155,3 +155,5 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   std::mutex audio_cb_mutex;
 
 };
+
+#endif

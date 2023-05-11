@@ -1,5 +1,7 @@
 
-#pragma once
+
+#ifndef MICROPHONE_SOURCE_H
+#define MICROPHONE_SOURCE_H
 #include "custom_audio.h"
 
 
@@ -50,4 +52,4 @@ virtual int32_t RecordingChannels() = 0;
 rtc::scoped_refptr<MicrophoneSource> source = nullptr;
 };
 
-
+#endif
