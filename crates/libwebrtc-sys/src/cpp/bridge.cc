@@ -956,7 +956,7 @@ void set_system_audio_source(AudioSourceManager& manager, int64_t id) {
 
 // Returns `AudioSourceInfo` id.
 int64_t system_source_id(const AudioSourceInfo& source) {
-  return source.GetId();
+  return source.GetProcessId();
 }
 
 // Returns `AudioSourceInfo` title.

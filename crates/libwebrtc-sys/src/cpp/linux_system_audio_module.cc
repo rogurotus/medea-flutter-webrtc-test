@@ -451,7 +451,7 @@ int32_t SystemModule::ProcessRecordedData(int8_t* bufferData,
   if (source != nullptr) {
     ReorderingBuffer(release_capture_buffer, (int16_t*)bufferData, sample_rate_hz_, _recChannels,
                      audio_multiplier);
-    source->UpdateFrame(release_capture_buffer.data(), bufferSizeInSamples,
+    source->UpdateFrame(release_capture_buffer.data(), bufferSizeInSamples / _recChannels,
                         sample_rate_hz_, _recChannels);
   }
 
