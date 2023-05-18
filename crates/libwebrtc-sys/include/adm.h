@@ -34,6 +34,8 @@
 
 #include "microphone_module.h"
 #include "system_audio_module.h"
+#include <optional>
+#include <vector>
 
 #if defined(WEBRTC_LINUX)
 #include "modules/audio_device/linux/audio_mixer_manager_pulse_linux.h"
@@ -52,7 +54,24 @@
 #include "macos_system_audio_module.h"
 #endif
 
+class MixedAudioSource : public rtc::RefCountedObject<webrtc::AudioSourceInterface>, public webrtc::ObserverInterface {
+  public:
 
+  const cricket::AudioOptions options() const;
+  webrtc::MediaSourceInterface::SourceState state() const;
+  bool remote() const;
+  void RegisterObserver(webrtc::ObserverInterface* observer);
+  void UnregisterObserver(webrtc::ObserverInterface* observer);
+  void AddSource(rtc::scoped_refptr<AudioSource> source);
+  void RemoveSource(rtc::scoped_refptr<AudioSource> source);
+  void OnChanged();
+
+  private:
+  std::vector<rtc::scoped_refptr<AudioSource>> _sources;
+  webrtc::ObserverInterface* _observer;
+  webrtc::MediaSourceInterface::SourceState _state = webrtc::MediaSourceInterface::SourceState::kLive;
+
+};
 
 class AudioSourceManager {
   public:
@@ -72,6 +91,9 @@ class AudioSourceManager {
   virtual void AddSource(rtc::scoped_refptr<AudioSource> source) = 0;
   // Removes `AudioSource` to `AudioSourceManager`.
   virtual void RemoveSource(rtc::scoped_refptr<AudioSource> source) = 0;
+  // todo
+  virtual rtc::scoped_refptr<webrtc::AudioSourceInterface> CreateMixedAudioSource() = 0;
+  rtc::scoped_refptr<MixedAudioSource> audio_source;
 };
 
 
@@ -116,6 +138,8 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   float GetSystemAudioVolume() const override;
   void AddSource(rtc::scoped_refptr<AudioSource>  source) override;
   void RemoveSource(rtc::scoped_refptr<AudioSource>  source) override;
+  rtc::scoped_refptr<webrtc::AudioSourceInterface> CreateMixedAudioSource() override;
+
 
   // Microphone mute control.
   int32_t MicrophoneMuteIsAvailable(bool* available) override;

@@ -91,6 +91,10 @@ void CustomAudioDeviceModule::AddSource(
     sources.push_back(source);
     cv.notify_all();
   }
+
+  if (audio_source) {
+    audio_source->AddSource(source);
+  }
   mixer->AddSource(source.get());
 }
 
@@ -104,6 +108,9 @@ void CustomAudioDeviceModule::RemoveSource(
         break;
       }
     }
+  }
+  if (audio_source) {
+    audio_source->RemoveSource(source);
   }
   mixer->RemoveSource(source.get());
 }
@@ -175,6 +182,18 @@ CustomAudioDeviceModule::CreateForTest(
   return audio_device;
 }
 
+  rtc::scoped_refptr<webrtc::AudioSourceInterface> CustomAudioDeviceModule::CreateMixedAudioSource() {
+    if (!audio_source) {
+      if (audio_source->state() != webrtc::MediaSourceInterface::SourceState::kEnded) {
+        audio_source = rtc::scoped_refptr<MixedAudioSource>(new MixedAudioSource());
+        for (int i = 0; i < sources.size(); ++i) {
+          audio_source->AddSource(sources[i]);
+        }
+      }
+    }
+    return audio_source;
+  }
+
 CustomAudioDeviceModule::CustomAudioDeviceModule(
     AudioLayer audio_layer,
     webrtc::TaskQueueFactory* task_queue_factory)
@@ -206,3 +225,46 @@ void CustomAudioDeviceModule::RecordProcess() {
       },
       "audio_device_module_rec_thread", attributes);
 }
+
+  const cricket::AudioOptions MixedAudioSource::options() const {
+    return cricket::AudioOptions();
+  }
+  webrtc::MediaSourceInterface::SourceState MixedAudioSource::state() const {
+    return _state;
+  }
+  bool MixedAudioSource::remote() const {
+    return false;
+  }
+  void MixedAudioSource::RegisterObserver(webrtc::ObserverInterface* observer) {
+    _observer = observer;
+  }
+
+  void MixedAudioSource::UnregisterObserver(webrtc::ObserverInterface* observer) {
+    _observer = nullptr;
+  }
+  void MixedAudioSource::AddSource(rtc::scoped_refptr<AudioSource> source) {
+    source->RegisterObserver(this);
+    _sources.push_back(source);
+  }
+
+  void MixedAudioSource::RemoveSource(rtc::scoped_refptr<AudioSource> source) {
+    source->UnregisterObserver(this);
+    for (int i = 0; i < _sources.size(); ++i) {
+      if (_sources[i] == source) {
+        _sources.erase(_sources.begin() + i);
+        break;
+      }
+    }
+  }
+
+  void MixedAudioSource::OnChanged() {
+    for (int i = 0; i < _sources.size(); ++i) {
+      if (!_sources[i]->is_ended()) {
+        return;
+      }
+    }
+    _state = webrtc::MediaSourceInterface::SourceState::kEnded;
+    if (_observer) {
+      _observer->OnChanged();
+    }
+  }

@@ -358,7 +358,7 @@ impl Webrtc {
             Arc::clone(src)
         } else {
             let src =
-                Arc::new(self.peer_connection_factory.create_audio_source()?);
+                Arc::new(self.audio_device_module.inner.create_audio_source()?);
             self.audio_source.0.replace(Arc::clone(&src));
 
             src

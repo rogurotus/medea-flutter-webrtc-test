@@ -1,6 +1,7 @@
 #if WEBRTC_LINUX
 
 #include "linux_microphone_module.h"
+#include <iostream>
 #include "api/make_ref_counted.h"
 #include "rtc_base/logging.h"
 
@@ -23,6 +24,20 @@ void MicrophoneModule::PaServerInfoCallback(pa_context* c,
   static_cast<MicrophoneModule*>(pThis)->PaServerInfoCallbackHandler(i);
 }
 
+static void subscribe_result(pa_context *c, int success, void *userdata) {
+  auto thisP = (MicrophoneModule*) userdata;
+  pa_threaded_mainloop_signal(thisP->_paMainloop, 0);
+}
+
+static void subscribe_sink_event(pa_context* c,
+                          pa_subscription_event_type_t t,
+                          uint32_t idx,
+                          void* userdata) {
+  auto thisP = (MicrophoneModule*)userdata;
+  if (idx == thisP->_paDeviceIndex && t & pa_subscription_event_type_t::PA_SUBSCRIPTION_EVENT_REMOVE) {
+    thisP->SourceEnded();
+  }
+}
 
 
 int MicrophoneSource::sources_num = 0;
@@ -63,6 +78,10 @@ rtc::scoped_refptr<AudioSource> MicrophoneModule::CreateSource() {
   auto result = source;
   source->Release();
   return result;
+}
+
+void MicrophoneModule::SourceEnded() {
+ _ended = true;
 }
 
 int32_t MicrophoneModule::SetRecordingDevice(uint16_t index) {
@@ -689,6 +708,12 @@ int32_t MicrophoneModule::InitMicrophone() {
     return -1;
   }
 
+  pa_context_set_subscribe_callback(_paContext, subscribe_sink_event, this);
+  pa_operation* o = pa_context_subscribe(
+      _paContext, pa_subscription_mask_t::PA_SUBSCRIPTION_MASK_SOURCE,
+      subscribe_result, this);
+  WaitForOperationCompletion(o);
+
   // Check if default device
   if (_inputDeviceIndex == 0) {
     uint16_t deviceIndex = 0;
@@ -711,7 +736,6 @@ int32_t MicrophoneModule::InitMicrophone() {
 
   // Clear _deviceIndex
   _deviceIndex = -1;
-  _paDeviceIndex = -1;
 
   return 0;
 }
@@ -840,6 +864,16 @@ void MicrophoneModule::PaStreamStateCallback(pa_stream* p, void* pThis) {
 }
 
 bool MicrophoneModule::RecThreadProcess() {
+
+  if (_ended) {
+    _ended = false;
+
+    StopRecording();
+    if (source != nullptr) {
+      source->ended();
+    }
+  }
+
   if (!_timeEventRec.Wait(1000)) {
     return true;
   }

@@ -36,11 +36,14 @@ class MicrophoneModule : public MicrophoneModuleInterface {
   // Microphone source.
   rtc::scoped_refptr<AudioSource> CreateSource();
   void ResetSource();
+  void SourceEnded();
   int32_t StopRecording();
   int32_t StartRecording();
   int32_t RecordingChannels();
 
   // END MicrophoneModuleInterface
+  pa_threaded_mainloop* _paMainloop = nullptr;
+  uint16_t _paDeviceIndex = -1;
 
  private:
   void PaLock();
@@ -111,9 +114,8 @@ class MicrophoneModule : public MicrophoneModuleInterface {
   const void* _tempSampleData = nullptr;
   size_t _tempSampleDataSize = 0;
   int32_t _configuredLatencyRec = 0;
-  uint16_t _paDeviceIndex = -1;
   bool _paStateChanged = false;
-  pa_threaded_mainloop* _paMainloop = nullptr;
+  bool _ended = false;
   pa_mainloop_api* _paMainloopApi = nullptr;
   pa_context* _paContext = nullptr;
   pa_stream* _recStream = nullptr;

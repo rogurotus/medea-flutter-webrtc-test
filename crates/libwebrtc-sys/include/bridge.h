@@ -294,7 +294,7 @@ std::unique_ptr<VideoTrackSourceInterface> create_display_video_source(
 
 // Creates a new `AudioSourceInterface`.
 std::unique_ptr<AudioSourceInterface> create_audio_source(
-    const PeerConnectionFactoryInterface& peer_connection_factory);
+    AudioSourceManager& adm);
 
 // Creates a new `VideoTrackInterface`.
 std::unique_ptr<VideoTrackInterface> create_video_track(

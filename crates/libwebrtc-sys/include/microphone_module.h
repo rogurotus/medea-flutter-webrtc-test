@@ -47,6 +47,7 @@ virtual void ResetSource() = 0;
 virtual int32_t StopRecording() = 0;
 virtual int32_t StartRecording() = 0;
 virtual int32_t RecordingChannels() = 0;
+virtual void SourceEnded() = 0;
 rtc::scoped_refptr<MicrophoneSource> source = nullptr;
 };
 

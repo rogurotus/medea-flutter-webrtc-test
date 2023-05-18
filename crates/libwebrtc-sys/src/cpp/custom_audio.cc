@@ -77,3 +77,27 @@ void AudioSource::Mute() {
   mute_clock_ = std::chrono::system_clock::now();
   cv_.notify_all();
 }
+
+bool AudioSource::is_ended() {
+  return ended_;
+}
+
+void AudioSource::ended() {
+  ended_ = true;
+  for (int i = 0; i < observers.size(); ++i) {
+    observers[i]->OnChanged();
+  }
+}
+
+void AudioSource::RegisterObserver(webrtc::ObserverInterface* observer) {
+  observers.push_back(observer);
+}
+
+void AudioSource::UnregisterObserver(webrtc::ObserverInterface* observer) {
+  for (int i = 0; i < observers.size(); ++i) {
+    if (observers[i] == observer) {
+      observers.erase(observers.begin() + i);
+      break;
+    }
+  }
+}

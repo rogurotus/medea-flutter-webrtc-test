@@ -5,9 +5,10 @@
 #include "api/audio/audio_frame.h"
 #include "api/audio/audio_mixer.h"
 #include "common_audio/resampler/include/push_resampler.h"
+#include "api/media_stream_interface.h"
 
 class RefCountedAudioSource : public webrtc::AudioMixer::Source,
-                              public rtc::RefCountInterface {};
+                              public rtc::RefCountInterface, public webrtc::NotifierInterface {};
 
 class AudioSource : public rtc::RefCountedObject<RefCountedAudioSource> {
  public:
@@ -37,6 +38,11 @@ class AudioSource : public rtc::RefCountedObject<RefCountedAudioSource> {
   // Prepares an audio frame.
   void FrameProcessing(int sample_rate_hz, webrtc::AudioFrame* audio_frame);
 
+  bool is_ended();
+  void ended();
+  void RegisterObserver(webrtc::ObserverInterface* observer);
+  void UnregisterObserver(webrtc::ObserverInterface* observer);
+
  private:
   // Current audio data.
   webrtc::AudioFrame frame_;
@@ -44,6 +50,9 @@ class AudioSource : public rtc::RefCountedObject<RefCountedAudioSource> {
   webrtc::PushResampler<int16_t> render_resampler_;
   // Buffer for converted audio data.
   int16_t resample_buffer[webrtc::AudioFrame::kMaxDataSizeSamples];
+
+  std::vector<webrtc::ObserverInterface*> observers;
+  bool ended_ = false;
 
   // Provides synchronization for sending audio frames.
   std::mutex mutex_;

@@ -60,7 +60,8 @@ class _LoopbackState extends State<Loopback> {
   // Platform messages are asynchronous, so we initialize in an async method.
   void _makeCall() async {
     var caps = DeviceConstraints();
-    caps.audio.mandatory = AudioConstraints();
+    var a = AudioConstraints();
+    caps.audio.mandatory = a;
     caps.video.mandatory = DeviceVideoConstraints();
     caps.video.mandatory!.width = 640;
     caps.video.mandatory!.height = 480;
@@ -68,6 +69,12 @@ class _LoopbackState extends State<Loopback> {
 
     try {
       _tracks = await getUserMedia(caps);
+
+      for (var element in _tracks!) {
+        element.onEnded(() {
+          print("ende");
+        });
+      }
       await _localRenderer.setSrcObject(
           _tracks!.firstWhere((track) => track.kind() == MediaKind.video));
 

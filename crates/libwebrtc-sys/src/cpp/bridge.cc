@@ -377,12 +377,11 @@ std::unique_ptr<VideoTrackSourceInterface> create_display_video_source(
   return std::make_unique<VideoTrackSourceInterface>(src);
 }
 
-// Calls `PeerConnectionFactoryInterface->CreateAudioSource()` with empty
-// `AudioOptions`.
+// Creates a new `AudioSourceInterface`.
 std::unique_ptr<AudioSourceInterface> create_audio_source(
-    const PeerConnectionFactoryInterface& peer_connection_factory) {
+    AudioSourceManager& adm) {
   
-  auto src =  peer_connection_factory->CreateAudioSource(cricket::AudioOptions());
+  auto src =  adm.CreateMixedAudioSource();
   if (src == nullptr) {
     return nullptr;
   }

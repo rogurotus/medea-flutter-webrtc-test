@@ -2,6 +2,8 @@
 
 #include "linux_system_audio_module.h"
 #include <iostream>
+#include <string>
+#include <sys/stat.h>
 const int32_t WEBRTC_PA_NO_LATENCY_REQUIREMENTS = -1;
 const uint32_t WEBRTC_PA_ADJUST_LATENCY_PROTOCOL_VERSION = 13;
 const uint32_t WEBRTC_PA_LOW_CAPTURE_LATENCY_MSECS = 10;
@@ -289,6 +291,14 @@ bool SystemModule::RecThreadProcess() {
       source->Mute();
     }
     _recSinkId = -1;
+
+    std::string s = std::to_string(_recProcessId);
+    struct stat stat_base;
+    if (stat(("/proc/" + s).c_str(), &stat_base) == -1) {
+      if (source != nullptr) {
+        source->ended();
+      }
+    }
     return true;
   }
 

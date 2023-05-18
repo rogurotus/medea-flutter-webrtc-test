@@ -70,3 +70,10 @@
         call(adm.get(), &AudioSourceManager::RemoveSource, std::move(source));
     return call.Marshal(primary_thread_);
   }
+
+  rtc::scoped_refptr<webrtc::AudioSourceInterface> AudioSourceManagerProxy::CreateMixedAudioSource() {
+    TRACE_BOILERPLATE(CreateMixedAudioSource);
+    webrtc::MethodCall<AudioSourceManager, rtc::scoped_refptr<webrtc::AudioSourceInterface>>
+        call(adm.get(), &AudioSourceManager::CreateMixedAudioSource);
+    return call.Marshal(primary_thread_);
+  };

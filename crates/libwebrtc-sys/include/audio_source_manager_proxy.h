@@ -18,6 +18,8 @@ class AudioSourceManagerProxy : AudioSourceManager {
   void SetRecordingSource(int id) override;
   void SetSystemAudioVolume(float level) override;
   float GetSystemAudioVolume() const override;
+  rtc::scoped_refptr<webrtc::AudioSourceInterface> CreateMixedAudioSource() override;
+
  private:
   rtc::scoped_refptr<CustomAudioDeviceModule> adm;
   rtc::Thread* primary_thread_;
