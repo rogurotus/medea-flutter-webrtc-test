@@ -305,9 +305,7 @@ impl Webrtc {
             if let Some(source) = self
                 .audio_device_module
                 .current_device_id
-                .as_ref()
-                .map(|id| self.audio_source.1.remove(id))
-                .flatten()
+                .as_ref().and_then(|id| self.audio_source.1.remove(id))
             {
                 self.audio_device_module.remove_source(&source);
             }

@@ -23,6 +23,7 @@ class SystemModule : public SystemModuleInterface {
     int32_t StopRecording() { return 0; };
     int32_t StartRecording() { return 0; };
     int32_t RecordingChannels() { return 0; };
+    void ResetSource() {};
 
     // Enumerate system audio outputs.
     std::vector<AudioSourceInfo> EnumerateSystemSource() const { return std::vector<AudioSourceInfo>(); };
