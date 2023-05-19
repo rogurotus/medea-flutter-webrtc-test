@@ -262,7 +262,9 @@ impl AudioDeviceModule {
 
     /// Creates a new [`AudioSourceInterface`], which provides sound recording
     /// from native platform.
-    pub fn create_audio_source(&mut self) -> anyhow::Result<AudioSourceInterface> {
+    pub fn create_audio_source(
+        &mut self,
+    ) -> anyhow::Result<AudioSourceInterface> {
         let ptr = webrtc::create_audio_source(self.1.pin_mut());
 
         if ptr.is_null() {
