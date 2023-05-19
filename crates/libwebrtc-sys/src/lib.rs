@@ -265,7 +265,7 @@ impl AudioDeviceModule {
     pub fn create_audio_source(
         &mut self,
     ) -> anyhow::Result<AudioSourceInterface> {
-        let ptr = webrtc::create_audio_source(self.1.pin_mut());
+        let ptr = webrtc::create_mixed_audio_source(self.1.pin_mut());
 
         if ptr.is_null() {
             bail!(
@@ -1570,6 +1570,20 @@ impl PeerConnectionFactoryInterface {
             inner,
             _observer: dependencies.observer,
         })
+    }
+
+    /// Creates a new [`AudioSourceInterface`], which provides sound recording
+    /// from native platform.
+    pub fn create_audio_source(&self) -> anyhow::Result<AudioSourceInterface> {
+        let ptr = webrtc::create_audio_source(&self.0);
+
+        if ptr.is_null() {
+            bail!(
+                "`null` pointer returned from \
+                 `webrtc::PeerConnectionFactoryInterface::CreateAudioSource()`",
+            );
+        }
+        Ok(AudioSourceInterface(ptr))
     }
 
     /// Creates a new [`VideoTrackInterface`] sourced by the provided

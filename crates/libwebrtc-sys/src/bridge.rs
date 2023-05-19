@@ -2211,9 +2211,14 @@ pub(crate) mod webrtc {
             fps: usize,
         ) -> UniquePtr<VideoTrackSourceInterface>;
 
+        /// Creates a new mixed [`AudioSourceInterface`].
+        pub fn create_mixed_audio_source(
+            adm: Pin<&mut AudioSourceManager>,
+        ) -> UniquePtr<AudioSourceInterface>;
+
         /// Creates a new [`AudioSourceInterface`].
         pub fn create_audio_source(
-            adm: Pin<&mut AudioSourceManager>,
+            peer_connection_factory: &PeerConnectionFactoryInterface,
         ) -> UniquePtr<AudioSourceInterface>;
 
         /// Creates a new [`VideoTrackInterface`].

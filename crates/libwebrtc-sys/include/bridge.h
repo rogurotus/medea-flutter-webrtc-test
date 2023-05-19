@@ -292,9 +292,13 @@ std::unique_ptr<VideoTrackSourceInterface> create_display_video_source(
     size_t height,
     size_t fps);
 
+// Creates a new mixed `AudioSourceInterface`.
+std::unique_ptr<AudioSourceInterface> create_mixed_audio_source(
+    AudioSourceManager& adm);
+
 // Creates a new `AudioSourceInterface`.
 std::unique_ptr<AudioSourceInterface> create_audio_source(
-    AudioSourceManager& adm);
+    const PeerConnectionFactoryInterface& peer_connection_factory);
 
 // Creates a new `VideoTrackInterface`.
 std::unique_ptr<VideoTrackInterface> create_video_track(

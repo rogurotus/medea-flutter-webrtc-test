@@ -11,7 +11,7 @@ use sys::TrackEventObserver;
 use xxhash::xxh3::xxh3_64;
 
 use crate::{
-    api::{self, MediaType, TrackEvent},
+    api::{self, is_fake_media, MediaType, TrackEvent},
     devices, next_id,
     stream_sink::StreamSink,
     PeerConnectionId, VideoSink, VideoSinkId, Webrtc,
@@ -356,8 +356,11 @@ impl Webrtc {
         let src = if let Some(src) = self.audio_source.0.as_ref() {
             Arc::clone(src)
         } else {
-            let src =
-                Arc::new(self.audio_device_module.inner.create_audio_source()?);
+            let src = if is_fake_media() {
+                Arc::new(self.peer_connection_factory.create_audio_source()?)
+            } else {
+                Arc::new(self.audio_device_module.inner.create_audio_source()?)
+            };
             self.audio_source.0.replace(Arc::clone(&src));
 
             src
