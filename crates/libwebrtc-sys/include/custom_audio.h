@@ -38,9 +38,16 @@ class AudioSource : public rtc::RefCountedObject<RefCountedAudioSource> {
   // Prepares an audio frame.
   void FrameProcessing(int sample_rate_hz, webrtc::AudioFrame* audio_frame);
 
+  // Returns true if this `AudioSource` is ended.
   bool is_ended();
+
+  // Sets ended to true and notifies observers.
   void ended();
+
+  // Registers the passed observer.
   void RegisterObserver(webrtc::ObserverInterface* observer);
+
+  // Unregisters the passed observer.
   void UnregisterObserver(webrtc::ObserverInterface* observer);
 
  private:

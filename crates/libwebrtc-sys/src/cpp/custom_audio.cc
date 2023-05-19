@@ -78,10 +78,12 @@ void AudioSource::Mute() {
   cv_.notify_all();
 }
 
+// Returns true if this `AudioSource` is ended.
 bool AudioSource::is_ended() {
   return ended_;
 }
 
+// Sets ended to true and notifies observers.
 void AudioSource::ended() {
   ended_ = true;
   for (int i = 0; i < observers.size(); ++i) {
@@ -89,10 +91,13 @@ void AudioSource::ended() {
   }
 }
 
+
+// Registers the passed observer.
 void AudioSource::RegisterObserver(webrtc::ObserverInterface* observer) {
   observers.push_back(observer);
 }
 
+// Unregisters the passed observer.
 void AudioSource::UnregisterObserver(webrtc::ObserverInterface* observer) {
   for (int i = 0; i < observers.size(); ++i) {
     if (observers[i] == observer) {

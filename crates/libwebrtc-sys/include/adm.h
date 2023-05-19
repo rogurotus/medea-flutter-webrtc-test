@@ -54,16 +54,25 @@
 #include "macos_system_audio_module.h"
 #endif
 
+
+// Implemenatation `webrtc::AudioSourceInterface` consisting of mixed `AudioSource`.
 class MixedAudioSource : public rtc::RefCountedObject<webrtc::AudioSourceInterface>, public webrtc::ObserverInterface {
   public:
-
+  // Returns default `cricket::AudioOptions`.
   const cricket::AudioOptions options() const;
+  // Returns current `webrtc::MediaSourceInterface::SourceState`.
   webrtc::MediaSourceInterface::SourceState state() const;
+  // Returns false.
   bool remote() const;
+  // Registers the passed observer.
   void RegisterObserver(webrtc::ObserverInterface* observer);
+  // Unregisters the passed observer.
   void UnregisterObserver(webrtc::ObserverInterface* observer);
+  // Adds `AudioSource` to `MixedAudioSource` for state tracking.
   void AddSource(rtc::scoped_refptr<AudioSource> source);
+  // Removes `AudioSource` from `MixedAudioSource`.
   void RemoveSource(rtc::scoped_refptr<AudioSource> source);
+  // Notifies observers when all `AudioSource` is ended.
   void OnChanged();
 
   private:
@@ -89,9 +98,9 @@ class AudioSourceManager {
   virtual float GetSystemAudioVolume() const = 0;
   // Adds `AudioSource` to `AudioSourceManager`.
   virtual void AddSource(rtc::scoped_refptr<AudioSource> source) = 0;
-  // Removes `AudioSource` to `AudioSourceManager`.
+  // Removes `AudioSource` from `AudioSourceManager`.
   virtual void RemoveSource(rtc::scoped_refptr<AudioSource> source) = 0;
-  // todo
+  // Creates `webrtc::AudioSourceInterface` consisting of mixed `AudioSource`.
   virtual rtc::scoped_refptr<webrtc::AudioSourceInterface> CreateMixedAudioSource() = 0;
   rtc::scoped_refptr<MixedAudioSource> audio_source;
 };

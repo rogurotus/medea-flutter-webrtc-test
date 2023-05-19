@@ -182,7 +182,7 @@ CustomAudioDeviceModule::CreateForTest(
   return audio_device;
 }
 
-// todo
+// Creates `webrtc::AudioSourceInterface` consisting of mixed `AudioSource`.
 rtc::scoped_refptr<webrtc::AudioSourceInterface>
 CustomAudioDeviceModule::CreateMixedAudioSource() {
   if (audio_source == nullptr ||
@@ -228,34 +228,38 @@ void CustomAudioDeviceModule::RecordProcess() {
       "audio_device_module_rec_thread", attributes);
 }
 
-// todo
+// Returns default `cricket::AudioOptions`.
 const cricket::AudioOptions MixedAudioSource::options() const {
   return cricket::AudioOptions();
 }
-// todo
+
+// Returns current `webrtc::MediaSourceInterface::SourceState`.
 webrtc::MediaSourceInterface::SourceState MixedAudioSource::state() const {
   return _state;
 }
-// todo
+
+// Returns false.
 bool MixedAudioSource::remote() const {
   return false;
 }
-// todo
+
+// Registers the passed observer.
 void MixedAudioSource::RegisterObserver(webrtc::ObserverInterface* observer) {
   _observer = observer;
 }
 
-// todo
+// Unregisters the passed observer.
 void MixedAudioSource::UnregisterObserver(webrtc::ObserverInterface* observer) {
   _observer = nullptr;
 }
-// todo
+
+// Adds `AudioSource` to `MixedAudioSource` for state tracking.
 void MixedAudioSource::AddSource(rtc::scoped_refptr<AudioSource> source) {
   source->RegisterObserver(this);
   _sources.push_back(source);
 }
 
-// todo
+// Removes `AudioSource` from `MixedAudioSource`.
 void MixedAudioSource::RemoveSource(rtc::scoped_refptr<AudioSource> source) {
   source->UnregisterObserver(this);
   for (int i = 0; i < _sources.size(); ++i) {
@@ -266,7 +270,7 @@ void MixedAudioSource::RemoveSource(rtc::scoped_refptr<AudioSource> source) {
   }
 }
 
-// todo
+// Notifies observers when all `AudioSource` is ended.
 void MixedAudioSource::OnChanged() {
   for (int i = 0; i < _sources.size(); ++i) {
     if (!_sources[i]->is_ended()) {
