@@ -312,6 +312,10 @@ class AudioConstraints {
   ///           tracks.
   final String? deviceId;
 
+  /// Identifier of the system audio source generating the content of the
+  /// [`MediaStreamTrack`].
+  final int? systemId;
+
   const AudioConstraints({
     this.deviceId,
     this.systemId,
@@ -326,7 +330,7 @@ class AudioSourceInfo {
   /// Title of system audio source.
   final String title;
 
-  AudioSourceInfo({
+  const AudioSourceInfo({
     required this.id,
     required this.title,
   });
