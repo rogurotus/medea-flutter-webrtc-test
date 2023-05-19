@@ -182,17 +182,19 @@ CustomAudioDeviceModule::CreateForTest(
   return audio_device;
 }
 
-  rtc::scoped_refptr<webrtc::AudioSourceInterface> CustomAudioDeviceModule::CreateMixedAudioSource() {
-    if (!audio_source) {
-      if (audio_source->state() != webrtc::MediaSourceInterface::SourceState::kEnded) {
-        audio_source = rtc::scoped_refptr<MixedAudioSource>(new MixedAudioSource());
-        for (int i = 0; i < sources.size(); ++i) {
-          audio_source->AddSource(sources[i]);
-        }
-      }
+// todo
+rtc::scoped_refptr<webrtc::AudioSourceInterface>
+CustomAudioDeviceModule::CreateMixedAudioSource() {
+  if (audio_source == nullptr ||
+      audio_source->state() ==
+          webrtc::MediaSourceInterface::SourceState::kEnded) {
+    audio_source = rtc::scoped_refptr<MixedAudioSource>(new MixedAudioSource());
+    for (int i = 0; i < sources.size(); ++i) {
+      audio_source->AddSource(sources[i]);
     }
-    return audio_source;
   }
+  return audio_source;
+}
 
 CustomAudioDeviceModule::CustomAudioDeviceModule(
     AudioLayer audio_layer,
@@ -226,45 +228,53 @@ void CustomAudioDeviceModule::RecordProcess() {
       "audio_device_module_rec_thread", attributes);
 }
 
-  const cricket::AudioOptions MixedAudioSource::options() const {
-    return cricket::AudioOptions();
-  }
-  webrtc::MediaSourceInterface::SourceState MixedAudioSource::state() const {
-    return _state;
-  }
-  bool MixedAudioSource::remote() const {
-    return false;
-  }
-  void MixedAudioSource::RegisterObserver(webrtc::ObserverInterface* observer) {
-    _observer = observer;
-  }
+// todo
+const cricket::AudioOptions MixedAudioSource::options() const {
+  return cricket::AudioOptions();
+}
+// todo
+webrtc::MediaSourceInterface::SourceState MixedAudioSource::state() const {
+  return _state;
+}
+// todo
+bool MixedAudioSource::remote() const {
+  return false;
+}
+// todo
+void MixedAudioSource::RegisterObserver(webrtc::ObserverInterface* observer) {
+  _observer = observer;
+}
 
-  void MixedAudioSource::UnregisterObserver(webrtc::ObserverInterface* observer) {
-    _observer = nullptr;
-  }
-  void MixedAudioSource::AddSource(rtc::scoped_refptr<AudioSource> source) {
-    source->RegisterObserver(this);
-    _sources.push_back(source);
-  }
+// todo
+void MixedAudioSource::UnregisterObserver(webrtc::ObserverInterface* observer) {
+  _observer = nullptr;
+}
+// todo
+void MixedAudioSource::AddSource(rtc::scoped_refptr<AudioSource> source) {
+  source->RegisterObserver(this);
+  _sources.push_back(source);
+}
 
-  void MixedAudioSource::RemoveSource(rtc::scoped_refptr<AudioSource> source) {
-    source->UnregisterObserver(this);
-    for (int i = 0; i < _sources.size(); ++i) {
-      if (_sources[i] == source) {
-        _sources.erase(_sources.begin() + i);
-        break;
-      }
+// todo
+void MixedAudioSource::RemoveSource(rtc::scoped_refptr<AudioSource> source) {
+  source->UnregisterObserver(this);
+  for (int i = 0; i < _sources.size(); ++i) {
+    if (_sources[i] == source) {
+      _sources.erase(_sources.begin() + i);
+      break;
     }
   }
+}
 
-  void MixedAudioSource::OnChanged() {
-    for (int i = 0; i < _sources.size(); ++i) {
-      if (!_sources[i]->is_ended()) {
-        return;
-      }
-    }
-    _state = webrtc::MediaSourceInterface::SourceState::kEnded;
-    if (_observer) {
-      _observer->OnChanged();
+// todo
+void MixedAudioSource::OnChanged() {
+  for (int i = 0; i < _sources.size(); ++i) {
+    if (!_sources[i]->is_ended()) {
+      return;
     }
   }
+  _state = webrtc::MediaSourceInterface::SourceState::kEnded;
+  if (_observer) {
+    _observer->OnChanged();
+  }
+}

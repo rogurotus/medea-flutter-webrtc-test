@@ -351,10 +351,14 @@ class SystemModule : public SystemModuleInterface {
                          uint32_t& sampleRate);
   static ComPtr<IAudioClient> InitClient(
       DWORD process_id,
+      DWORD& reg_process_id,
       PFN_ActivateAudioInterfaceAsync activate_audio_interface_async,
       speaker_layout& speakers,
       int& format,
-      uint32_t& samples_per_sec);
+      uint32_t& samples_per_sec,
+      rtc::scoped_refptr<SystemSource> source,
+      HANDLE& ended_wait_handle
+      );
 
   bool ProcessCaptureData();
   static DWORD WINAPI CaptureThread(LPVOID param);
@@ -372,6 +376,7 @@ class SystemModule : public SystemModuleInterface {
   PFN_ActivateAudioInterfaceAsync activate_audio_interface_async = NULL;
 
   DWORD process_id = 0;
+  DWORD reg_process_id = 0;
 
   bool previouslyFailed = false;
 
@@ -385,6 +390,7 @@ class SystemModule : public SystemModuleInterface {
   WinHandle reconnectExitSignal;
   WinHandle exitSignal;
   WinHandle initSignal;
+  HANDLE ended_wait_handle = nullptr;
 
   DWORD reconnectDuration = 0;
   WinHandle reconnectSignal;

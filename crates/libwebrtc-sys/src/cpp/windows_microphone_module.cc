@@ -30,12 +30,11 @@
 #include "windows_microphone_module.h"
 // clang-format on
 
-#include <string.h>
-
 #include <comdef.h>
 #include <dmo.h>
 #include <functiondiscoverykeys_devpkey.h>
 #include <mmsystem.h>
+#include <string.h>
 #include <strsafe.h>
 #include <uuids.h>
 #include <windows.h>
@@ -246,6 +245,12 @@ int32_t MicrophoneModule::SetRecordingDevice(uint16_t index) {
     StartRecording();
   }
   return 0;
+}
+
+void MicrophoneModule::SourceEnded() {
+  if (source != nullptr) {
+    source->ended();
+  }
 }
 
 int32_t MicrophoneModule::RecordingChannels() {
@@ -460,6 +465,7 @@ DWORD MicrophoneModule::DoCaptureThread() {
         RTC_LOG(LS_ERROR) << "IAudioCaptureClient::GetBuffer returned"
                              " AUDCLNT_E_BUFFER_ERROR, hr = 0x"
                           << rtc::ToHex(hr);
+        SourceEnded();
         goto Exit;
       }
 

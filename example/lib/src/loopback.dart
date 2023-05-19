@@ -60,6 +60,7 @@ class _LoopbackState extends State<Loopback> {
   // Platform messages are asynchronous, so we initialize in an async method.
   void _makeCall() async {
     var caps = DeviceConstraints();
+    // todo
     var a = AudioConstraints();
     caps.audio.mandatory = a;
     caps.video.mandatory = DeviceVideoConstraints();

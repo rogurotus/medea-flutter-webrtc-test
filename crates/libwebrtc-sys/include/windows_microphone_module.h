@@ -37,6 +37,7 @@ class MicrophoneModule : public MicrophoneModuleInterface {
   int32_t StopRecording();
   int32_t StartRecording();
   int32_t RecordingChannels();
+  void SourceEnded();
 
   // END MicrophoneModuleInterface
 

@@ -168,12 +168,22 @@ SystemModule::~SystemModule() {
   Terminate();
 }
 
+static void OnEndedCallBack(PVOID user_data, BOOLEAN a) {
+  SystemSource* source = (SystemSource*)user_data;
+  if (source != nullptr) {
+    source->ended();
+  }
+}
+
 ComPtr<IAudioClient> SystemModule::InitClient(
     DWORD process_id,
+    DWORD& reg_process_id,
     PFN_ActivateAudioInterfaceAsync activate_audio_interface_async,
     speaker_layout& channels,
     int& format,
-    uint32_t& samples_per_sec) {
+    uint32_t& samples_per_sec,
+    rtc::scoped_refptr<SystemSource> source,
+    HANDLE& ended_wait_handle) {
   WAVEFORMATEXTENSIBLE wfextensible;
   const WAVEFORMATEX* pFormat;
   HRESULT res;
@@ -207,6 +217,17 @@ ComPtr<IAudioClient> SystemModule::InitClient(
 
   audioclientActivationParams.ProcessLoopbackParams.TargetProcessId =
       process_id;
+
+  if (process_id != reg_process_id) {
+    if (reg_process_id != 0) {
+      UnregisterWait(ended_wait_handle);
+    }
+    auto process_handle = OpenProcess(PROCESS_ALL_ACCESS, TRUE, process_id);
+    RegisterWaitForSingleObject(&ended_wait_handle, process_handle,
+                                OnEndedCallBack, source.get(), INFINITE,
+                                WT_EXECUTEONLYONCE);
+    reg_process_id = process_id;
+  }
 
   audioclientActivationParams.ProcessLoopbackParams.ProcessLoopbackMode =
       PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE;
@@ -448,8 +469,9 @@ bool SystemModule::ProcessCaptureData() {
 void SystemModule::Initialize() {
   ResetEvent(receiveSignal);
 
-  ComPtr<IAudioClient> temp_client = InitClient(
-      process_id, activate_audio_interface_async, speakers, format, sampleRate);
+  ComPtr<IAudioClient> temp_client =
+      InitClient(process_id, reg_process_id, activate_audio_interface_async,
+                 speakers, format, sampleRate, source, ended_wait_handle);
 
   ComPtr<IAudioCaptureClient> temp_capture =
       InitCapture(temp_client, receiveSignal);
@@ -553,6 +575,9 @@ int32_t SystemModule::RecordingChannels() {
 }
 
 void SystemModule::ResetSource() {
+  if (ended_wait_handle != nullptr) {
+    UnregisterWait(ended_wait_handle);
+  }
   source = nullptr;
 }
 
