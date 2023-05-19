@@ -14,7 +14,7 @@ class SystemModule : public SystemModuleInterface {
     bool Init() { return false; };
     int32_t Terminate() { return 0; };
     rtc::scoped_refptr<AudioSource> CreateSource() { return nullptr; };
-    void ResetSource() { return; };
+    void ResetSource() {};
 
     // Settings.
     void SetRecordingSource(int id) { return; };
@@ -23,7 +23,6 @@ class SystemModule : public SystemModuleInterface {
     int32_t StopRecording() { return 0; };
     int32_t StartRecording() { return 0; };
     int32_t RecordingChannels() { return 0; };
-    void ResetSource() {};
 
     // Enumerate system audio outputs.
     std::vector<AudioSourceInfo> EnumerateSystemSource() const { return std::vector<AudioSourceInfo>(); };
