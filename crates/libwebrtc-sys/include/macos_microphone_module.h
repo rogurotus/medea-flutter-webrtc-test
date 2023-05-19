@@ -31,7 +31,8 @@ class MicrophoneModule : public MicrophoneModuleInterface {
 
   // Microphone source.
   rtc::scoped_refptr<AudioSource> CreateSource() {return nullptr;}
-  void ResetSource() {}
+  void ResetSource() {};
+  void SourceEnded() {};
   int32_t StopRecording() {return 0;}
   int32_t StartRecording() {return 0;}
   int32_t RecordingChannels() {return 0;}
