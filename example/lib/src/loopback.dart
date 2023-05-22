@@ -19,6 +19,7 @@ class _LoopbackState extends State<Loopback> {
   PeerConnection? _pc1;
   PeerConnection? _pc2;
 
+  List<MediaDeviceInfo>? _mediaDevicesList;
   final _localRenderer = createVideoRenderer();
   final _remoteRenderer = createVideoRenderer();
   bool _inCalling = false;
@@ -27,12 +28,15 @@ class _LoopbackState extends State<Loopback> {
   int _volume = -1;
   bool _microIsAvailable = false;
 
+  RtpTransceiver? _audioTransceiver;
+
   @override
   void initState() {
     super.initState();
     initRenderers();
 
     () async {
+      _mediaDevicesList = await enumerateDevices();
       if (await microphoneVolumeIsAvailable()) {
         var volume = await microphoneVolume();
         setState(() {
@@ -93,6 +97,7 @@ class _LoopbackState extends State<Loopback> {
 
       var atrans = await _pc1?.addTransceiver(
           MediaKind.audio, RtpTransceiverInit(TransceiverDirection.sendOnly));
+      _audioTransceiver = atrans;
 
       var offer = await _pc1?.createOffer();
       await _pc1?.setLocalDescription(offer!);
@@ -153,6 +158,30 @@ class _LoopbackState extends State<Loopback> {
     }
   }
 
+  void _selectAudioInput(String deviceId) async {
+    var constraints = DeviceConstraints();
+    constraints.audio.mandatory = AudioConstraints();
+    constraints.audio.mandatory!.deviceId = deviceId;
+    print("selectAudioInput22");
+    try {
+      var audioTrack = await getUserMedia(constraints);
+      print("Audio Tracks count: ${audioTrack.length}");
+      for (var t in audioTrack) {
+        print("DeviceID of Track: ${t.deviceId()}");
+      }
+      await _audioTransceiver?.sender.replaceTrack(audioTrack.first);
+      print("Requested deviceId: $deviceId");
+    } catch (e) {
+      print("Exception $e");
+    }
+    // await _audioTransceiver?.sender.replaceTrack(
+    //     _tracks!.firstWhere((track) => track.deviceId() == deviceId));
+  }
+
+  void _selectAudioOutput(String deviceId) {
+    setOutputAudioId(deviceId);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -161,6 +190,24 @@ class _LoopbackState extends State<Loopback> {
             'GetUserMedia API Test. ${_inCalling ? (_microIsAvailable ? 'Micro volume: $_volume .' : 'Microphone is not available!') : ''}'),
         actions: _inCalling
             ? <Widget>[
+          PopupMenuButton<String>(
+            onSelected: _selectAudioOutput,
+            itemBuilder: (BuildContext context) {
+              if (_mediaDevicesList != null) {
+                return _mediaDevicesList!
+                    .where((device) =>
+                device.kind == MediaDeviceKind.audiooutput)
+                    .map((device) {
+                  return PopupMenuItem<String>(
+                    value: device.deviceId,
+                    child: Text(device.label),
+                  );
+                }).toList();
+              }
+              return [];
+            },
+            icon: const Icon(Icons.volume_down),
+          ),
                 IconButton(
                   icon: const Icon(Icons.remove),
                   tooltip: 'Micro lower',
@@ -173,11 +220,31 @@ class _LoopbackState extends State<Loopback> {
                         }
                       : null,
                 ),
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  tooltip: 'Micro louder',
+                PopupMenuButton<String>(
+                  onSelected: _selectAudioInput,
+                  itemBuilder: (BuildContext context) {
+                    if (_mediaDevicesList != null) {
+                      return _mediaDevicesList!
+                          .where((device) =>
+                      device.kind == MediaDeviceKind.audioinput)
+                          .map((device) {
+                        return PopupMenuItem<String>(
+                          value: device.deviceId,
+                          child: Text(device.label),
+                        );
+                      }).toList();
+                    }
+                    return [];
+                  },
+                  icon: const Icon(Icons.mic),
+                ),
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: 'Micro louder',
                   onPressed: _microIsAvailable
                       ? () async {
+                          print("Micro louder");
+                          await _audioTransceiver?.getDirection();
                           setState(() {
                             _volume = _volume <= 90 ? _volume + 10 : 100;
                           });
@@ -189,7 +256,7 @@ class _LoopbackState extends State<Loopback> {
                   icon:
                       _mic ? const Icon(Icons.mic_off) : const Icon(Icons.mic),
                   tooltip: _mic ? 'Disable audio rec' : 'Enable audio rec',
-                  onPressed: () {
+                  onPressed: () async {
                     setState(() {
                       _mic = !_mic;
                     });

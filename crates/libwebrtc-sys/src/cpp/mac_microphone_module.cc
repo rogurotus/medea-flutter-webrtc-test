@@ -8,6 +8,7 @@
 #include "modules/third_party/portaudio/pa_ringbuffer.h"
 #include "rtc_base/arraysize.h"
 #include <ApplicationServices/ApplicationServices.h>
+#include <CoreAudio/CoreAudio.h>
 
 #define WEBRTC_CA_RETURN_ON_ERR(expr)                                \
   do {                                                               \
@@ -328,11 +329,12 @@ OSStatus MicrophoneModule::SetDesiredPlayoutFormat() {
   // Our preferred format to work with.
   _outDesiredFormat.mSampleRate = webrtc::N_PLAY_SAMPLES_PER_SEC;
   _outDesiredFormat.mChannelsPerFrame = _playChannels;
-  if (_ptrAudioBuffer) {
-    // Update audio buffer with the selected parameters.
-    _ptrAudioBuffer->SetPlayoutSampleRate(webrtc::N_PLAY_SAMPLES_PER_SEC);
-    _ptrAudioBuffer->SetPlayoutChannels((uint8_t)_playChannels);
-  }
+  // TODO(evdokimovs): Reread, because it can be needed
+//  if (_ptrAudioBuffer) {
+//    // Update audio buffer with the selected parameters.
+//    _ptrAudioBuffer->SetPlayoutSampleRate(webrtc::N_PLAY_SAMPLES_PER_SEC);
+//    _ptrAudioBuffer->SetPlayoutChannels((uint8_t)_playChannels);
+//  }
   _renderDelayOffsetSamples =
       _renderBufSizeSamples - webrtc::N_BUFFERS_OUT * webrtc::ENGINE_PLAY_BUF_SIZE_IN_SAMPLES *
                                   _outDesiredFormat.mChannelsPerFrame;
@@ -438,6 +440,10 @@ bool MicrophoneModule::CaptureWorkerThread() {
       return false;
     }
   }
+  if (source != nullptr) {
+    source->UpdateFrame(recordBuffer, size,
+                        webrtc::N_REC_SAMPLES_PER_SEC, _inDesiredFormat.mChannelsPerFrame);
+  }
   // TODO(xians): what if the returned size is incorrect?
   if (size == webrtc::ENGINE_REC_BUF_SIZE_IN_SAMPLES) {
     int32_t msecOnPlaySide;
@@ -448,18 +454,20 @@ bool MicrophoneModule::CaptureWorkerThread() {
         static_cast<int32_t>(1e-3 * (renderDelayUs + _renderLatencyUs) + 0.5);
     msecOnRecordSide =
         static_cast<int32_t>(1e-3 * (captureDelayUs + _captureLatencyUs) + 0.5);
-    if (!_ptrAudioBuffer) {
-      RTC_LOG(LS_ERROR) << "capture AudioBuffer is invalid";
-      return false;
-    }
+    // TODO(evdokimovs): Reread, because it can be needed
+//    if (!_ptrAudioBuffer) {
+//      RTC_LOG(LS_ERROR) << "##CaptureThread 13";
+//      RTC_LOG(LS_ERROR) << "capture AudioBuffer is invalid";
+//      return false;
+//    }
     // store the recorded buffer (no action will be taken if the
     // #recorded samples is not a full buffer)
-    _ptrAudioBuffer->SetRecordedBuffer((int8_t*)&recordBuffer, (uint32_t)size);
-    _ptrAudioBuffer->SetVQEData(msecOnPlaySide, msecOnRecordSide);
-    _ptrAudioBuffer->SetTypingStatus(KeyPressed());
+//    _ptrAudioBuffer->SetRecordedBuffer((int8_t*)&recordBuffer, (uint32_t)size);
+//    _ptrAudioBuffer->SetVQEData(msecOnPlaySide, msecOnRecordSide);
+//    _ptrAudioBuffer->SetTypingStatus(KeyPressed());
     // deliver recorded samples at specified sample rate, mic level etc.
     // to the observer using callback
-    _ptrAudioBuffer->DeliverRecordedData();
+//    _ptrAudioBuffer->DeliverRecordedData();
   }
   return true;
 }
@@ -545,11 +553,12 @@ int32_t MicrophoneModule::InitRecording() {
     _recChannels = 1;
     RTC_LOG(LS_VERBOSE) << "Stereo recording unavailable on this device";
   }
-  if (_ptrAudioBuffer) {
-    // Update audio buffer with the selected parameters
-    _ptrAudioBuffer->SetRecordingSampleRate(webrtc::N_REC_SAMPLES_PER_SEC);
-    _ptrAudioBuffer->SetRecordingChannels((uint8_t)_recChannels);
-  }
+  // TODO(evdokimovs): Reread, because it can be needed
+//  if (_ptrAudioBuffer) {
+//    // Update audio buffer with the selected parameters
+//    _ptrAudioBuffer->SetRecordingSampleRate(webrtc::N_REC_SAMPLES_PER_SEC);
+//    _ptrAudioBuffer->SetRecordingChannels((uint8_t)_recChannels);
+//  }
   _inDesiredFormat.mSampleRate = webrtc::N_REC_SAMPLES_PER_SEC;
   _inDesiredFormat.mBytesPerPacket =
       _inDesiredFormat.mChannelsPerFrame * sizeof(SInt16);
@@ -857,11 +866,12 @@ int32_t MicrophoneModule::HandleStreamFormatChange(
                       << streamFormat.mChannelsPerFrame << ")";
     return -1;
   }
-  if (_ptrAudioBuffer && streamFormat.mChannelsPerFrame != _recChannels) {
-    RTC_LOG(LS_ERROR) << "Changing channels not supported (mChannelsPerFrame = "
-                      << streamFormat.mChannelsPerFrame << ")";
-    return -1;
-  }
+  // TODO(evdokimovs): Reread, because it can be needed
+  //  if (_ptrAudioBuffer && streamFormat.mChannelsPerFrame != _recChannels) {
+  //    RTC_LOG(LS_ERROR) << "Changing channels not supported (mChannelsPerFrame = "
+  //                      << streamFormat.mChannelsPerFrame << ")";
+  //    return -1;
+  //  }
   RTC_LOG(LS_VERBOSE) << "Stream format:";
   RTC_LOG(LS_VERBOSE) << "mSampleRate = " << streamFormat.mSampleRate
                       << ", mChannelsPerFrame = "
@@ -1022,6 +1032,23 @@ OSStatus MicrophoneModule::objectListenerProc(
 /// ============================== PUBLIC METHODS ==============================
 /// ============================================================================
 
+OSStatus MyAudioDevicePropertyChangedHandler(
+    AudioObjectID inObjectID,
+    UInt32 inNumberAddresses,
+    const AudioObjectPropertyAddress *inAddresses,
+    void *inClientData) {
+  MicrophoneModule* microphoneModule = reinterpret_cast<MicrophoneModule*>(inClientData);
+  RTC_LOG(LS_ERROR) << "Stream property was changed: ";
+  for (UInt32 i = 0; i < inNumberAddresses; ++i) {
+    if (inAddresses[i].mSelector == kAudioDevicePropertyStreams) {
+      // Handle property change here
+
+//      std::cout << "Audio device channel count changed" << std::endl;
+      RTC_LOG(LS_ERROR) << "Stream property was changed: ";
+    }
+  }
+}
+
 MicrophoneModule::MicrophoneModule()
     : _ptrAudioBuffer(NULL),
       _mixerManager(),
@@ -1058,6 +1085,43 @@ MicrophoneModule::MicrophoneModule()
       _captureBufSizeSamples(0),
       _renderBufSizeSamples(0),
       prev_key_state_() {
+
+//  dispatch_queue_t runLoopQueue = dispatch_queue_create("com.example.runloop", DISPATCH_QUEUE_SERIAL);
+//  dispatch_async(runLoopQueue, ^{
+//    auto propertyAddress = AudioObjectPropertyAddress{
+//        .mSelector = kAudioDevicePropertyStreamFormat,
+//        .mScope = kAudioObjectPropertyScopeOutput,
+//        .mElement = kAudioObjectPropertyElementMaster,
+//    };
+//    AudioDeviceID recDevices[MaxNumberDevices];
+//    uint32_t nDevices = GetNumberDevices(kAudioDevicePropertyScopeOutput,
+//                                         recDevices, MaxNumberDevices);
+//    for (const auto& device : recDevices) {
+//      OSStatus result = AudioObjectAddPropertyListener(device,
+//                                                       &propertyAddress,
+//                                                       MyAudioDevicePropertyChangedHandler,
+//                                                       this);
+//    }
+//    CFRunLoopRun();
+//  });
+//  auto propertyAddress = AudioObjectPropertyAddress{
+//      .mSelector = kAudioHardwarePropertyDevices,
+//      .mScope = kAudioObjectPropertyScopeGlobal,
+//      .mElement = kAudioObjectPropertyElementMaster,
+//  };
+//
+//  AudioObjectID defaultOutputDeviceID = AudioObjectID(kAudioObjectSystemObject);
+//  OSStatus result = AudioObjectAddPropertyListener(defaultOutputDeviceID,
+//                                                   &propertyAddress,
+//                                                   MyAudioDevicePropertyChangedHandler,
+//                                                   nullptr);
+
+//  AudioObjectAddPropertyListener(
+//      AudioObjectID(kAudioObjectSystemObject),
+//      &AudioOutputDevicePropertyAddress,
+//      PropertyChangedCallback,
+//      &_defaultAudioOutputChanged);
+
   RTC_DLOG(LS_INFO) << __FUNCTION__ << " created";
   memset(_renderConvertData, 0, sizeof(_renderConvertData));
   memset(&_outStreamFormat, 0, sizeof(AudioStreamBasicDescription));
@@ -1072,7 +1136,7 @@ MicrophoneModule::~MicrophoneModule() {
     Terminate();
   }
   RTC_DCHECK(capture_worker_thread_.empty());
-  RTC_DCHECK(render_worker_thread_.empty());
+//  RTC_DCHECK(render_worker_thread_.empty());
   if (_paRenderBuffer) {
     delete _paRenderBuffer;
     _paRenderBuffer = NULL;
@@ -1335,12 +1399,18 @@ int32_t MicrophoneModule::MinMicrophoneVolume(uint32_t* minVolume) const {
 
 // Settings.
 int32_t MicrophoneModule::SetRecordingDevice(uint16_t index) {
+  RTC_LOG(LS_ERROR) << "SetRecordingDevice 1";
+  auto start = _recIsInitialized;
+  StopRecording();
   if (_recIsInitialized) {
+    RTC_LOG(LS_ERROR) << "SetRecordingDevice 2";
     return -1;
   }
+  RTC_LOG(LS_ERROR) << "SetRecordingDevice 3";
   AudioDeviceID recDevices[MaxNumberDevices];
   uint32_t nDevices = GetNumberDevices(kAudioDevicePropertyScopeInput,
                                        recDevices, MaxNumberDevices);
+  RTC_LOG(LS_ERROR) << "SetRecordingDevice 4";
   RTC_LOG(LS_VERBOSE) << "number of available waveform-audio input devices is "
                       << nDevices;
   if (index > (nDevices - 1)) {
@@ -1350,7 +1420,30 @@ int32_t MicrophoneModule::SetRecordingDevice(uint16_t index) {
   }
   _inputDeviceIndex = index;
   _inputDeviceIsSpecified = true;
+
+  if (start) {
+    InitRecording();
+    StartRecording();
+  }
+
   return 0;
+}
+
+int MicrophoneSource::sources_num = 0;
+MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
+  this->module = module;
+  if (sources_num == 0) {
+    module->StartRecording();
+  }
+  ++sources_num;
+}
+
+MicrophoneSource::~MicrophoneSource() {
+  --sources_num;
+  if (sources_num == 0) {
+    module->StopRecording();
+    module->ResetSource();
+  }
 }
 
 rtc::scoped_refptr<AudioSource> MicrophoneModule::CreateSource() {

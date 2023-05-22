@@ -23,6 +23,7 @@ use std::{
         Arc,
     },
 };
+use std::sync::Mutex;
 
 use dashmap::DashMap;
 use libwebrtc_sys as sys;
@@ -66,6 +67,9 @@ struct Webrtc {
     audio_device_module: AudioDeviceModule,
     worker_thread: sys::Thread,
     signaling_thread: sys::Thread,
+
+    stereo_enabled: Mutex<bool>,
+    current_playout_device: String,
 
     /// [`ThreadPool`] used to offload blocking or CPU-intensive tasks, so they
     /// won't block Flutter WebRTC threads.
@@ -113,6 +117,8 @@ impl Webrtc {
             video_device_info: VideoDeviceInfo::new()?,
             peer_connection_factory,
             video_sources: HashMap::new(),
+            stereo_enabled: Mutex::new(false),
+            current_playout_device: "".to_string(),
             video_tracks: Arc::new(DashMap::new()),
             audio_source: None,
             audio_tracks: Arc::new(DashMap::new()),

@@ -181,8 +181,11 @@ void CustomAudioDeviceModule::RecordProcess() {
           }
 
           mixer->Mix(audio_recorder->RecordingChannels(), &frame);
-          cb->SetRecordingChannels(frame.num_channels());
-          cb->SetRecordingSampleRate(frame.sample_rate_hz());
+//          if (firstRun) {
+//            cb->SetRecordingChannels(frame.num_channels());
+//            cb->SetRecordingSampleRate(frame.sample_rate_hz());
+//            firstRun = false;
+//          }
           cb->SetRecordedBuffer(frame.data(), frame.sample_rate_hz() / 100);
           cb->DeliverRecordedData();
         }

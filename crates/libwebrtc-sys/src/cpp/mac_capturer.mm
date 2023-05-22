@@ -3,6 +3,7 @@
 
 #include <rtc_base/logging.h>
 
+#import <AVFAudio/AVFAudio.h>
 #import <sdk/objc/base/RTCVideoCapturer.h>
 #import <sdk/objc/components/capturer/RTCCameraVideoCapturer.h>
 #import <sdk/objc/native/api/video_capturer.h>

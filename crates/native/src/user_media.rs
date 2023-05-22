@@ -299,8 +299,15 @@ impl Webrtc {
         if Some(&device_id)
             != self.audio_device_module.current_device_id.as_ref()
         {
-            self.audio_device_module
-                .set_recording_device(device_id, device_index)?;
+            let adm = &mut self.audio_device_module;
+            // adm.stop_playout()?;
+            adm.set_recording_device(device_id, device_index)?;
+            // adm.init_playout()?;
+            // adm.start_playout()?;
+            // self.set_audio_playout_device(self.current_playout_device.clone())?;
+            // adm.stereo_playout_is_available(false)?;
+            // adm.init_playout()?;
+            // adm.start_playout()?;
         }
 
         let src = if let Some((src, _)) = self.audio_source.as_ref() {

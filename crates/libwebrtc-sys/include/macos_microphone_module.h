@@ -33,6 +33,7 @@ class MicrophoneModule : public MicrophoneModuleInterface {
 
   // Settings.
   int32_t SetRecordingDevice(uint16_t index);
+  int32_t StartPlayout();
 
   // Microphone source.
   rtc::scoped_refptr<AudioSource> CreateSource();
@@ -146,7 +147,7 @@ class MicrophoneModule : public MicrophoneModuleInterface {
   // Only valid/running between calls to StartRecording and StopRecording.
   rtc::PlatformThread capture_worker_thread_;
   // Only valid/running between calls to StartPlayout and StopPlayout.
-  rtc::PlatformThread render_worker_thread_;
+//  rtc::PlatformThread render_worker_thread_;
   webrtc::AudioMixerManagerMac _mixerManager;
   uint16_t _inputDeviceIndex;
   uint16_t _outputDeviceIndex;

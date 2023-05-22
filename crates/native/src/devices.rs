@@ -274,6 +274,8 @@ impl Webrtc {
         &mut self,
         device_id: String,
     ) -> anyhow::Result<()> {
+        log::error!("set_audio_playout_device");
+        self.current_playout_device = device_id.clone();
         let device_id = AudioDeviceId::from(device_id);
         let index = self.get_index_of_audio_playout_device(&device_id)?;
 

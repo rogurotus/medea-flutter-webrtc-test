@@ -1,4 +1,5 @@
 #include "custom_audio.h"
+#include "rtc_base/logging.h"
 
 // Overwrites `audio_frame`. The data_ field is overwritten with
 // 10 ms of new audio (either 1 or 2 interleaved channels) at
@@ -47,5 +48,7 @@ int AudioSource::Ssrc() const {
 // A way for this source to say that GetAudioFrameWithInfo called
 // with this sample rate or higher will not cause quality loss.
 int AudioSource::PreferredSampleRate() const {
+  // TODO(evdokimovs): Returns 0 when no frame
+  return 48000;
   return frame_.sample_rate_hz();
 };

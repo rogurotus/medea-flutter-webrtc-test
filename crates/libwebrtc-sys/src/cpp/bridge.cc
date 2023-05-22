@@ -175,9 +175,155 @@ std::unique_ptr<CustomAudioDeviceModule> create_custom_audio_device_module(
   return std::make_unique<CustomAudioDeviceModule>(adm);
 }
 
+#include <chrono>
+#include <thread>
+
+OSStatus MyAudioDevicePropertyChangedHandler(
+    AudioObjectID inObjectID,
+    UInt32 inNumberAddresses,
+    const AudioObjectPropertyAddress *inAddresses,
+    void *inClientData) {
+  RTC_LOG(LS_ERROR) << "Stream property was changed 1: ";
+  dispatch_queue_t runLoopQueue = dispatch_queue_create("com.example.stop_playout", DISPATCH_QUEUE_SERIAL);
+  dispatch_async(runLoopQueue, ^{
+    webrtc::AudioDeviceModule* adm = reinterpret_cast<webrtc::AudioDeviceModule*>(inClientData);
+    auto stopPlayoutRes = adm->StopPlayout();
+    RTC_LOG(LS_ERROR) << "StopPlayout is executed";
+    if (stopPlayoutRes != 0) {
+      RTC_LOG(LS_ERROR) << "StopPlayout is not 0: " << stopPlayoutRes;
+    }
+    auto initPlayoutRes = adm->InitPlayout();
+    RTC_LOG(LS_ERROR) << "InitPlayout is executed";
+    if (initPlayoutRes != 0) {
+      RTC_LOG(LS_ERROR) << "InitPlayout is not 0: " << initPlayoutRes;
+    }
+    auto startPlayoutRes = adm->StartPlayout();
+    if (startPlayoutRes != 0) {
+      RTC_LOG(LS_ERROR) << "StartPlayout is not 0: " << startPlayoutRes;
+    }
+  });
+//  for (UInt32 i = 0; i < inNumberAddresses; ++i) {
+//    if (inAddresses[i].mSelector == kAudioDevicePropertyStreams) {
+      RTC_LOG(LS_ERROR) << "Stream property was changed 2: ";
+      RTC_LOG(LS_ERROR) << "Executing StopPlayout";
+      return 0;
+//    }
+//  }
+}
+
+int32_t GetNumberDevices(const AudioObjectPropertyScope scope,
+                                           AudioDeviceID scopedDeviceIds[],
+                                           const uint32_t deviceListLength) {
+  OSStatus err = noErr;
+  AudioObjectPropertyAddress propertyAddress = {
+      kAudioHardwarePropertyDevices, kAudioObjectPropertyScopeGlobal,
+      kAudioObjectPropertyElementMaster};
+  UInt32 size = 0;
+  AudioObjectGetPropertyDataSize(
+      kAudioObjectSystemObject, &propertyAddress, 0, NULL, &size);
+  if (size == 0) {
+    RTC_LOG(LS_WARNING) << "No devices";
+    return 0;
+  }
+  UInt32 numberDevices = size / sizeof(AudioDeviceID);
+  const auto deviceIds = std::make_unique<AudioDeviceID[]>(numberDevices);
+  AudioBufferList* bufferList = NULL;
+  UInt32 numberScopedDevices = 0;
+  // First check if there is a default device and list it
+  UInt32 hardwareProperty = 0;
+  if (scope == kAudioDevicePropertyScopeOutput) {
+    hardwareProperty = kAudioHardwarePropertyDefaultOutputDevice;
+  } else {
+    hardwareProperty = kAudioHardwarePropertyDefaultInputDevice;
+  }
+  AudioObjectPropertyAddress propertyAddressDefault = {
+      hardwareProperty, kAudioObjectPropertyScopeGlobal,
+      kAudioObjectPropertyElementMaster};
+  AudioDeviceID usedID;
+  UInt32 uintSize = sizeof(UInt32);
+  AudioObjectGetPropertyData(kAudioObjectSystemObject,
+                                                     &propertyAddressDefault, 0,
+                                                     NULL, &uintSize, &usedID);
+  if (usedID != kAudioDeviceUnknown) {
+    scopedDeviceIds[numberScopedDevices] = usedID;
+    numberScopedDevices++;
+  } else {
+    RTC_LOG(LS_WARNING) << "GetNumberDevices(): Default device unknown";
+  }
+  // Then list the rest of the devices
+  bool listOK = true;
+  AudioObjectGetPropertyData(kAudioObjectSystemObject,
+                                               &propertyAddress, 0, NULL, &size,
+                                               deviceIds.get());
+  if (err != noErr) {
+    listOK = false;
+  } else {
+    propertyAddress.mSelector = kAudioDevicePropertyStreamConfiguration;
+    propertyAddress.mScope = scope;
+    propertyAddress.mElement = 0;
+    for (UInt32 i = 0; i < numberDevices; i++) {
+      // Check for input channels
+      AudioObjectGetPropertyDataSize(
+          deviceIds[i], &propertyAddress, 0, NULL, &size);
+      if (err == kAudioHardwareBadDeviceError) {
+        // This device doesn't actually exist; continue iterating.
+        continue;
+      } else if (err != noErr) {
+        listOK = false;
+        break;
+      }
+      bufferList = (AudioBufferList*)malloc(size);
+      AudioObjectGetPropertyData(
+          deviceIds[i], &propertyAddress, 0, NULL, &size, bufferList);
+      if (err != noErr) {
+        listOK = false;
+        break;
+      }
+      if (bufferList->mNumberBuffers > 0) {
+        if (numberScopedDevices >= deviceListLength) {
+          RTC_LOG(LS_ERROR) << "Device list is not long enough";
+          listOK = false;
+          break;
+        }
+        scopedDeviceIds[numberScopedDevices] = deviceIds[i];
+        numberScopedDevices++;
+      }
+      free(bufferList);
+      bufferList = NULL;
+    }  // for
+  }
+  if (!listOK) {
+    if (bufferList) {
+      free(bufferList);
+      bufferList = NULL;
+    }
+    return -1;
+  }
+  return numberScopedDevices;
+}
+
 // Calls `AudioDeviceModule->Init()`.
 int32_t init_audio_device_module(const AudioDeviceModule& audio_device_module) {
-  return audio_device_module->Init();
+  auto res = audio_device_module->Init();
+  dispatch_queue_t runLoopQueue = dispatch_queue_create("com.example.runloop", DISPATCH_QUEUE_SERIAL);
+  dispatch_async(runLoopQueue, ^{
+    auto propertyAddress = AudioObjectPropertyAddress{
+        .mSelector = kAudioDevicePropertyStreamFormat,
+        .mScope = kAudioObjectPropertyScopeOutput,
+        .mElement = kAudioObjectPropertyElementMaster,
+    };
+    AudioDeviceID recDevices[64];
+    uint32_t nDevices = GetNumberDevices(kAudioDevicePropertyScopeOutput,
+                                         recDevices, 64);
+    for (const auto& device : recDevices) {
+      OSStatus result = AudioObjectAddPropertyListener(device,
+                                                       &propertyAddress,
+                                                       MyAudioDevicePropertyChangedHandler,
+                                                       audio_device_module.get());
+    }
+    CFRunLoopRun();
+  });
+  return res;
 }
 
 // Calls `AudioDeviceModule->InitMicrophone()`.
@@ -278,11 +424,36 @@ int32_t stop_playout(const AudioDeviceModule& audio_device_module) {
 // Sets stereo availability of the specified playout device.
 int32_t stereo_playout_is_available(const AudioDeviceModule& audio_device_module,
                                     bool available) {
-  return audio_device_module->StereoPlayoutIsAvailable(&available);
+  return audio_device_module->SetStereoPlayout(false);
 }
 
 // Initializes the specified audio playout device.
 int32_t init_playout(const AudioDeviceModule& audio_device_module) {
+//  RTC_LOG(LS_ERROR) << "init_playout 1";
+//  auto AudioDeviceListPropertyAddress = AudioObjectPropertyAddress{
+//      .mSelector = kAudioHardwarePropertyDevices,
+//      .mScope = kAudioObjectPropertyScopeGlobal,
+//      .mElement = kAudioObjectPropertyElementMaster,
+//  };
+//  auto AudioOutputDevicePropertyAddress = AudioObjectPropertyAddress{
+//      .mSelector = kAudioHardwarePropertyDefaultOutputDevice,
+//      .mScope = kAudioObjectPropertyScopeGlobal,
+//      .mElement = kAudioObjectPropertyElementMaster,
+//  };
+//
+//  RTC_LOG(LS_ERROR) << "init_playout 2";
+//  auto first_res = AudioObjectAddPropertyListener(
+//      AudioObjectID(kAudioObjectSystemObject),
+//      &AudioDeviceListPropertyAddress,
+//      &refresh,
+//      nullptr);
+//  RTC_LOG(LS_ERROR) << "Result of adding first callback: " << first_res;
+//
+//
+//  AudioObjectAddPropertyListener(AudioObjectID(kAudioObjectSystemObject), &propertyAddress, &refresh, nullptr);
+//
+//
+//  RTC_LOG(LS_ERROR) << "init_playout 3";
   return audio_device_module->InitPlayout();
 }
 

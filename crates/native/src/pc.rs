@@ -412,6 +412,10 @@ impl Webrtc {
         peer_id: u64,
         transceiver_index: u32,
     ) -> anyhow::Result<sys::RtpTransceiverDirection> {
+        let mut stereo_enabled = self.stereo_enabled.lock().unwrap();
+        *stereo_enabled = !*stereo_enabled;
+        log::debug!("Stereo is enabled: {}", stereo_enabled);
+        self.audio_device_module.stereo_playout_is_available(*stereo_enabled).ok();
         let peer_id = PeerConnectionId::from(peer_id);
         let peer = self.peer_connections.get(&peer_id).ok_or_else(|| {
             anyhow!("`PeerConnection` with ID `{peer_id}` doesn't exist")
@@ -557,7 +561,13 @@ impl Webrtc {
                         .or_default()
                         .insert(transceiver_index);
 
-                    sender.replace_audio_track(Some(track.as_ref()))
+                    // let adm = &self.audio_device_module;
+                    sender.replace_audio_track(Some(track.as_ref()))?;
+                    // std::thread::sleep(std::time::Duration::from_secs(5));
+                    // adm.stop_playout()?;
+                    // adm.init_playout()?;
+                    // adm.start_playout()?;
+                    Ok(())
                 }
                 _ => unreachable!(),
             }
