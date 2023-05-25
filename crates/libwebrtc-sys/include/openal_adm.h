@@ -11,6 +11,7 @@
 #include <al.h>
 #include <alc.h>
 #include <atomic>
+#include "rtc_base/platform_thread.h"
 
 namespace crl {
 

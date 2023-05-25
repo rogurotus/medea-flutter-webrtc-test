@@ -80,7 +80,7 @@ ALCGETINTEGER64VSOFT alcGetInteger64vSOFT/* = nullptr*/;
 template <typename Callback>
 void EnumerateDevices(ALCenum specifier, Callback &&callback) {
   auto devices = alcGetString(nullptr, specifier);
-  Assert(devices != nullptr);
+//  Assert(devices != nullptr);
   while (*devices != 0) {
     callback(devices);
     while (*devices != 0) {
@@ -161,13 +161,13 @@ void SetStringToArray(const std::string &string, char *array, int size) {
 } // namespace
 
 struct AudioDeviceOpenAL::Data {
-  Data() : timer(&thread) {
-    context.moveToThread(&thread);
+  Data() {
+//    context.moveToThread(&thread);
   }
 
-  QThread thread;
+//  QThread thread;
   QObject context;
-  base::Timer timer;
+//  base::Timer timer;
 
   QByteArray recordedSamples;
   int emptyRecordingData = 0;
@@ -186,7 +186,7 @@ struct AudioDeviceOpenAL::Data {
 
 template <typename Callback>
 std::invoke_result_t<Callback> AudioDeviceOpenAL::sync(Callback &&callback) {
-  Expects(_data != nullptr);
+//  Expects(_data != nullptr);
 
   using Result = std::invoke_result_t<Callback>;
 
@@ -272,7 +272,7 @@ int32_t AudioDeviceOpenAL::Terminate() {
   StopPlayout();
   _initialized = false;
 
-  Ensures(!_data);
+//  Ensures(!_data);
   return 0;
 }
 
@@ -451,26 +451,30 @@ int32_t AudioDeviceOpenAL::RecordingDeviceName(
     uint16_t index,
     char name[webrtc::kAdmMaxDeviceNameSize],
     char guid[webrtc::kAdmMaxGuidSize]) {
-  return DeviceName(ALC_CAPTURE_DEVICE_SPECIFIER, index, name, guid);
+  return 0;
+//  return DeviceName(ALC_CAPTURE_DEVICE_SPECIFIER, index, name, guid);
 }
 
 int16_t AudioDeviceOpenAL::RecordingDevices() {
-  return DevicesCount(ALC_CAPTURE_DEVICE_SPECIFIER);
+//  return DevicesCount(ALC_CAPTURE_DEVICE_SPECIFIER);
+  return 0;
 }
 
 int32_t AudioDeviceOpenAL::SetRecordingDevice(uint16_t index) {
-  const auto result = DeviceName(
-      ALC_CAPTURE_DEVICE_SPECIFIER,
-      index,
-      nullptr,
-      &_recordingDeviceId);
-  return result ? result : restartRecording();
+  return 0;
+//  const auto result = DeviceName(
+//      ALC_CAPTURE_DEVICE_SPECIFIER,
+//      index,
+//      nullptr,
+//      &_recordingDeviceId);
+//  return result ? result : restartRecording();
 }
 
 int32_t AudioDeviceOpenAL::SetRecordingDevice(WindowsDeviceType /*device*/) {
-  _recordingDeviceId = ComputeDefaultDeviceId(
-      ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
-  return _recordingDeviceId.empty() ? -1 : restartRecording();
+  return 0;
+//  _recordingDeviceId = ComputeDefaultDeviceId(
+//      ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
+//  return _recordingDeviceId.empty() ? -1 : restartRecording();
 }
 
 int32_t AudioDeviceOpenAL::PlayoutIsAvailable(bool *available) {
@@ -481,9 +485,9 @@ int32_t AudioDeviceOpenAL::PlayoutIsAvailable(bool *available) {
 }
 
 int32_t AudioDeviceOpenAL::RecordingIsAvailable(bool *available) {
-  if (available) {
-    *available = true;
-  }
+//  if (available) {
+//    *available = true;
+//  }
   return 0;
 }
 
@@ -494,7 +498,16 @@ int32_t AudioDeviceOpenAL::InitPlayout() {
     return 0;
   }
   _playoutInitialized = true;
-  ensureThreadStarted();
+
+  _ptrThreadPlay = rtc::PlatformThread::SpawnJoinable(
+      [this] {
+        while (processPlayoutData()) {
+        }
+      },
+      "webrtc_audio_module_play_thread",
+      rtc::ThreadAttributes().SetPriority(rtc::ThreadPriority::kRealtime));
+
+//  ensureThreadStarted();
   openPlayoutDevice();
   return 0;
 }
@@ -506,7 +519,7 @@ void AudioDeviceOpenAL::openRecordingDevice() {
   _recordingDevice = alcCaptureOpenDevice(
       _recordingDeviceId.empty() ? nullptr : _recordingDeviceId.c_str(),
       kRecordingFrequency,
-      AL_FORMAT_MONO16,
+      AL_FORMAT_MONO16processPlayoutData,
       kRecordingFrequency / 4);
   if (!_recordingDevice) {
     RTC_LOG(LS_ERROR)
@@ -593,39 +606,39 @@ void AudioDeviceOpenAL::handleEvent(
 }
 
 int32_t AudioDeviceOpenAL::InitRecording() {
-  if (!_initialized) {
-    return -1;
-  } else if (_recordingInitialized) {
-    return 0;
-  }
-  _recordingInitialized = true;
-  ensureThreadStarted();
-  openRecordingDevice();
-  _audioDeviceBuffer.SetRecordingSampleRate(kRecordingFrequency);
-  _audioDeviceBuffer.SetRecordingChannels(kRecordingChannels);
+//  if (!_initialized) {
+//    return -1;
+//  } else if (_recordingInitialized) {
+//    return 0;
+//  }
+//  _recordingInitialized = true;
+//  ensureThreadStarted();
+//  openRecordingDevice();
+//  _audioDeviceBuffer.SetRecordingSampleRate(kRecordingFrequency);
+//  _audioDeviceBuffer.SetRecordingChannels(kRecordingChannels);
   return 0;
 }
 
 void AudioDeviceOpenAL::ensureThreadStarted() {
-  if (_data) {
-    return;
-  }
-  _thread = rtc::Thread::Current();
-  if (_thread && !_thread->IsOwned()) {
-    _thread->UnwrapCurrent();
-    _thread = nullptr;
-  }
-  //	Assert(_thread != nullptr);
-  //	Assert(_thread->IsOwned());
-
-  _data = std::make_unique<Data>();
-  _data->timer.setCallback([=] { processData(); });
-  _data->thread.setObjectName("Webrtc OpenAL Thread");
-  _data->thread.start(QThread::TimeCriticalPriority);
+//  if (_data) {
+//    return;
+//  }
+//  _thread = rtc::Thread::Current();
+//  if (_thread && !_thread->IsOwned()) {
+//    _thread->UnwrapCurrent();
+//    _thread = nullptr;
+//  }
+//  //	Assert(_thread != nullptr);
+//  //	Assert(_thread->IsOwned());
+//
+//  _data = std::make_unique<Data>();
+//  _data->timer.setCallback([=] { processData(); });
+//  _data->thread.setObjectName("Webrtc OpenAL Thread");
+//  _data->thread.start(QThread::TimeCriticalPriority);
 }
 
 void AudioDeviceOpenAL::processData() {
-  Expects(_data != nullptr);
+//  Expects(_data != nullptr);
 
   if (_data->playing && !_playoutFailed) {
     processPlayoutData();
@@ -684,7 +697,7 @@ void AudioDeviceOpenAL::processRecordingData() {
 }
 
 bool AudioDeviceOpenAL::clearProcessedBuffer() {
-  Expects(_data != nullptr);
+//  Expects(_data != nullptr);
 
   auto processed = ALint(0);
   alGetSourcei(_data->source, AL_BUFFERS_PROCESSED, &processed);
@@ -788,7 +801,7 @@ crl::time AudioDeviceOpenAL::countExactQueuedMsForLatency(
 }
 
 void AudioDeviceOpenAL::processPlayoutData() {
-  Expects(_data != nullptr);
+//  Expects(_data != nullptr);
 
   const auto playing = [&] {
     auto state = ALint(AL_INITIAL);
@@ -818,7 +831,7 @@ void AudioDeviceOpenAL::processPlayoutData() {
     //RTC_LOG(LS_ERROR) << "PLAYOUT LATENCY: " << _playoutLatency << "ms";
 
     const auto i = ranges::find(_data->queuedBuffers, false);
-    Assert(i != end(_data->queuedBuffers));
+//    Assert(i != end(_data->queuedBuffers));
     const auto index = int(i - begin(_data->queuedBuffers));
     alBufferData(
         _data->buffers[index],
@@ -895,7 +908,7 @@ int32_t AudioDeviceOpenAL::StartRecording() {
 }
 
 void AudioDeviceOpenAL::startCaptureOnThread() {
-  Expects(_data != nullptr);
+//  Expects(_data != nullptr);
 
   sync([&] {
     _data->recording = true;
@@ -907,9 +920,9 @@ void AudioDeviceOpenAL::startCaptureOnThread() {
       _recordingFailed = true;
       return;
     }
-    if (!_data->timer.isActive()) {
-      _data->timer.callEach(kProcessInterval);
-    }
+//    if (!_data->timer.isActive()) {
+//      _data->timer.callEach(kProcessInterval);
+//    }
   });
   if (_recordingFailed) {
     closeRecordingDevice();
@@ -917,7 +930,7 @@ void AudioDeviceOpenAL::startCaptureOnThread() {
 }
 
 void AudioDeviceOpenAL::stopCaptureOnThread() {
-  Expects(_data != nullptr);
+//  Expects(_data != nullptr);
 
   if (!_data->recording) {
     return;
@@ -928,7 +941,7 @@ void AudioDeviceOpenAL::stopCaptureOnThread() {
       return;
     }
     if (!_data->playing) {
-      _data->timer.cancel();
+//      _data->timer.cancel();
     }
     if (_recordingDevice) {
       alcCaptureStop(_recordingDevice);
@@ -937,7 +950,7 @@ void AudioDeviceOpenAL::stopCaptureOnThread() {
 }
 
 void AudioDeviceOpenAL::startPlayingOnThread() {
-  Expects(_data != nullptr);
+//  Expects(_data != nullptr);
 
   sync([&] {
     _data->playing = true;
@@ -986,15 +999,15 @@ void AudioDeviceOpenAL::startPlayingOnThread() {
       //	_data->buffers.data());
       //alSourcePlay(source);
 
-      if (!_data->timer.isActive()) {
-        _data->timer.callEach(kProcessInterval);
-      }
+//      if (!_data->timer.isActive()) {
+//        _data->timer.callEach(kProcessInterval);
+//      }
     }
   });
 }
 
 void AudioDeviceOpenAL::stopPlayingOnThread() {
-  Expects(_data != nullptr);
+//  Expects(_data != nullptr);
 
   sync([&] {
     const auto guard = gsl::finally([&] {
@@ -1011,7 +1024,7 @@ void AudioDeviceOpenAL::stopPlayingOnThread() {
       return;
     }
     if (!_data->recording) {
-      _data->timer.cancel();
+//      _data->timer.cancel();
     }
     if (_data->source) {
       alSourceStop(_data->source);
@@ -1029,8 +1042,8 @@ int32_t AudioDeviceOpenAL::StopRecording() {
     stopCaptureOnThread();
     _audioDeviceBuffer.StopRecording();
     if (!_data->playing) {
-      _data->thread.quit();
-      _data->thread.wait();
+//      _data->thread.quit();
+//      _data->thread.wait();
       _data = nullptr;
     }
   }
@@ -1040,7 +1053,7 @@ int32_t AudioDeviceOpenAL::StopRecording() {
 }
 
 void AudioDeviceOpenAL::restartRecordingQueued() {
-  Expects(_data != nullptr);
+//  Expects(_data != nullptr);
 
   if (!_thread) {
     // We support auto-restarting only when started from rtc::Thread.
@@ -1077,7 +1090,7 @@ int AudioDeviceOpenAL::restartRecording() {
 }
 
 void AudioDeviceOpenAL::restartPlayoutQueued() {
-  Expects(_data != nullptr);
+//  Expects(_data != nullptr);
 
   if (!_thread) {
     // We support auto-restarting only when started from rtc::Thread.
@@ -1206,8 +1219,8 @@ int32_t AudioDeviceOpenAL::StopPlayout() {
     stopPlayingOnThread();
     _audioDeviceBuffer.StopPlayout();
     if (!_data->recording) {
-      _data->thread.quit();
-      _data->thread.wait();
+//      _data->thread.quit();
+//      _data->thread.wait();
       _data = nullptr;
     }
   }
