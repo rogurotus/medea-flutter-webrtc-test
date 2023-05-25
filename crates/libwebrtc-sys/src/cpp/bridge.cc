@@ -10,6 +10,7 @@
 #include "modules/audio_device/include/audio_device_factory.h"
 
 #include "libwebrtc-sys/src/bridge.rs.h"
+//#include "openal_adm.h"
 
 namespace bridge {
  
@@ -186,18 +187,22 @@ OSStatus MyAudioDevicePropertyChangedHandler(
   RTC_LOG(LS_ERROR) << "Stream property was changed 1: ";
   dispatch_queue_t runLoopQueue = dispatch_queue_create("com.example.stop_playout", DISPATCH_QUEUE_SERIAL);
   dispatch_async(runLoopQueue, ^{
-    webrtc::AudioDeviceModule* adm = reinterpret_cast<webrtc::AudioDeviceModule*>(inClientData);
+    ::CustomAudioDeviceModule* adm = reinterpret_cast<::CustomAudioDeviceModule*>(inClientData);
+    adm->StartRecording();
     auto stopPlayoutRes = adm->StopPlayout();
     RTC_LOG(LS_ERROR) << "StopPlayout is executed";
     if (stopPlayoutRes != 0) {
       RTC_LOG(LS_ERROR) << "StopPlayout is not 0: " << stopPlayoutRes;
     }
+    adm->SetStereoPlayout(true);
+    adm->InitRecording();
     auto initPlayoutRes = adm->InitPlayout();
     RTC_LOG(LS_ERROR) << "InitPlayout is executed";
     if (initPlayoutRes != 0) {
       RTC_LOG(LS_ERROR) << "InitPlayout is not 0: " << initPlayoutRes;
     }
     auto startPlayoutRes = adm->StartPlayout();
+    adm->StartRecording();
     if (startPlayoutRes != 0) {
       RTC_LOG(LS_ERROR) << "StartPlayout is not 0: " << startPlayoutRes;
     }

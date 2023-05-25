@@ -85,6 +85,12 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   int32_t InitMicrophone() override;
   bool MicrophoneIsInitialized() const override;
 
+//  int32_t SetPlayoutDevice(uint16_t index) override;
+//  int32_t SetPlayoutDevice(WindowsDeviceType device) override;
+  int32_t StartPlayout() override;
+//  int32_t StopPlayout() override;
+//  bool PlayoutIsInitialized() const override;
+
   // Microphone volume controls.
   int32_t MicrophoneVolumeIsAvailable(bool* available)  override;
   int32_t SetMicrophoneVolume(uint32_t volume) override;
@@ -110,11 +116,28 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   // `AudioSource` for mixing.
   std::vector<rtc::scoped_refptr<AudioSource>> sources;
   std::mutex source_mutex;
-  
+
+//  rtc::Thread *_thread = nullptr;
+  webrtc::AudioDeviceBuffer _audioDeviceBuffer;
+//  std::unique_ptr<Data> _data;
+//
+//  ALCdevice *_playoutDevice = nullptr;
+//  ALCcontext *_playoutContext = nullptr;
+//  std::string _playoutDeviceId;
+//  crl::time _playoutLatency = 0;
+//  int _playoutChannels = 2;
+  bool _playoutInitialized = false;
+  bool _playoutFailed = false;
+//  bool _speakerInitialized = false;
+//  bool _initialized = false;
+
   // Audio capture module.
   std::unique_ptr<MicrophoneModuleInterface> audio_recorder;
 
   rtc::PlatformThread ptrThreadRec;
   std::condition_variable cv;
   bool quit = false;
+
+ private:
+  void openPlayoutDevice();
 };
