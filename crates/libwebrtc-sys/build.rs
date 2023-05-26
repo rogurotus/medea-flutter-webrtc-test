@@ -32,7 +32,7 @@ fn main() -> anyhow::Result<()> {
     let cpp_files = get_cpp_files()?;
 
     println!("cargo:rustc-link-lib=webrtc");
-    println!("cargo:rustc-link-lib=OpenAL");
+    // println!("cargo:rustc-link-lib=OpenAL");
 
     link_libs()?;
 

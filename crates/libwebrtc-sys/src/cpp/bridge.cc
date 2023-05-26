@@ -184,34 +184,34 @@ OSStatus MyAudioDevicePropertyChangedHandler(
     UInt32 inNumberAddresses,
     const AudioObjectPropertyAddress *inAddresses,
     void *inClientData) {
-  RTC_LOG(LS_ERROR) << "Stream property was changed 1: ";
-  dispatch_queue_t runLoopQueue = dispatch_queue_create("com.example.stop_playout", DISPATCH_QUEUE_SERIAL);
-  dispatch_async(runLoopQueue, ^{
-    ::CustomAudioDeviceModule* adm = reinterpret_cast<::CustomAudioDeviceModule*>(inClientData);
-    adm->StartRecording();
-    auto stopPlayoutRes = adm->StopPlayout();
-    RTC_LOG(LS_ERROR) << "StopPlayout is executed";
-    if (stopPlayoutRes != 0) {
-      RTC_LOG(LS_ERROR) << "StopPlayout is not 0: " << stopPlayoutRes;
-    }
-    adm->SetStereoPlayout(true);
-    adm->InitRecording();
-    auto initPlayoutRes = adm->InitPlayout();
-    RTC_LOG(LS_ERROR) << "InitPlayout is executed";
-    if (initPlayoutRes != 0) {
-      RTC_LOG(LS_ERROR) << "InitPlayout is not 0: " << initPlayoutRes;
-    }
-    auto startPlayoutRes = adm->StartPlayout();
-    adm->StartRecording();
-    if (startPlayoutRes != 0) {
-      RTC_LOG(LS_ERROR) << "StartPlayout is not 0: " << startPlayoutRes;
-    }
-  });
-//  for (UInt32 i = 0; i < inNumberAddresses; ++i) {
-//    if (inAddresses[i].mSelector == kAudioDevicePropertyStreams) {
-      RTC_LOG(LS_ERROR) << "Stream property was changed 2: ";
-      RTC_LOG(LS_ERROR) << "Executing StopPlayout";
-      return 0;
+//  RTC_LOG(LS_ERROR) << "Stream property was changed 1: ";
+//  dispatch_queue_t runLoopQueue = dispatch_queue_create("com.example.stop_playout", DISPATCH_QUEUE_SERIAL);
+//  dispatch_async(runLoopQueue, ^{
+//    ::CustomAudioDeviceModule* adm = reinterpret_cast<::CustomAudioDeviceModule*>(inClientData);
+//    adm->StartRecording();
+//    auto stopPlayoutRes = adm->StopPlayout();
+//    RTC_LOG(LS_ERROR) << "StopPlayout is executed";
+//    if (stopPlayoutRes != 0) {
+//      RTC_LOG(LS_ERROR) << "StopPlayout is not 0: " << stopPlayoutRes;
+//    }
+//    adm->SetStereoPlayout(true);
+//    adm->InitRecording();
+//    auto initPlayoutRes = adm->InitPlayout();
+//    RTC_LOG(LS_ERROR) << "InitPlayout is executed";
+//    if (initPlayoutRes != 0) {
+//      RTC_LOG(LS_ERROR) << "InitPlayout is not 0: " << initPlayoutRes;
+//    }
+//    auto startPlayoutRes = adm->StartPlayout();
+//    adm->StartRecording();
+//    if (startPlayoutRes != 0) {
+//      RTC_LOG(LS_ERROR) << "StartPlayout is not 0: " << startPlayoutRes;
+//    }
+//  });
+////  for (UInt32 i = 0; i < inNumberAddresses; ++i) {
+////    if (inAddresses[i].mSelector == kAudioDevicePropertyStreams) {
+//      RTC_LOG(LS_ERROR) << "Stream property was changed 2: ";
+//      RTC_LOG(LS_ERROR) << "Executing StopPlayout";
+//      return 0;
 //    }
 //  }
 }

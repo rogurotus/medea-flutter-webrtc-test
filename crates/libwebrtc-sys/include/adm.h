@@ -4,6 +4,8 @@
 #define WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE 1
 #include <iostream>
 #include "api/task_queue/task_queue_factory.h"
+#include <al.h>
+#include <alc.h>
 #include "modules/audio_device/audio_device_impl.h"
 
 #include <memory>
@@ -47,6 +49,35 @@
 #include "macos_microphone_module.h"
 #endif
 
+namespace crl {
+
+using time = std::int64_t;
+using profile_time = std::int64_t;
+
+namespace details {
+
+using inner_time_type = std::int64_t;
+using inner_profile_type = std::int64_t;
+
+void init();
+
+inner_time_type current_value();
+time convert(inner_time_type value);
+
+inner_profile_type current_profile_value();
+profile_time convert_profile(inner_profile_type);
+
+} // namespace details
+
+// Thread-safe.
+time now();
+profile_time profile();
+
+// Returns true if some adjustment was made.
+bool adjust_time();
+
+} // namespace crl
+
 class AudioSourceManager {
   public:
   // Creates a `AudioSource` from a microphone.
@@ -85,12 +116,6 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   int32_t InitMicrophone() override;
   bool MicrophoneIsInitialized() const override;
 
-//  int32_t SetPlayoutDevice(uint16_t index) override;
-//  int32_t SetPlayoutDevice(WindowsDeviceType device) override;
-  int32_t StartPlayout() override;
-//  int32_t StopPlayout() override;
-//  bool PlayoutIsInitialized() const override;
-
   // Microphone volume controls.
   int32_t MicrophoneVolumeIsAvailable(bool* available)  override;
   int32_t SetMicrophoneVolume(uint32_t volume) override;
@@ -109,6 +134,35 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   int32_t SetMicrophoneMute(bool enable) override;
   int32_t MicrophoneMute(bool* enabled) const override;
 
+  // Playout control.
+  int16_t PlayoutDevices() override;
+  int32_t SetPlayoutDevice(uint16_t index) override;
+  int32_t SetPlayoutDevice(WindowsDeviceType device) override;
+  int32_t PlayoutDeviceName(uint16_t index,
+                            char name[webrtc::kAdmMaxDeviceNameSize],
+                            char guid[webrtc::kAdmMaxGuidSize]) override;
+  int32_t InitPlayout() override;
+  bool PlayoutIsInitialized() const override;
+  int32_t StartPlayout() override;
+  int32_t StopPlayout() override;
+  bool Playing() const override;
+  int32_t InitSpeaker() override;
+  bool SpeakerIsInitialized() const override;
+  int32_t StereoPlayoutIsAvailable(bool *available) const override;
+  int32_t SetStereoPlayout(bool enable) override;
+  int32_t StereoPlayout(bool *enabled) const override;
+  int32_t PlayoutDelay(uint16_t *delayMS) const override;
+
+  int32_t SpeakerVolumeIsAvailable(bool *available) override;
+  int32_t SetSpeakerVolume(uint32_t volume) override;
+  int32_t SpeakerVolume(uint32_t *volume) const override;
+  int32_t MaxSpeakerVolume(uint32_t *maxVolume) const override;
+  int32_t MinSpeakerVolume(uint32_t *minVolume) const override;
+
+  int32_t SpeakerMuteIsAvailable(bool *available) override;
+  int32_t SetSpeakerMute(bool enable) override;
+  int32_t SpeakerMute(bool *enabled) const override;
+
   private:
   // Mixes `AudioSource` to send.
   rtc::scoped_refptr<webrtc::AudioMixerImpl> mixer = webrtc::AudioMixerImpl::Create();
@@ -117,19 +171,8 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   std::vector<rtc::scoped_refptr<AudioSource>> sources;
   std::mutex source_mutex;
 
-//  rtc::Thread *_thread = nullptr;
+  bool _initialized = false;
   webrtc::AudioDeviceBuffer _audioDeviceBuffer;
-//  std::unique_ptr<Data> _data;
-//
-//  ALCdevice *_playoutDevice = nullptr;
-//  ALCcontext *_playoutContext = nullptr;
-//  std::string _playoutDeviceId;
-//  crl::time _playoutLatency = 0;
-//  int _playoutChannels = 2;
-  bool _playoutInitialized = false;
-  bool _playoutFailed = false;
-//  bool _speakerInitialized = false;
-//  bool _initialized = false;
 
   // Audio capture module.
   std::unique_ptr<MicrophoneModuleInterface> audio_recorder;
@@ -139,5 +182,12 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   bool quit = false;
 
  private:
+  int restartPlayout();
   void openPlayoutDevice();
+
+  std::string _playoutDeviceId;
+  bool _playoutInitialized = false;
+  bool _playoutFailed = false;
+  int _playoutChannels = 2;
+  bool _speakerInitialized = false;
 };

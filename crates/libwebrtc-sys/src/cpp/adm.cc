@@ -19,12 +19,113 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/platform_thread.h"
+#ifdef WEBRTC_WIN
+#include "webrtc/win/webrtc_loopback_adm_win.h"
+#endif // WEBRTC_WIN
+
+constexpr auto kRecordingFrequency = 48000;
+constexpr auto kPlayoutFrequency = 48000;
+constexpr auto kRecordingChannels = 1;
+constexpr auto kBufferSizeMs = crl::time(10);
+constexpr auto kPlayoutPart = (kPlayoutFrequency * kBufferSizeMs + 999)
+                              / 1000;
+constexpr auto kRecordingPart = (kRecordingFrequency * kBufferSizeMs + 999)
+                                / 1000;
+constexpr auto kRecordingBufferSize = kRecordingPart * sizeof(int16_t)
+                                      * kRecordingChannels;
+constexpr auto kRestartAfterEmptyData = 50; // Half a second with no data.
+constexpr auto kProcessInterval = crl::time(10);
+
+constexpr auto kBuffersFullCount = 7;
+constexpr auto kBuffersKeepReadyCount = 5;
+
+constexpr auto kDefaultRecordingLatency = crl::time(20);
+constexpr auto kDefaultPlayoutLatency = crl::time(20);
+constexpr auto kQueryExactTimeEach = 20;
+
+constexpr auto kALMaxValues = 6;
+auto kAL_EVENT_CALLBACK_FUNCTION_SOFT = ALenum();
+auto kAL_EVENT_CALLBACK_USER_PARAM_SOFT = ALenum();
+auto kAL_EVENT_TYPE_BUFFER_COMPLETED_SOFT = ALenum();
+auto kAL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT = ALenum();
+auto kAL_EVENT_TYPE_DISCONNECTED_SOFT = ALenum();
+auto kAL_SAMPLE_OFFSET_CLOCK_SOFT = ALenum();
+auto kAL_SAMPLE_OFFSET_CLOCK_EXACT_SOFT = ALenum();
+
+auto kALC_DEVICE_LATENCY_SOFT = ALenum();
+
+using AL_INT64_TYPE = std::int64_t;
+
+using ALEVENTPROCSOFT = void(*)(
+    ALenum eventType,
+    ALuint object,
+    ALuint param,
+    ALsizei length,
+    const ALchar *message,
+    void *userParam);
+using ALEVENTCALLBACKSOFT = void(*)(
+    ALEVENTPROCSOFT callback,
+    void *userParam);
+using ALCSETTHREADCONTEXT = ALCboolean(*)(ALCcontext *context);
+using ALGETSOURCEI64VSOFT = void(*)(
+    ALuint source,
+    ALenum param,
+    AL_INT64_TYPE *values);
+using ALCGETINTEGER64VSOFT = void(*)(
+    ALCdevice *device,
+    ALCenum pname,
+    ALsizei size,
+    AL_INT64_TYPE *values);
+
+ALEVENTCALLBACKSOFT alEventCallbackSOFT/* = nullptr*/;
+ALCSETTHREADCONTEXT alcSetThreadContext/* = nullptr*/;
+ALGETSOURCEI64VSOFT alGetSourcei64vSOFT/* = nullptr*/;
+ALCGETINTEGER64VSOFT alcGetInteger64vSOFT/* = nullptr*/;
 
 // Main initializaton and termination
 int32_t CustomAudioDeviceModule::Init() {
+  RTC_LOG(LS_ERROR) << "Initializing AudioDeviceModule 1";
   if (webrtc::AudioDeviceModuleImpl::Init() != 0) {
     return -1;
   }
+
+  if (_initialized) {
+    return 0;
+  }
+  alcSetThreadContext = (ALCSETTHREADCONTEXT)alcGetProcAddress(
+      nullptr,
+      "alcSetThreadContext");
+  if (!alcSetThreadContext) {
+    return -1;
+  }
+  alEventCallbackSOFT = (ALEVENTCALLBACKSOFT)alcGetProcAddress(
+      nullptr,
+      "alEventCallbackSOFT");
+
+  alGetSourcei64vSOFT = (ALGETSOURCEI64VSOFT)alcGetProcAddress(
+      nullptr,
+      "alGetSourcei64vSOFT");
+
+  alcGetInteger64vSOFT = (ALCGETINTEGER64VSOFT)alcGetProcAddress(
+      nullptr,
+      "alcGetInteger64vSOFT");
+
+#define RESOLVE_ENUM(ENUM) k##ENUM = alcGetEnumValue(nullptr, #ENUM)
+  RESOLVE_ENUM(AL_EVENT_CALLBACK_FUNCTION_SOFT);
+  RESOLVE_ENUM(AL_EVENT_CALLBACK_FUNCTION_SOFT);
+  RESOLVE_ENUM(AL_EVENT_CALLBACK_USER_PARAM_SOFT);
+  RESOLVE_ENUM(AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT);
+  RESOLVE_ENUM(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT);
+  RESOLVE_ENUM(AL_EVENT_TYPE_DISCONNECTED_SOFT);
+  RESOLVE_ENUM(AL_SAMPLE_OFFSET_CLOCK_SOFT);
+  RESOLVE_ENUM(AL_SAMPLE_OFFSET_CLOCK_EXACT_SOFT);
+  RESOLVE_ENUM(ALC_DEVICE_LATENCY_SOFT);
+#undef RESOLVE_ENUM
+  RTC_LOG(LS_ERROR) << "Initializing AudioDeviceModule 2";
+
+  _initialized = true;
+  RTC_LOG(LS_ERROR) << "Initializing AudioDeviceModule 3";
+
   return audio_recorder->Init();
 };
 
@@ -163,8 +264,10 @@ CustomAudioDeviceModule::CustomAudioDeviceModule(
     AudioLayer audio_layer,
     webrtc::TaskQueueFactory* task_queue_factory)
     : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory),
-      audio_recorder(std::move(
-          std::unique_ptr<MicrophoneModuleInterface>(new MicrophoneModule()))) {
+      _audioDeviceBuffer(task_queue_factory),
+      audio_recorder(std::move(std::unique_ptr<MicrophoneModuleInterface>(new MicrophoneModule()))) {
+  _audioDeviceBuffer.SetRecordingSampleRate(kRecordingFrequency);
+  _audioDeviceBuffer.SetRecordingChannels(kRecordingChannels);
 }
 
 void CustomAudioDeviceModule::RecordProcess() {
@@ -191,4 +294,265 @@ void CustomAudioDeviceModule::RecordProcess() {
         }
       },
       "audio_device_module_rec_thread", attributes);
+}
+
+template <typename Callback>
+void EnumerateDevices(ALCenum specifier, Callback &&callback) {
+  auto devices = alcGetString(nullptr, specifier);
+  while (*devices != 0) {
+    callback(devices);
+    while (*devices != 0) {
+      ++devices;
+    }
+    ++devices;
+  }
+}
+
+[[nodiscard]] int DevicesCount(ALCenum specifier) {
+  auto result = 0;
+  EnumerateDevices(specifier, [&](const char *device) {
+    ++result;
+  });
+  return result;
+}
+
+[[nodiscard]] std::string ComputeDefaultDeviceId(ALCenum specifier) {
+    const auto device = alcGetString(nullptr, specifier);
+    return device ? std::string(device) : std::string();
+}
+
+[[nodiscard]] int DeviceName(
+    ALCenum specifier,
+    int index,
+    std::string *name,
+    std::string *guid) {
+  EnumerateDevices(specifier, [&](const char *device) {
+    if (index < 0) {
+      return;
+    } else if (index > 0) {
+      --index;
+      return;
+    }
+
+    auto string = std::string(device);
+    if (name) {
+      if (guid) {
+        *guid = string;
+      }
+      const auto prefix = std::string("OpenAL Soft on ");
+      if (string.rfind(prefix, 0) == 0) {
+        string = string.substr(prefix.size());
+      }
+      *name = std::move(string);
+    } else if (guid) {
+      *guid = std::move(string);
+    }
+    index = -1;
+  });
+  return (index > 0) ? -1 : 0;
+}
+
+void SetStringToArray(const std::string &string, char *array, int size) {
+  const auto length = std::min(int(string.size()), size - 1);
+  if (length > 0) {
+    memcpy(array, string.data(), length);
+  }
+  array[length] = 0;
+}
+
+[[nodiscard]] int DeviceName(
+    ALCenum specifier,
+    int index,
+    char name[webrtc::kAdmMaxDeviceNameSize],
+    char guid[webrtc::kAdmMaxGuidSize]) {
+    auto sname = std::string();
+    auto sguid = std::string();
+    const auto result = DeviceName(specifier, index, &sname, &sguid);
+    if (result) {
+      return result;
+    }
+    SetStringToArray(sname, name, webrtc::kAdmMaxDeviceNameSize);
+    SetStringToArray(sguid, guid, webrtc::kAdmMaxGuidSize);
+  return 0;
+}
+
+int32_t CustomAudioDeviceModule::SetPlayoutDevice(uint16_t index) {
+  const auto result = DeviceName(
+      ALC_ALL_DEVICES_SPECIFIER,
+      index,
+      nullptr,
+      &_playoutDeviceId);
+  return result ? result : restartPlayout();
+}
+
+int32_t CustomAudioDeviceModule::SetPlayoutDevice(WindowsDeviceType /*device*/) {
+  _playoutDeviceId = ComputeDefaultDeviceId(ALC_DEFAULT_DEVICE_SPECIFIER);
+  return _playoutDeviceId.empty() ? -1 : restartPlayout();
+}
+
+// TODO:
+int CustomAudioDeviceModule::restartPlayout() {
+//  if (!_data || !_data->playing) {
+//    return 0;
+//  }
+//  stopPlayingOnThread();
+//  closePlayoutDevice();
+//  if (!validatePlayoutDeviceId()) {
+//    sync([&] {
+//      _data->playing = true;
+//      _playoutFailed = true;
+//    });
+//    return 0;
+//  }
+//  _playoutFailed = false;
+////  openPlayoutDevice();
+////  startPlayingOnThread();
+  return 0;
+}
+
+int16_t CustomAudioDeviceModule::PlayoutDevices() {
+  return DevicesCount(ALC_ALL_DEVICES_SPECIFIER);
+}
+
+int32_t CustomAudioDeviceModule::PlayoutDeviceName(
+    uint16_t index,
+    char name[webrtc::kAdmMaxDeviceNameSize],
+    char guid[webrtc::kAdmMaxGuidSize]) {
+  return DeviceName(ALC_ALL_DEVICES_SPECIFIER, index, name, guid);
+}
+
+// TODO:
+int32_t CustomAudioDeviceModule::InitPlayout() {
+  if (!_initialized) {
+    return -1;
+  } else if (_playoutInitialized) {
+    return 0;
+  }
+  _playoutInitialized = true;
+//  ensureThreadStarted();
+//  openPlayoutDevice();
+  return 0;
+}
+
+bool CustomAudioDeviceModule::PlayoutIsInitialized() const {
+  return _playoutInitialized;
+}
+
+// TODO:
+int32_t CustomAudioDeviceModule::StartPlayout() {
+  if (!_playoutInitialized) {
+    return -1;
+  } else if (Playing()) {
+    return 0;
+  }
+  if (_playoutFailed) {
+    _playoutFailed = false;
+//    TODO: openPlayoutDevice();
+  }
+  _audioDeviceBuffer.SetPlayoutSampleRate(kPlayoutFrequency);
+  _audioDeviceBuffer.SetPlayoutChannels(_playoutChannels);
+  _audioDeviceBuffer.StartPlayout();
+//  TODO: startPlayingOnThread();
+  return 0;
+}
+
+// TODO:
+int32_t CustomAudioDeviceModule::StopPlayout() {
+//  if (_data) {
+//    stopPlayingOnThread();
+    _audioDeviceBuffer.StopPlayout();
+//    if (!_data->recording) {
+//      _data->thread.quit();
+//      _data->thread.wait();
+//      _data = nullptr;
+//    }
+//  }
+//  closePlayoutDevice();
+  _playoutInitialized = false;
+  return 0;
+}
+
+// TODO
+bool CustomAudioDeviceModule::Playing() const {
+  return false;
+//  return _data && _data->playing;
+}
+
+int32_t CustomAudioDeviceModule::InitSpeaker() {
+  _speakerInitialized = true;
+  return 0;
+}
+
+bool CustomAudioDeviceModule::SpeakerIsInitialized() const {
+  return _speakerInitialized;
+}
+
+int32_t CustomAudioDeviceModule::StereoPlayoutIsAvailable(bool *available) const {
+  if (available) {
+    *available = true;
+  }
+  return 0;
+}
+
+int32_t CustomAudioDeviceModule::SetStereoPlayout(bool enable) {
+  if (Playing()) {
+    return -1;
+  }
+  _playoutChannels = enable ? 2 : 1;
+  return 0;
+}
+
+int32_t CustomAudioDeviceModule::StereoPlayout(bool *enabled) const {
+  if (enabled) {
+    *enabled = (_playoutChannels == 2);
+  }
+  return 0;
+}
+
+int32_t CustomAudioDeviceModule::PlayoutDelay(uint16_t *delayMS) const {
+  if (delayMS) {
+    *delayMS = 0;
+  }
+  return 0;
+}
+
+int32_t CustomAudioDeviceModule::SpeakerVolumeIsAvailable(bool *available) {
+  if (available) {
+    *available = false;
+  }
+  return 0;
+}
+
+int32_t CustomAudioDeviceModule::SetSpeakerVolume(uint32_t volume) {
+  return -1;
+}
+
+int32_t CustomAudioDeviceModule::SpeakerVolume(uint32_t *volume) const {
+  return -1;
+}
+
+int32_t CustomAudioDeviceModule::MaxSpeakerVolume(uint32_t *maxVolume) const {
+  return -1;
+}
+
+int32_t CustomAudioDeviceModule::MinSpeakerVolume(uint32_t *minVolume) const {
+  return -1;
+}
+
+int32_t CustomAudioDeviceModule::SpeakerMuteIsAvailable(bool *available) {
+  if (available) {
+    *available = false;
+  }
+  return 0;
+}
+
+int32_t CustomAudioDeviceModule::SetSpeakerMute(bool enable) {
+  return -1;
+}
+
+int32_t CustomAudioDeviceModule::SpeakerMute(bool *enabled) const {
+  if (enabled) {
+    *enabled = false;
+  }
+  return 0;
 }
