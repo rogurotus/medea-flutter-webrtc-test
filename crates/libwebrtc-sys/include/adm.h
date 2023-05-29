@@ -190,4 +190,5 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   bool _playoutFailed = false;
   int _playoutChannels = 2;
   bool _speakerInitialized = false;
+  ALCcontext *_playoutContext = nullptr;
 };

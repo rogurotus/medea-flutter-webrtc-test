@@ -551,3 +551,45 @@ int32_t CustomAudioDeviceModule::SpeakerMute(bool *enabled) const {
   }
   return 0;
 }
+
+void CustomAudioDeviceModule::openPlayoutDevice() {
+  if (_playoutDevice || _playoutFailed) {
+    return;
+  }
+  _playoutDevice = alcOpenDevice(
+      _playoutDeviceId.empty() ? nullptr : _playoutDeviceId.c_str());
+  if (!_playoutDevice) {
+    RTC_LOG(LS_ERROR)
+        << "OpenAL Device open failed, deviceID: '"
+        << _playoutDeviceId
+        << "'";
+    _playoutFailed = true;
+    return;
+  }
+  _playoutContext = alcCreateContext(_playoutDevice, nullptr);
+//  if (!_playoutContext) {
+//    RTC_LOG(LS_ERROR) << "OpenAL Context create failed.";
+//    _playoutFailed = true;
+//    closePlayoutDevice();
+//    return;
+//  }
+//  sync([&] {
+//    alcSetThreadContext(_playoutContext);
+    if (alEventCallbackSOFT) {
+//      alEventCallbackSOFT([](
+//          ALenum eventType,
+//          ALuint object,
+//          ALuint param,
+//          ALsizei length,
+//          const ALchar *message,
+//                              void *that) {
+//        static_cast<AudioDeviceOpenAL*>(that)->handleEvent(
+//            eventType,
+//            object,
+//            param,
+//            length,
+//            message);
+//      }, this);
+    }
+//  });
+}
