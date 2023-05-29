@@ -13,10 +13,6 @@
   #include "libwebrtc-sys/include/device_info_mac.h"
   #include "mac_capturer.h"
   #include "device_info_mac.h"
-  #include "macos_microphone_module.h"
-  #include <AudioToolbox/AudioServices.h>
-  #include <AudioToolbox/AudioSession.h>
-  #include <CoreAudio/CoreAudio.h>
 #else
   #include "device_video_capturer.h"
 #endif
@@ -174,10 +170,6 @@ int32_t max_microphone_volume(const AudioDeviceModule& audio_device_module,
 // Returns the current level of the microphone volume.
 int32_t microphone_volume(const AudioDeviceModule& audio_device_module,
                           uint32_t& volume);
-
-OSStatus refresh(AudioObjectID inObjectID, UInt32 inNumberAddresses, const AudioObjectPropertyAddress *inAddresses, void *inClientData);
-
-static void handleRouteChange(void *userData, AudioSessionPropertyID propertyID, UInt32 dataSize, const void *data);
 
 // Returns count of the available playout audio devices.
 int16_t playout_devices(const AudioDeviceModule& audio_device_module);

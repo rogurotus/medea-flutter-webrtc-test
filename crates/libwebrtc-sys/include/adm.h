@@ -4,8 +4,8 @@
 #define WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE 1
 #include <iostream>
 #include "api/task_queue/task_queue_factory.h"
-#include <al.h>
-#include <alc.h>
+#include <AL/al.h>
+#include <AL/alc.h>
 #include "modules/audio_device/audio_device_impl.h"
 
 #include <memory>
