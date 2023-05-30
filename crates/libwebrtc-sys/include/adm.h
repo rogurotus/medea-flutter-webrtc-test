@@ -165,6 +165,8 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   int32_t SpeakerMute(bool *enabled) const override;
 
   private:
+  struct Data;
+
   // Mixes `AudioSource` to send.
   rtc::scoped_refptr<webrtc::AudioMixerImpl> mixer = webrtc::AudioMixerImpl::Create();
 
@@ -173,13 +175,14 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   std::mutex source_mutex;
 
   bool _initialized = false;
+  std::unique_ptr<Data> _data;
+
   webrtc::AudioDeviceBuffer _audioDeviceBuffer;
 
   // Audio capture module.
   std::unique_ptr<MicrophoneModuleInterface> audio_recorder;
 
   rtc::PlatformThread recordingThread;
-  std::unique_ptr<rtc::Thread> _playoutThread;
   std::condition_variable cv;
   bool quit = false;
 
@@ -187,9 +190,17 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   int restartPlayout();
   void openPlayoutDevice();
 
+  void startPlayingOnThread();
   void ensureThreadStarted();
   void closePlayoutDevice();
+  bool validatePlayoutDeviceId();
+
   bool processPlayout();
+
+  	// NB! closePlayoutDevice should be called after this, so that next time
+  	// we start playing, we set the thread local context and event callback.
+  	void stopPlayingOnThread();
+
   void handleEvent(
     ALenum eventType,
 	ALuint object,

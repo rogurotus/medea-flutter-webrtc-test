@@ -82,6 +82,24 @@ ALCSETTHREADCONTEXT alcSetThreadContext/* = nullptr*/;
 ALGETSOURCEI64VSOFT alGetSourcei64vSOFT/* = nullptr*/;
 ALCGETINTEGER64VSOFT alcGetInteger64vSOFT/* = nullptr*/;
 
+struct CustomAudioDeviceModule::Data {
+	Data() {
+		_playoutThread = rtc::Thread::Create();
+	}
+
+	std::unique_ptr<rtc::Thread> _playoutThread;
+
+//	QByteArray playoutSamples;
+	ALuint source = 0;
+	int queuedBuffersCount = 0;
+	std::array<ALuint, kBuffersFullCount> buffers = { { 0 } };
+	std::array<bool, kBuffersFullCount> queuedBuffers = { { false } };
+	int64_t exactDeviceTimeCounter = 0;
+	int64_t lastExactDeviceTime = 0;
+	crl::time lastExactDeviceTimeWhen = 0;
+	bool playing = false;
+};
+
 // Main initializaton and termination
 int32_t CustomAudioDeviceModule::Init() {
   RTC_LOG(LS_ERROR) << "Initializing AudioDeviceModule 1";
@@ -265,15 +283,13 @@ CustomAudioDeviceModule::CustomAudioDeviceModule(
     webrtc::TaskQueueFactory* task_queue_factory)
     : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory),
       _audioDeviceBuffer(task_queue_factory),
-      audio_recorder(std::move(std::unique_ptr<MicrophoneModuleInterface>(new MicrophoneModule()))),
-      _playoutThread(rtc::Thread::Create()) {
-  _audioDeviceBuffer.SetRecordingSampleRate(kRecordingFrequency);
-  _audioDeviceBuffer.SetRecordingChannels(kRecordingChannels);
+      audio_recorder(std::move(std::unique_ptr<MicrophoneModuleInterface>(new MicrophoneModule()))) {
 }
 
 void CustomAudioDeviceModule::RecordProcess() {
   const auto attributes =
       rtc::ThreadAttributes().SetPriority(rtc::ThreadPriority::kRealtime);
+
   recordingThread = rtc::PlatformThread::SpawnJoinable(
       [this] {
         webrtc::AudioFrame frame;
@@ -285,6 +301,8 @@ void CustomAudioDeviceModule::RecordProcess() {
           }
 
           mixer->Mix(audio_recorder->RecordingChannels(), &frame);
+          cb->SetRecordingChannels(frame.num_channels());
+          cb->SetRecordingSampleRate(frame.sample_rate_hz());
           cb->SetRecordedBuffer(frame.data(), frame.sample_rate_hz() / 100);
           cb->DeliverRecordedData();
         }
@@ -386,23 +404,24 @@ int32_t CustomAudioDeviceModule::SetPlayoutDevice(WindowsDeviceType /*device*/) 
   return _playoutDeviceId.empty() ? -1 : restartPlayout();
 }
 
-// TODO:
 int CustomAudioDeviceModule::restartPlayout() {
-//  if (!_data || !_data->playing) {
-//    return 0;
-//  }
-//  stopPlayingOnThread();
-//  closePlayoutDevice();
-//  if (!validatePlayoutDeviceId()) {
-//    sync([&] {
-//      _data->playing = true;
-//      _playoutFailed = true;
-//    });
-//    return 0;
-//  }
-//  _playoutFailed = false;
+  if (!_data || !_data->playing) {
+    return 0;
+  }
+  stopPlayingOnThread();
+  closePlayoutDevice();
+  if (!validatePlayoutDeviceId()) {
+    _data->_playoutThread->Invoke<void>(RTC_FROM_HERE, [this] {
+        _data->playing = true;
+        _playoutFailed = true;
+    });
+    return 0;
+  }
+  _playoutFailed = false;
+  RTC_LOG(LS_ERROR) << "restartPlayout 1";
   openPlayoutDevice();
-////  startPlayingOnThread();
+  startPlayingOnThread();
+
   return 0;
 }
 
@@ -425,8 +444,12 @@ int32_t CustomAudioDeviceModule::InitPlayout() {
     return 0;
   }
   _playoutInitialized = true;
+
+  RTC_LOG(LS_ERROR) << "InitPlayout 1";
   ensureThreadStarted();
+  RTC_LOG(LS_ERROR) << "InitPlayout 2";
   openPlayoutDevice();
+  RTC_LOG(LS_ERROR) << "InitPlayout 3";
   return 0;
 }
 
@@ -436,15 +459,19 @@ bool CustomAudioDeviceModule::PlayoutIsInitialized() const {
 
 // TODO: 222222222222
 int32_t CustomAudioDeviceModule::StartPlayout() {
+    RTC_LOG(LS_ERROR) << "StartPlayout 1";
   if (!_playoutInitialized) {
     return -1;
   } else if (Playing()) {
     return 0;
   }
+  RTC_LOG(LS_ERROR) << "StartPlayout 2";
   if (_playoutFailed) {
     _playoutFailed = false;
+    RTC_LOG(LS_ERROR) << "StartPlayout 3";
     openPlayoutDevice();
   }
+  RTC_LOG(LS_ERROR) << "StartPlayout 4";
   _audioDeviceBuffer.SetPlayoutSampleRate(kPlayoutFrequency);
   _audioDeviceBuffer.SetPlayoutChannels(_playoutChannels);
   _audioDeviceBuffer.StartPlayout();
@@ -452,26 +479,20 @@ int32_t CustomAudioDeviceModule::StartPlayout() {
   return 0;
 }
 
-// TODO:
 int32_t CustomAudioDeviceModule::StopPlayout() {
-//  if (_data) {
-//    stopPlayingOnThread();
+  if (_data) {
+    stopPlayingOnThread();
     _audioDeviceBuffer.StopPlayout();
-//    if (!_data->recording) {
-//      _data->thread.quit();
-//      _data->thread.wait();
-//      _data = nullptr;
-//    }
-//  }
+    _data->_playoutThread->Stop();
+    _data = nullptr;
+  }
   closePlayoutDevice();
   _playoutInitialized = false;
   return 0;
 }
 
-// TODO
 bool CustomAudioDeviceModule::Playing() const {
-  return false;
-//  return _data && _data->playing;
+  return _data && _data->playing;
 }
 
 int32_t CustomAudioDeviceModule::InitSpeaker() {
@@ -554,6 +575,7 @@ int32_t CustomAudioDeviceModule::SpeakerMute(bool *enabled) const {
 }
 
 void CustomAudioDeviceModule::openPlayoutDevice() {
+  RTC_LOG(LS_ERROR) << "openPlayoutDevice 1";
   if (_playoutDevice || _playoutFailed) {
     return;
   }
@@ -566,7 +588,7 @@ void CustomAudioDeviceModule::openPlayoutDevice() {
     _playoutFailed = true;
     return;
   }
-
+RTC_LOG(LS_ERROR) << "openPlayoutDevice 2";
   _playoutContext = alcCreateContext(_playoutDevice, nullptr);
   if (!_playoutContext) {
     RTC_LOG(LS_ERROR) << "OpenAL Context create failed.";
@@ -574,26 +596,29 @@ void CustomAudioDeviceModule::openPlayoutDevice() {
     closePlayoutDevice();
     return;
   }
-
-  _playoutThread->Invoke<void>(RTC_FROM_HERE, [this] {
-    alcSetThreadContext(_playoutContext);
-    if (alEventCallbackSOFT) {
-        alEventCallbackSOFT([](
-            ALenum eventType,
-            ALuint object,
-            ALuint param,
-            ALsizei length,
-            const ALchar *message,
-            void *that) {
-                 static_cast<CustomAudioDeviceModule*>(that)->handleEvent(
-                   eventType,
-                   object,
-                   param,
-                   length,
-                   message);
-           }, this);
-       }
+ RTC_LOG(LS_ERROR) << "openPlayoutDevice 3";
+      _data->_playoutThread->Invoke<void>(RTC_FROM_HERE, [this] {
+      /*
+        alcSetThreadContext(_playoutContext);
+        if (alEventCallbackSOFT) {
+            alEventCallbackSOFT([](
+                ALenum eventType,
+                ALuint object,
+                ALuint param,
+                ALsizei length,
+                const ALchar *message,
+                void *that) {
+                     static_cast<CustomAudioDeviceModule*>(that)->handleEvent(
+                       eventType,
+                       object,
+                       param,
+                       length,
+                       message);
+               }, this);
+           }
+           */
       });
+  RTC_LOG(LS_ERROR) << "openPlayoutDevice 4";
 }
 
 void CustomAudioDeviceModule::handleEvent(
@@ -615,8 +640,7 @@ void CustomAudioDeviceModule::handleEvent(
 }
 
 void CustomAudioDeviceModule::ensureThreadStarted() {
-
-	if (_playoutThread->RunningForTest()) {
+	if (_data) {
 		return;
 	}
 	_thread = rtc::Thread::Current();
@@ -624,10 +648,12 @@ void CustomAudioDeviceModule::ensureThreadStarted() {
     	_thread->UnwrapCurrent();
     	_thread = nullptr;
     }
+    _data = std::make_unique<Data>();
 
-	_playoutThread->Start();
+    _data->_playoutThread->Start();
+    _thread->AllowInvokesToThread(_data->_playoutThread.get());
 
-	_playoutThread->PostTask(
+	_data->_playoutThread->PostTask(
       [=] {
         // while (processPlayout()) { }
       });
@@ -760,4 +786,96 @@ void CustomAudioDeviceModule::closePlayoutDevice() {
 		alcCloseDevice(_playoutDevice);
 		_playoutDevice = nullptr;
 	}
+}
+
+bool CustomAudioDeviceModule::validatePlayoutDeviceId() {
+	auto valid = false;
+	EnumerateDevices(ALC_ALL_DEVICES_SPECIFIER, [&](const char *device) {
+		if (!valid && _playoutDeviceId == std::string(device)) {
+			valid = true;
+		}
+	});
+	if (valid) {
+		return true;
+	}
+	const auto defaultDeviceId = ComputeDefaultDeviceId(
+		ALC_DEFAULT_DEVICE_SPECIFIER);
+	if (!defaultDeviceId.empty()) {
+		_playoutDeviceId = defaultDeviceId;
+		return true;
+	}
+	RTC_LOG(LS_ERROR) << "Could not find any OpenAL devices.";
+	return false;
+}
+
+void CustomAudioDeviceModule::startPlayingOnThread() {
+  _data->_playoutThread->Invoke<void>(RTC_FROM_HERE, [this] {
+        _data->playing = true;
+		if (_playoutFailed) {
+			return;
+		}
+		ALuint source = 0;
+		alGenSources(1, &source);
+		if (source) {
+			alSourcef(source, AL_PITCH, 1.f);
+			alSource3f(source, AL_POSITION, 0, 0, 0);
+			alSource3f(source, AL_VELOCITY, 0, 0, 0);
+			alSourcei(source, AL_LOOPING, 0);
+			alSourcei(source, AL_SOURCE_RELATIVE, 1);
+			alSourcei(source, AL_ROLLOFF_FACTOR, 0);
+			if (alIsExtensionPresent("AL_SOFT_direct_channels_remix")) {
+				alSourcei(
+					source,
+					alGetEnumValue("AL_DIRECT_CHANNELS_SOFT"),
+					alGetEnumValue("AL_REMIX_UNMATCHED_SOFT"));
+			}
+			_data->source = source;
+			alGenBuffers(_data->buffers.size(), _data->buffers.data());
+
+			_data->exactDeviceTimeCounter = 0;
+			_data->lastExactDeviceTime = 0;
+			_data->lastExactDeviceTimeWhen = 0;
+
+			const auto bufferSize = kPlayoutPart * sizeof(int16_t)
+				* _playoutChannels;
+
+			// _data->playoutSamples = QByteArray(bufferSize, 0);
+
+			// if (!_data->timer.isActive()) {
+			//	_data->timer.callEach(kProcessInterval);
+			// }
+		}
+  });
+}
+
+void CustomAudioDeviceModule::stopPlayingOnThread() {
+	//Expects(_data != nullptr);
+ /*
+	sync([&] {
+		const auto guard = gsl::finally([&] {
+			if (alEventCallbackSOFT) {
+				alEventCallbackSOFT(nullptr, nullptr);
+			}
+			alcSetThreadContext(nullptr);
+		});
+		if (!_data->playing) {
+			return;
+		}
+		_data->playing = false;
+		if (_playoutFailed) {
+			return;
+		}
+		if (!_data->recording) {
+			_data->timer.cancel();
+		}
+		if (_data->source) {
+			alSourceStop(_data->source);
+			unqueueAllBuffers();
+			alDeleteBuffers(_data->buffers.size(), _data->buffers.data());
+			alDeleteSources(1, &_data->source);
+			_data->source = 0;
+			ranges::fill(_data->buffers, ALuint(0));
+		}
+	});
+	*/
 }

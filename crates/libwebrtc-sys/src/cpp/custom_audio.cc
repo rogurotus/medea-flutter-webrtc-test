@@ -9,7 +9,7 @@ webrtc::AudioMixer::Source::AudioFrameInfo AudioSource::GetAudioFrameWithInfo(
     webrtc::AudioFrame* audio_frame) {
   std::unique_lock<std::mutex> lock(mutex_);
   cv_.wait(lock, [&]() { return frame_available_; });
-//  RTC_LOG(LS_ERROR) << "Sample rate HZ: " << sample_rate_hz;
+  RTC_LOG(LS_ERROR) << "Sample rate HZ: " << sample_rate_hz;
   auto* source = frame_.data();
   if (frame_.sample_rate_hz() != sample_rate_hz) {
     render_resampler_.InitializeIfNeeded(frame_.sample_rate_hz(),
@@ -50,8 +50,7 @@ int AudioSource::Ssrc() const {
 // A way for this source to say that GetAudioFrameWithInfo called
 // with this sample rate or higher will not cause quality loss.
 int AudioSource::PreferredSampleRate() const {
-  // TODO(evdokimovs): Returns 0 when no frame
-//  RTC_LOG(LS_ERROR) << "PrefferedSampleRate: " << frame_.sample_rate_hz();
-  return 48000;
-  return frame_.sample_rate_hz();
+  // RTC_LOG(LS_ERROR) << "PrefferedSampleRate: " << frame_.sample_rate_hz();
+  // return frame_.sample_rate_hz();
+  return 8000;
 };
