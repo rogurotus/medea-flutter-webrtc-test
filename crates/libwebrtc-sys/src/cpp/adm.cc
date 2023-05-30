@@ -265,7 +265,8 @@ CustomAudioDeviceModule::CustomAudioDeviceModule(
     webrtc::TaskQueueFactory* task_queue_factory)
     : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory),
       _audioDeviceBuffer(task_queue_factory),
-      audio_recorder(std::move(std::unique_ptr<MicrophoneModuleInterface>(new MicrophoneModule()))) {
+      audio_recorder(std::move(std::unique_ptr<MicrophoneModuleInterface>(new MicrophoneModule()))),
+      _playoutThread(rtc::Thread::Create()) {
   _audioDeviceBuffer.SetRecordingSampleRate(kRecordingFrequency);
   _audioDeviceBuffer.SetRecordingChannels(kRecordingChannels);
 }
@@ -273,7 +274,7 @@ CustomAudioDeviceModule::CustomAudioDeviceModule(
 void CustomAudioDeviceModule::RecordProcess() {
   const auto attributes =
       rtc::ThreadAttributes().SetPriority(rtc::ThreadPriority::kRealtime);
-  ptrThreadRec = rtc::PlatformThread::SpawnJoinable(
+  recordingThread = rtc::PlatformThread::SpawnJoinable(
       [this] {
         webrtc::AudioFrame frame;
         auto cb = GetAudioDeviceBuffer();
@@ -400,7 +401,7 @@ int CustomAudioDeviceModule::restartPlayout() {
 //    return 0;
 //  }
 //  _playoutFailed = false;
-////  openPlayoutDevice();
+  openPlayoutDevice();
 ////  startPlayingOnThread();
   return 0;
 }
@@ -416,7 +417,7 @@ int32_t CustomAudioDeviceModule::PlayoutDeviceName(
   return DeviceName(ALC_ALL_DEVICES_SPECIFIER, index, name, guid);
 }
 
-// TODO:
+// TODO: 1111111111
 int32_t CustomAudioDeviceModule::InitPlayout() {
   if (!_initialized) {
     return -1;
@@ -424,8 +425,8 @@ int32_t CustomAudioDeviceModule::InitPlayout() {
     return 0;
   }
   _playoutInitialized = true;
-//  ensureThreadStarted();
-//  openPlayoutDevice();
+  ensureThreadStarted();
+  openPlayoutDevice();
   return 0;
 }
 
@@ -433,7 +434,7 @@ bool CustomAudioDeviceModule::PlayoutIsInitialized() const {
   return _playoutInitialized;
 }
 
-// TODO:
+// TODO: 222222222222
 int32_t CustomAudioDeviceModule::StartPlayout() {
   if (!_playoutInitialized) {
     return -1;
@@ -442,7 +443,7 @@ int32_t CustomAudioDeviceModule::StartPlayout() {
   }
   if (_playoutFailed) {
     _playoutFailed = false;
-//    TODO: openPlayoutDevice();
+    openPlayoutDevice();
   }
   _audioDeviceBuffer.SetPlayoutSampleRate(kPlayoutFrequency);
   _audioDeviceBuffer.SetPlayoutChannels(_playoutChannels);
@@ -462,7 +463,7 @@ int32_t CustomAudioDeviceModule::StopPlayout() {
 //      _data = nullptr;
 //    }
 //  }
-//  closePlayoutDevice();
+  closePlayoutDevice();
   _playoutInitialized = false;
   return 0;
 }
@@ -556,8 +557,7 @@ void CustomAudioDeviceModule::openPlayoutDevice() {
   if (_playoutDevice || _playoutFailed) {
     return;
   }
-  _playoutDevice = alcOpenDevice(
-      _playoutDeviceId.empty() ? nullptr : _playoutDeviceId.c_str());
+  _playoutDevice = alcOpenDevice(_playoutDeviceId.empty() ? nullptr : _playoutDeviceId.c_str());
   if (!_playoutDevice) {
     RTC_LOG(LS_ERROR)
         << "OpenAL Device open failed, deviceID: '"
@@ -566,30 +566,198 @@ void CustomAudioDeviceModule::openPlayoutDevice() {
     _playoutFailed = true;
     return;
   }
+
   _playoutContext = alcCreateContext(_playoutDevice, nullptr);
-//  if (!_playoutContext) {
-//    RTC_LOG(LS_ERROR) << "OpenAL Context create failed.";
-//    _playoutFailed = true;
-//    closePlayoutDevice();
-//    return;
-//  }
-//  sync([&] {
-//    alcSetThreadContext(_playoutContext);
+  if (!_playoutContext) {
+    RTC_LOG(LS_ERROR) << "OpenAL Context create failed.";
+    _playoutFailed = true;
+    closePlayoutDevice();
+    return;
+  }
+
+  _playoutThread->Invoke<void>(RTC_FROM_HERE, [this] {
+    alcSetThreadContext(_playoutContext);
     if (alEventCallbackSOFT) {
-//      alEventCallbackSOFT([](
-//          ALenum eventType,
-//          ALuint object,
-//          ALuint param,
-//          ALsizei length,
-//          const ALchar *message,
-//                              void *that) {
-//        static_cast<AudioDeviceOpenAL*>(that)->handleEvent(
-//            eventType,
-//            object,
-//            param,
-//            length,
-//            message);
-//      }, this);
+        alEventCallbackSOFT([](
+            ALenum eventType,
+            ALuint object,
+            ALuint param,
+            ALsizei length,
+            const ALchar *message,
+            void *that) {
+                 static_cast<CustomAudioDeviceModule*>(that)->handleEvent(
+                   eventType,
+                   object,
+                   param,
+                   length,
+                   message);
+           }, this);
+       }
+      });
+}
+
+void CustomAudioDeviceModule::handleEvent(
+		ALenum eventType,
+		ALuint object,
+		ALuint param,
+		ALsizei length,
+		const ALchar *message) {
+	if (eventType == kAL_EVENT_TYPE_DISCONNECTED_SOFT && _thread) {
+        /*
+		const auto weak = QPointer<QObject>(&_data->context);
+		_thread->PostTask([=] {
+			if (weak) {
+				// restartRecording();
+			}
+		});
+		*/
+	}
+}
+
+void CustomAudioDeviceModule::ensureThreadStarted() {
+
+	if (_playoutThread->RunningForTest()) {
+		return;
+	}
+	_thread = rtc::Thread::Current();
+    if (_thread && !_thread->IsOwned()) {
+    	_thread->UnwrapCurrent();
+    	_thread = nullptr;
     }
-//  });
+
+	_playoutThread->Start();
+
+	_playoutThread->PostTask(
+      [=] {
+        // while (processPlayout()) { }
+      });
+/*
+    if (_thread && !_thread->IsOwned()) {
+		_thread->UnwrapCurrent();
+		_thread = nullptr;
+	}
+	//	Assert(_thread != nullptr);
+	//	Assert(_thread->IsOwned());
+
+	_data = std::make_unique<Data>();
+	_data->timer.setCallback([=] { processData(); });
+	_data->thread.setObjectName("Webrtc OpenAL Thread");
+	_data->thread.start(QThread::TimeCriticalPriority);
+*/
+}
+
+[[nodiscard]] bool Failed(ALCdevice *device) {
+	if (auto code = alcGetError(device); code != ALC_NO_ERROR) {
+		RTC_LOG(LS_ERROR)
+			<< "OpenAL Error "
+			<< code
+			<< ": "
+			<< (const char *)alcGetString(device, code);
+		return true;
+	}
+	return false;
+}
+
+bool CustomAudioDeviceModule::processPlayout() {
+/*
+	const auto playing = [&] {
+		auto state = ALint(AL_INITIAL);
+		alGetSourcei(_data->source, AL_SOURCE_STATE, &state);
+		return (state == AL_PLAYING);
+	};
+	const auto wasPlaying = playing();
+
+	if (wasPlaying) {
+		clearProcessedBuffers();
+	} else {
+		unqueueAllBuffers();
+	}
+
+	const auto wereQueued = _data->queuedBuffers;
+	while (_data->queuedBuffersCount < kBuffersKeepReadyCount) {
+		const auto available = _audioDeviceBuffer.RequestPlayoutData(
+			kPlayoutPart);
+		if (available == kPlayoutPart) {
+			_audioDeviceBuffer.GetPlayoutData(_data->playoutSamples.data());
+		} else {
+			//ranges::fill(_data->playoutSamples, 0);
+			break;
+		}
+		const auto now = crl::now();
+		_playoutLatency = countExactQueuedMsForLatency(now, wasPlaying);
+		//RTC_LOG(LS_ERROR) << "PLAYOUT LATENCY: " << _playoutLatency << "ms";
+
+		const auto i = std::range::find(_data->queuedBuffers, false);
+		const auto index = int(i - std::begin(_data->queuedBuffers));
+		alBufferData(
+			_data->buffers[index],
+			(_playoutChannels == 2) ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16,
+			_data->playoutSamples.data(),
+			_data->playoutSamples.size(),
+			kPlayoutFrequency);
+
+#ifdef WEBRTC_WIN
+		if (IsLoopbackCaptureActive() && _playoutChannels == 2) {
+			LoopbackCapturePushFarEnd(
+				now + _playoutLatency,
+				_data->playoutSamples,
+				kPlayoutFrequency,
+				_playoutChannels);
+		}
+#endif // WEBRTC_WIN
+
+		_data->queuedBuffers[index] = true;
+		++_data->queuedBuffersCount;
+		if (wasPlaying) {
+			alSourceQueueBuffers(
+				_data->source,
+				1,
+				_data->buffers.data() + index);
+		}
+	}
+	if (!_data->queuedBuffersCount) {
+		return;
+	}
+	if (!playing()) {
+		if (wasPlaying) {
+			// While we were queueing buffers the source stopped.
+			// Now we can't unqueue only old buffers, so we unqueue all
+			// of them and then re-queue the ones we queued right now.
+			unqueueAllBuffers();
+			for (auto i = 0; i != int(_data->buffers.size()); ++i) {
+				if (!wereQueued[i] && _data->queuedBuffers[i]) {
+					alSourceQueueBuffers(
+						_data->source,
+						1,
+						_data->buffers.data() + i);
+				}
+			}
+		} else {
+			// We were not playing and had no buffers,
+			// so queue them all at once.
+			alSourceQueueBuffers(
+				_data->source,
+				_data->queuedBuffersCount,
+				_data->buffers.data());
+		}
+		alSourcePlay(_data->source);
+	}
+
+	if (Failed(_playoutDevice)) {
+		_playoutFailed = true;
+	}
+
+*/
+    return true;
+}
+
+void CustomAudioDeviceModule::closePlayoutDevice() {
+	if (_playoutContext) {
+		alcDestroyContext(_playoutContext);
+		_playoutContext = nullptr;
+	}
+	if (_playoutDevice) {
+		alcCloseDevice(_playoutDevice);
+		_playoutDevice = nullptr;
+	}
 }

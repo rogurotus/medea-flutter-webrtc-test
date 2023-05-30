@@ -17,6 +17,7 @@
 #include "modules/audio_device/include/audio_device.h"
 #include "modules/audio_device/include/audio_device_defines.h"
 
+#include "rtc_base/thread.h"
 #include "rtc_base/event.h"
 #include "rtc_base/platform_thread.h"
 #include "rtc_base/synchronization/mutex.h"
@@ -177,7 +178,8 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   // Audio capture module.
   std::unique_ptr<MicrophoneModuleInterface> audio_recorder;
 
-  rtc::PlatformThread ptrThreadRec;
+  rtc::PlatformThread recordingThread;
+  std::unique_ptr<rtc::Thread> _playoutThread;
   std::condition_variable cv;
   bool quit = false;
 
@@ -185,10 +187,22 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   int restartPlayout();
   void openPlayoutDevice();
 
+  void ensureThreadStarted();
+  void closePlayoutDevice();
+  bool processPlayout();
+  void handleEvent(
+    ALenum eventType,
+	ALuint object,
+	ALuint param,
+	ALsizei length,
+	const ALchar *message);
+
+  rtc::Thread *_thread = nullptr;
   std::string _playoutDeviceId;
   bool _playoutInitialized = false;
   bool _playoutFailed = false;
   int _playoutChannels = 2;
   bool _speakerInitialized = false;
   ALCcontext *_playoutContext = nullptr;
+  ALCdevice *_playoutDevice = nullptr;
 };
