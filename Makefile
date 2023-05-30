@@ -199,6 +199,8 @@ ifeq ($(platform),linux)
 		linux/rust/src/flutter_webrtc_native.cc
 	cp -f crates/native/include/api.h \
 		linux/rust/include/flutter-webrtc-native/include/api.h
+	cp -f target/x86_64-unknown-linux-gnu/$(if $(call eq,$(debug),no),release,debug)/libflutter_webrtc_native.so \
+		/media/alexlapa/drive2/CLionProjects3/flutter-webrtc/example/build/linux/x64/debug/bundle/lib/libflutter_webrtc_native.so
 endif
 ifeq ($(platform),macos)
 	$(foreach t,$(cargo-build-targets-macos),\
