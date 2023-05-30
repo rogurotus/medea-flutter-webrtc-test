@@ -12,6 +12,8 @@ class RefCountedAudioSource : public webrtc::AudioMixer::Source,
 
 class AudioSource : public rtc::RefCountedObject<RefCountedAudioSource> {
  public:
+  // Creates a new `AudioSource`.
+  AudioSource();
   // Overwrites `audio_frame`. The data_ field is overwritten with
   // 10 ms of new audio (either 1 or 2 interleaved channels) at
   // `sample_rate_hz`. All fields in `audio_frame` must be updated.

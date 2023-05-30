@@ -1,5 +1,10 @@
 #include "custom_audio.h"
 
+// Creates a new `AudioSource`.
+AudioSource::AudioSource() {
+  frame_.sample_rate_hz_ = 8000;
+}
+
 // Overwrites `audio_frame`. The data_ field is overwritten with
 // 10 ms of new audio (either 1 or 2 interleaved channels) at
 // `sample_rate_hz`. All fields in `audio_frame` must be updated.
