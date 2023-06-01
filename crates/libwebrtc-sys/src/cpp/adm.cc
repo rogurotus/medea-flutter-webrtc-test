@@ -91,7 +91,9 @@ struct CustomAudioDeviceModule::Data {
   int queuedBuffersCount = 0;
   std::array<ALuint, kBuffersFullCount> buffers = {{0}};
   std::array<bool, kBuffersFullCount> queuedBuffers = {{false}};
-  std::vector<char> playoutSamples;
+  int bufferSize = kPlayoutPart * sizeof(int16_t) * 2;
+  std::vector<char>* playoutSamples = new std::vector<char>(bufferSize, 0);
+//  int8_t* _playoutSamples = new int8_t[bufferSize]
   int64_t exactDeviceTimeCounter = 0;
   int64_t lastExactDeviceTime = 0;
   crl::time lastExactDeviceTimeWhen = 0;
@@ -573,9 +575,8 @@ void CustomAudioDeviceModule::openPlayoutDevice() {
     RTC_LOG(LS_ERROR) << "openPlayoutDevice 2";
     return;
   }
-  RTC_LOG(LS_ERROR) << "openPlayoutDevice 3";
-  _playoutDevice = alcOpenDevice(
-      _playoutDeviceId.empty() ? nullptr : _playoutDeviceId.c_str());
+  RTC_LOG(LS_ERROR) << "openPlayoutDevice 3" << _playoutDeviceId;
+  _playoutDevice = alcOpenDevice(nullptr);
   RTC_LOG(LS_ERROR) << "openPlayoutDevice 4";
   if (!_playoutDevice) {
     RTC_LOG(LS_ERROR) << "openPlayoutDevice 5";
@@ -643,6 +644,7 @@ void CustomAudioDeviceModule::ensureThreadStarted() {
   _thread->AllowInvokesToThread(_data->_playoutThread.get());
 
   _data->_playoutThread->PostTask([=] {
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     while (processPlayout()) {
     }
   });
@@ -780,7 +782,9 @@ bool CustomAudioDeviceModule::processPlayout() {
   while (_data->queuedBuffersCount < kBuffersKeepReadyCount) {
     const auto available = _audioDeviceBuffer.RequestPlayoutData(kPlayoutPart);
     if (available == kPlayoutPart) {
-      _audioDeviceBuffer.GetPlayoutData(_data->playoutSamples.data());
+      RTC_LOG(LS_ERROR) << "GetPlayoutData: 1";
+      _audioDeviceBuffer.GetPlayoutData(_data->playoutSamples->data());
+      RTC_LOG(LS_ERROR) << "GetPlayoutData: 2";
     } else {
       // ranges::fill(_data->playoutSamples, 0);
       break;
@@ -794,7 +798,7 @@ bool CustomAudioDeviceModule::processPlayout() {
     alBufferData(
         _data->buffers[index],
         (_playoutChannels == 2) ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16,
-        _data->playoutSamples.data(), _data->playoutSamples.size(),
+        _data->playoutSamples->data(), _data->playoutSamples->size(),
         kPlayoutFrequency);
 //
 //#ifdef WEBRTC_WIN
