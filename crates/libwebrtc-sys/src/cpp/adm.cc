@@ -279,6 +279,8 @@ CustomAudioDeviceModule::CustomAudioDeviceModule(
       _audioDeviceBuffer(task_queue_factory),
       audio_recorder(std::move(
           std::unique_ptr<MicrophoneModuleInterface>(new MicrophoneModule()))) {
+  _audioDeviceBuffer.SetPlayoutSampleRate(kPlayoutFrequency);
+  _audioDeviceBuffer.SetPlayoutChannels(_playoutChannels);
 }
 
 void CustomAudioDeviceModule::RecordProcess() {
@@ -461,6 +463,7 @@ int32_t CustomAudioDeviceModule::StartPlayout() {
     openPlayoutDevice();
   }
   RTC_LOG(LS_ERROR) << "StartPlayout 4";
+  RTC_LOG(LS_ERROR) << "PlayoutChannels" << _playoutChannels;
   _audioDeviceBuffer.SetPlayoutSampleRate(kPlayoutFrequency);
   _audioDeviceBuffer.SetPlayoutChannels(_playoutChannels);
   _audioDeviceBuffer.StartPlayout();
