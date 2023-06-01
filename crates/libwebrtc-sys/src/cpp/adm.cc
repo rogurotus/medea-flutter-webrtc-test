@@ -782,16 +782,16 @@ bool CustomAudioDeviceModule::processPlayout() {
   while (_data->queuedBuffersCount < kBuffersKeepReadyCount) {
     const auto available = _audioDeviceBuffer.RequestPlayoutData(kPlayoutPart);
     if (available == kPlayoutPart) {
-      RTC_LOG(LS_ERROR) << "GetPlayoutData: 1";
+//      RTC_LOG(LS_ERROR) << "GetPlayoutData: 1";
       _audioDeviceBuffer.GetPlayoutData(_data->playoutSamples->data());
-      RTC_LOG(LS_ERROR) << "GetPlayoutData: 2";
+//      RTC_LOG(LS_ERROR) << "GetPlayoutData: 2";
     } else {
       // ranges::fill(_data->playoutSamples, 0);
       break;
     }
-    const auto now = crl::now();
-    _playoutLatency = countExactQueuedMsForLatency(now, wasPlaying);
-     RTC_LOG(LS_ERROR) << "PLAYOUT LATENCY: " <<  _playoutChannels;
+//    const auto now = crl::now();
+//    _playoutLatency = countExactQueuedMsForLatency(now, wasPlaying);
+//     RTC_LOG(LS_ERROR) << "PLAYOUT LATENCY: " <<  _playoutChannels;
 
     const auto i = std::find(std::begin(_data->queuedBuffers), std::end(_data->queuedBuffers), false);
     const auto index = int(i - std::begin(_data->queuedBuffers));
@@ -834,7 +834,9 @@ bool CustomAudioDeviceModule::processPlayout() {
       alSourceQueueBuffers(_data->source, _data->queuedBuffersCount,
                            _data->buffers.data());
     }
+//    RTC_LOG(LS_ERROR) << "PlayAudio: 1";
     alSourcePlay(_data->source);
+//    RTC_LOG(LS_ERROR) << "PlayAudio: 2";
   }
 
   if (Failed(_playoutDevice)) {
@@ -941,4 +943,23 @@ void CustomAudioDeviceModule::stopPlayingOnThread() {
                  }
          });
          */
+}
+
+int16_t CustomAudioDeviceModule::RecordingDevices() {
+  return DevicesCount(ALC_CAPTURE_DEVICE_SPECIFIER);
+}
+
+int32_t CustomAudioDeviceModule::SetRecordingDevice(uint16_t index) {
+  const auto result = DeviceName(
+      ALC_CAPTURE_DEVICE_SPECIFIER,
+      index,
+      nullptr,
+      &_recordingDeviceId);
+  return result ? result : restartRecording();
+}
+
+int32_t CustomAudioDeviceModule::SetRecordingDevice(WindowsDeviceType /*device*/) {
+  _recordingDeviceId = ComputeDefaultDeviceId(
+      ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
+  return _recordingDeviceId.empty() ? -1 : restartRecording();
 }
