@@ -10,8 +10,13 @@
 
 #include <iostream>
 
+#include <cfenv>
+#include <cmath>
+#include <algorithm>
 #include <chrono>
+#include <ranges>
 #include <thread>
+#include <vector>
 #include "adm.h"
 #include "api/make_ref_counted.h"
 #include "common_audio/wav_file.h"
@@ -86,6 +91,7 @@ struct CustomAudioDeviceModule::Data {
   int queuedBuffersCount = 0;
   std::array<ALuint, kBuffersFullCount> buffers = {{0}};
   std::array<bool, kBuffersFullCount> queuedBuffers = {{false}};
+  std::vector<char> playoutSamples;
   int64_t exactDeviceTimeCounter = 0;
   int64_t lastExactDeviceTime = 0;
   crl::time lastExactDeviceTimeWhen = 0;
@@ -561,16 +567,21 @@ int32_t CustomAudioDeviceModule::SpeakerMute(bool* enabled) const {
 void CustomAudioDeviceModule::openPlayoutDevice() {
   RTC_LOG(LS_ERROR) << "openPlayoutDevice 1";
   if (_playoutDevice || _playoutFailed) {
+    RTC_LOG(LS_ERROR) << "openPlayoutDevice 2";
     return;
   }
+  RTC_LOG(LS_ERROR) << "openPlayoutDevice 3";
   _playoutDevice = alcOpenDevice(
       _playoutDeviceId.empty() ? nullptr : _playoutDeviceId.c_str());
+  RTC_LOG(LS_ERROR) << "openPlayoutDevice 4";
   if (!_playoutDevice) {
+    RTC_LOG(LS_ERROR) << "openPlayoutDevice 5";
     RTC_LOG(LS_ERROR) << "OpenAL Device open failed, deviceID: '"
                       << _playoutDeviceId << "'";
     _playoutFailed = true;
     return;
   }
+  RTC_LOG(LS_ERROR) << "openPlayoutDevice 6";
   RTC_LOG(LS_ERROR) << "openPlayoutDevice 2";
   _playoutContext = alcCreateContext(_playoutDevice, nullptr);
   if (!_playoutContext) {
@@ -629,7 +640,8 @@ void CustomAudioDeviceModule::ensureThreadStarted() {
   _thread->AllowInvokesToThread(_data->_playoutThread.get());
 
   _data->_playoutThread->PostTask([=] {
-    while (processPlayout()) { }
+    while (processPlayout()) {
+    }
   });
 }
 
@@ -642,95 +654,186 @@ void CustomAudioDeviceModule::ensureThreadStarted() {
   return false;
 }
 
+bool CustomAudioDeviceModule::clearProcessedBuffer() {
+  auto processed = ALint(0);
+  alGetSourcei(_data->source, AL_BUFFERS_PROCESSED, &processed);
+  if (processed < 1) {
+    return false;
+  }
+  auto buffer = ALuint(0);
+  alSourceUnqueueBuffers(_data->source, 1, &buffer);
+  for (auto i = 0; i != int(_data->buffers.size()); ++i) {
+    if (_data->buffers[i] == buffer) {
+      _data->queuedBuffers[i] = false;
+      --_data->queuedBuffersCount;
+      return true;
+    }
+  }
+}
+
+void CustomAudioDeviceModule::clearProcessedBuffers() {
+  while (true) {
+    if (!clearProcessedBuffer()) {
+      break;
+    }
+  }
+}
+
+void CustomAudioDeviceModule::unqueueAllBuffers() {
+  alSourcei(_data->source, AL_BUFFER, AL_NONE);
+  std::fill(std::begin(_data->queuedBuffers), std::end(_data->queuedBuffers),
+            false);
+  _data->queuedBuffersCount = 0;
+}
+
+[[nodiscard]] double SafeRound(double value) {
+  if (const auto result = std::round(value); !std::isnan(result)) {
+    return result;
+  }
+  const auto errors = std::fetestexcept(FE_ALL_EXCEPT);
+  if (const auto result = std::round(value); !std::isnan(result)) {
+    return result;
+  }
+  std::feclearexcept(FE_ALL_EXCEPT);
+  if (const auto result = std::round(value); !std::isnan(result)) {
+    return result;
+  }
+}
+
+crl::time CustomAudioDeviceModule::countExactQueuedMsForLatency(
+    crl::time now,
+    bool playing) {
+  auto values = std::array<AL_INT64_TYPE, kALMaxValues>{};
+  auto &sampleOffset = values[0];
+  auto &clockTime = values[1];
+  auto &exactDeviceTime = values[2];
+  const auto countExact = alGetSourcei64vSOFT
+                          && kAL_SAMPLE_OFFSET_CLOCK_SOFT
+                          && kAL_SAMPLE_OFFSET_CLOCK_EXACT_SOFT;
+  if (countExact) {
+    if (!_data->lastExactDeviceTimeWhen
+        || !(++_data->exactDeviceTimeCounter % kQueryExactTimeEach)) {
+      alGetSourcei64vSOFT(
+          _data->source,
+          kAL_SAMPLE_OFFSET_CLOCK_EXACT_SOFT,
+          values.data());
+      _data->lastExactDeviceTime = exactDeviceTime;
+      _data->lastExactDeviceTimeWhen = now;
+    } else {
+      alGetSourcei64vSOFT(
+          _data->source,
+          kAL_SAMPLE_OFFSET_CLOCK_SOFT,
+          values.data());
+
+      // The exactDeviceTime is in nanoseconds.
+      exactDeviceTime = _data->lastExactDeviceTime
+                        + (now - _data->lastExactDeviceTimeWhen) * 1'000'000;
+    }
+  } else {
+    auto offset = ALint(0);
+    alGetSourcei(_data->source, AL_SAMPLE_OFFSET, &offset);
+    sampleOffset = (AL_INT64_TYPE(offset) << 32);
+  }
+
+  const auto queuedSamples = (AL_INT64_TYPE(
+                                  _data->queuedBuffersCount * kPlayoutPart) << 32);
+  const auto processedInOpenAL = playing ? sampleOffset : queuedSamples;
+  const auto secondsQueuedInDevice = std::max(
+                                         clockTime - exactDeviceTime,
+                                         AL_INT64_TYPE(0)
+                                             ) / 1'000'000'000.;
+  const auto secondsQueuedInOpenAL
+      = (double((queuedSamples - processedInOpenAL) >> (32 - 10))
+         / double(kPlayoutFrequency * (1 << 10)));
+
+  const auto queuedTotal = crl::time(SafeRound(
+      (secondsQueuedInDevice + secondsQueuedInOpenAL) * 1'000));
+
+  return countExact
+             ? queuedTotal
+             : std::max(queuedTotal, kDefaultPlayoutLatency);
+}
+
+int32_t CustomAudioDeviceModule::RegisterAudioCallback(
+    webrtc::AudioTransport *audioCallback) {
+  return _audioDeviceBuffer.RegisterAudioCallback(audioCallback);
+}
+
 bool CustomAudioDeviceModule::processPlayout() {
-          const auto playing = [&] {
-                  auto state = ALint(AL_INITIAL);
-                  alGetSourcei(_data->source, AL_SOURCE_STATE, &state);
-                  return (state == AL_PLAYING);
-          };
-          const auto wasPlaying = playing();
-/*
-          if (wasPlaying) {
-                  clearProcessedBuffers();
-          } else {
-                  unqueueAllBuffers();
-          }
+  const auto playing = [&] {
+    auto state = ALint(AL_INITIAL);
+    alGetSourcei(_data->source, AL_SOURCE_STATE, &state);
+    return (state == AL_PLAYING);
+  };
+  const auto wasPlaying = playing();
 
-          const auto wereQueued = _data->queuedBuffers;
-          while (_data->queuedBuffersCount < kBuffersKeepReadyCount) {
-                  const auto available = _audioDeviceBuffer.RequestPlayoutData(
-                          kPlayoutPart);
-                  if (available == kPlayoutPart) {
-                          _audioDeviceBuffer.GetPlayoutData(_data->playoutSamples.data());
-                  } else {
-                          //ranges::fill(_data->playoutSamples, 0);
-                          break;
-                  }
-                  const auto now = crl::now();
-                  _playoutLatency = countExactQueuedMsForLatency(now,
-  wasPlaying);
-                  //RTC_LOG(LS_ERROR) << "PLAYOUT LATENCY: " << _playoutLatency
-  << "ms";
+  if (wasPlaying) {
+    clearProcessedBuffers();
+  } else {
+    unqueueAllBuffers();
+  }
 
-                  const auto i = std::range::find(_data->queuedBuffers, false);
-                  const auto index = int(i - std::begin(_data->queuedBuffers));
-                  alBufferData(
-                          _data->buffers[index],
-                          (_playoutChannels == 2) ? AL_FORMAT_STEREO16 :
-  AL_FORMAT_MONO16, _data->playoutSamples.data(), _data->playoutSamples.size(),
-                          kPlayoutFrequency);
+  const auto wereQueued = _data->queuedBuffers;
+  while (_data->queuedBuffersCount < kBuffersKeepReadyCount) {
+    const auto available = _audioDeviceBuffer.RequestPlayoutData(kPlayoutPart);
+    if (available == kPlayoutPart) {
+      _audioDeviceBuffer.GetPlayoutData(_data->playoutSamples.data());
+    } else {
+      // ranges::fill(_data->playoutSamples, 0);
+      break;
+    }
+    const auto now = crl::now();
+    _playoutLatency = countExactQueuedMsForLatency(now, wasPlaying);
+     RTC_LOG(LS_ERROR) << "PLAYOUT LATENCY: " <<  _playoutChannels;
 
-  #ifdef WEBRTC_WIN
-                  if (IsLoopbackCaptureActive() && _playoutChannels == 2) {
-                          LoopbackCapturePushFarEnd(
-                                  now + _playoutLatency,
-                                  _data->playoutSamples,
-                                  kPlayoutFrequency,
-                                  _playoutChannels);
-                  }
-  #endif // WEBRTC_WIN
+    const auto i = std::find(std::begin(_data->queuedBuffers), std::end(_data->queuedBuffers), false);
+    const auto index = int(i - std::begin(_data->queuedBuffers));
+    alBufferData(
+        _data->buffers[index],
+        (_playoutChannels == 2) ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16,
+        _data->playoutSamples.data(), _data->playoutSamples.size(),
+        kPlayoutFrequency);
+//
+//#ifdef WEBRTC_WIN
+//    if (IsLoopbackCaptureActive() && _playoutChannels == 2) {
+//      LoopbackCapturePushFarEnd(now + _playoutLatency, _data->playoutSamples,
+//                                kPlayoutFrequency, _playoutChannels);
+//    }
+//#endif  // WEBRTC_WIN
+//
+    _data->queuedBuffers[index] = true;
+    ++_data->queuedBuffersCount;
+    if (wasPlaying) {
+      alSourceQueueBuffers(_data->source, 1, _data->buffers.data() + index);
+    }
+  }
+  if (!_data->queuedBuffersCount) {
+    return false;
+  }
+  if (!playing()) {
+    if (wasPlaying) {
+      // While we were queueing buffers the source stopped.
+      // Now we can't unqueue only old buffers, so we
+          // of them and then re-queue the ones we queued right
+      unqueueAllBuffers();
+      for (auto i = 0; i != int(_data->buffers.size()); ++i) {
+        if (!wereQueued[i] && _data->queuedBuffers[i]) {
+          alSourceQueueBuffers(_data->source, 1, _data->buffers.data() + i);
+        }
+      }
+    } else {
+      // We were not playing and had no buffers,
+      // so queue them all at once.
+      alSourceQueueBuffers(_data->source, _data->queuedBuffersCount,
+                           _data->buffers.data());
+    }
+    alSourcePlay(_data->source);
+  }
 
-                  _data->queuedBuffers[index] = true;
-                  ++_data->queuedBuffersCount;
-                  if (wasPlaying) {
-                          alSourceQueueBuffers(
-                                  _data->source,
-                                  1,
-                                  _data->buffers.data() + index);
-                  }
-          }
-          if (!_data->queuedBuffersCount) {
-                  return;
-          }
-          if (!playing()) {
-                  if (wasPlaying) {
-                          // While we were queueing buffers the source stopped.
-                          // Now we can't unqueue only old buffers, so we
-  unqueue all
-                          // of them and then re-queue the ones we queued right
-  now. unqueueAllBuffers(); for (auto i = 0; i != int(_data->buffers.size());
-  ++i) { if (!wereQueued[i] && _data->queuedBuffers[i]) { alSourceQueueBuffers(
-                                                  _data->source,
-                                                  1,
-                                                  _data->buffers.data() + i);
-                                  }
-                          }
-                  } else {
-                          // We were not playing and had no buffers,
-                          // so queue them all at once.
-                          alSourceQueueBuffers(
-                                  _data->source,
-                                  _data->queuedBuffersCount,
-                                  _data->buffers.data());
-                  }
-                  alSourcePlay(_data->source);
-          }
+  if (Failed(_playoutDevice)) {
+    _playoutFailed = true;
+  }
 
-          if (Failed(_playoutDevice)) {
-                  _playoutFailed = true;
-          }
-
-  */
   return true;
 }
 

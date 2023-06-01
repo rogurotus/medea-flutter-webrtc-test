@@ -9,7 +9,7 @@ webrtc::AudioMixer::Source::AudioFrameInfo AudioSource::GetAudioFrameWithInfo(
     webrtc::AudioFrame* audio_frame) {
   std::unique_lock<std::mutex> lock(mutex_);
   cv_.wait(lock, [&]() { return frame_available_; });
-  RTC_LOG(LS_ERROR) << "Sample rate HZ: " << sample_rate_hz;
+  RTC_LOG(LS_ERROR) << "Number of channels: " << frame_.num_channels_;
   auto* source = frame_.data();
   if (frame_.sample_rate_hz() != sample_rate_hz) {
     render_resampler_.InitializeIfNeeded(frame_.sample_rate_hz(),
@@ -35,6 +35,7 @@ void AudioSource::UpdateFrame(const int16_t* source,
                               int channels) {
 //  RTC_LOG(LS_ERROR) << "UpdateFrame: " << sample_rate;
   std::unique_lock<std::mutex> lock(mutex_);
+  RTC_LOG(LS_ERROR) << "Number of channels 2: " << channels;
   frame_.UpdateFrame(0, source, size, sample_rate,
                      webrtc::AudioFrame::SpeechType::kNormalSpeech,
                      webrtc::AudioFrame::VADActivity::kVadActive, channels);

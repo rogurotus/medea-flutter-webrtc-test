@@ -163,6 +163,8 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   int32_t SpeakerMuteIsAvailable(bool *available) override;
   int32_t SetSpeakerMute(bool enable) override;
   int32_t SpeakerMute(bool *enabled) const override;
+  int32_t RegisterAudioCallback(
+      webrtc::AudioTransport *audioCallback) override;
 
   private:
   struct Data;
@@ -195,6 +197,15 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   void closePlayoutDevice();
   bool validatePlayoutDeviceId();
 
+  void clearProcessedBuffers();
+  bool clearProcessedBuffer();
+
+  void unqueueAllBuffers();
+
+  [[nodiscard]] crl::time countExactQueuedMsForLatency(
+      crl::time now,
+      bool playing);
+
   bool processPlayout();
 
   	// NB! closePlayoutDevice should be called after this, so that next time
@@ -213,6 +224,7 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   bool _playoutInitialized = false;
   bool _playoutFailed = false;
   int _playoutChannels = 2;
+  crl::time _playoutLatency = 0;
   bool _speakerInitialized = false;
   ALCcontext *_playoutContext = nullptr;
   ALCdevice *_playoutDevice = nullptr;
