@@ -107,24 +107,20 @@ std::unique_ptr<VideoTrackSourceInterface> create_device_video_source(
 }
 
 // Creates a new `AudioDeviceModuleProxy`.
-std::unique_ptr<AudioDeviceModule> create_audio_device_module(
+std::unique_ptr<CustomAudioDeviceModule> create_audio_device_module(
     Thread& worker_thread,
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory) {
-  AudioDeviceModule adm = worker_thread.Invoke<AudioDeviceModule>(
+  CustomAudioDeviceModule adm = worker_thread.Invoke<CustomAudioDeviceModule>(
       RTC_FROM_HERE, [audio_layer, &task_queue_factory] {
-        return webrtc::AudioDeviceModule::Create(audio_layer,
-                                                 &task_queue_factory);
+        return ::CustomAudioDeviceModule::Create(audio_layer, &task_queue_factory);
       });
 
   if (adm == nullptr) {
     return nullptr;
   }
 
-  AudioDeviceModule proxied =
-      webrtc::AudioDeviceModuleProxy::Create(&worker_thread, adm);
-
-  return std::make_unique<AudioDeviceModule>(proxied);
+  return std::make_unique<CustomAudioDeviceModule>(adm);
 }
 
 // Calls `AudioDeviceModule->Init()`.
