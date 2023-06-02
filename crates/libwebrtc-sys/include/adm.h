@@ -179,8 +179,6 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   bool _initialized = false;
   std::unique_ptr<Data> _data;
 
-  webrtc::AudioDeviceBuffer _audioDeviceBuffer;
-
   // Audio capture module.
   std::unique_ptr<MicrophoneModuleInterface> audio_recorder;
 

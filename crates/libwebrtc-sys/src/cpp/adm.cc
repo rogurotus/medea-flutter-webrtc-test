@@ -278,11 +278,10 @@ CustomAudioDeviceModule::CustomAudioDeviceModule(
     AudioLayer audio_layer,
     webrtc::TaskQueueFactory* task_queue_factory)
     : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory),
-      _audioDeviceBuffer(task_queue_factory),
       audio_recorder(std::move(
           std::unique_ptr<MicrophoneModuleInterface>(new MicrophoneModule()))) {
-  _audioDeviceBuffer.SetPlayoutSampleRate(kPlayoutFrequency);
-  _audioDeviceBuffer.SetPlayoutChannels(_playoutChannels);
+  GetAudioDeviceBuffer()->SetPlayoutSampleRate(kPlayoutFrequency);
+  GetAudioDeviceBuffer()->SetPlayoutChannels(_playoutChannels);
 }
 
 void CustomAudioDeviceModule::RecordProcess() {
@@ -466,9 +465,9 @@ int32_t CustomAudioDeviceModule::StartPlayout() {
   }
   RTC_LOG(LS_ERROR) << "StartPlayout 4";
   RTC_LOG(LS_ERROR) << "PlayoutChannels" << _playoutChannels;
-  _audioDeviceBuffer.SetPlayoutSampleRate(kPlayoutFrequency);
-  _audioDeviceBuffer.SetPlayoutChannels(_playoutChannels);
-  _audioDeviceBuffer.StartPlayout();
+  GetAudioDeviceBuffer()->SetPlayoutSampleRate(kPlayoutFrequency);
+  GetAudioDeviceBuffer()->SetPlayoutChannels(_playoutChannels);
+  GetAudioDeviceBuffer()->StartPlayout();
   //  TODO: startPlayingOnThread();
   return 0;
 }
@@ -476,7 +475,7 @@ int32_t CustomAudioDeviceModule::StartPlayout() {
 int32_t CustomAudioDeviceModule::StopPlayout() {
   if (_data) {
     stopPlayingOnThread();
-    _audioDeviceBuffer.StopPlayout();
+    GetAudioDeviceBuffer()->StopPlayout();
     _data->_playoutThread->Stop();
     _data = nullptr;
   }
@@ -761,7 +760,7 @@ crl::time CustomAudioDeviceModule::countExactQueuedMsForLatency(
 
 int32_t CustomAudioDeviceModule::RegisterAudioCallback(
     webrtc::AudioTransport *audioCallback) {
-  return _audioDeviceBuffer.RegisterAudioCallback(audioCallback);
+  return GetAudioDeviceBuffer()->RegisterAudioCallback(audioCallback);
 }
 
 bool CustomAudioDeviceModule::processPlayout() {
@@ -780,10 +779,10 @@ bool CustomAudioDeviceModule::processPlayout() {
 
   const auto wereQueued = _data->queuedBuffers;
   while (_data->queuedBuffersCount < kBuffersKeepReadyCount) {
-    const auto available = _audioDeviceBuffer.RequestPlayoutData(kPlayoutPart);
+    const auto available = GetAudioDeviceBuffer()->RequestPlayoutData(kPlayoutPart);
     if (available == kPlayoutPart) {
 //      RTC_LOG(LS_ERROR) << "GetPlayoutData: 1";
-      _audioDeviceBuffer.GetPlayoutData(_data->playoutSamples->data());
+      GetAudioDeviceBuffer()->GetPlayoutData(_data->playoutSamples->data());
 //      RTC_LOG(LS_ERROR) << "GetPlayoutData: 2";
     } else {
       // ranges::fill(_data->playoutSamples, 0);
@@ -943,23 +942,4 @@ void CustomAudioDeviceModule::stopPlayingOnThread() {
                  }
          });
          */
-}
-
-int16_t CustomAudioDeviceModule::RecordingDevices() {
-  return DevicesCount(ALC_CAPTURE_DEVICE_SPECIFIER);
-}
-
-int32_t CustomAudioDeviceModule::SetRecordingDevice(uint16_t index) {
-  const auto result = DeviceName(
-      ALC_CAPTURE_DEVICE_SPECIFIER,
-      index,
-      nullptr,
-      &_recordingDeviceId);
-  return result ? result : restartRecording();
-}
-
-int32_t CustomAudioDeviceModule::SetRecordingDevice(WindowsDeviceType /*device*/) {
-  _recordingDeviceId = ComputeDefaultDeviceId(
-      ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
-  return _recordingDeviceId.empty() ? -1 : restartRecording();
 }
