@@ -10,10 +10,10 @@
 
 #include <iostream>
 
-#include <cfenv>
-#include <cmath>
 #include <algorithm>
+#include <cfenv>
 #include <chrono>
+#include <cmath>
 #include <ranges>
 #include <thread>
 #include <vector>
@@ -93,7 +93,7 @@ struct CustomAudioDeviceModule::Data {
   std::array<bool, kBuffersFullCount> queuedBuffers = {{false}};
   int bufferSize = kPlayoutPart * sizeof(int16_t) * 2;
   std::vector<char>* playoutSamples = new std::vector<char>(bufferSize, 0);
-//  int8_t* _playoutSamples = new int8_t[bufferSize]
+  //  int8_t* _playoutSamples = new int8_t[bufferSize]
   int64_t exactDeviceTimeCounter = 0;
   int64_t lastExactDeviceTime = 0;
   crl::time lastExactDeviceTimeWhen = 0;
@@ -704,34 +704,28 @@ void CustomAudioDeviceModule::unqueueAllBuffers() {
   }
 }
 
-crl::time CustomAudioDeviceModule::countExactQueuedMsForLatency(
-    crl::time now,
-    bool playing) {
+crl::time CustomAudioDeviceModule::countExactQueuedMsForLatency(crl::time now,
+                                                                bool playing) {
   auto values = std::array<AL_INT64_TYPE, kALMaxValues>{};
-  auto &sampleOffset = values[0];
-  auto &clockTime = values[1];
-  auto &exactDeviceTime = values[2];
-  const auto countExact = alGetSourcei64vSOFT
-                          && kAL_SAMPLE_OFFSET_CLOCK_SOFT
-                          && kAL_SAMPLE_OFFSET_CLOCK_EXACT_SOFT;
+  auto& sampleOffset = values[0];
+  auto& clockTime = values[1];
+  auto& exactDeviceTime = values[2];
+  const auto countExact = alGetSourcei64vSOFT && kAL_SAMPLE_OFFSET_CLOCK_SOFT &&
+                          kAL_SAMPLE_OFFSET_CLOCK_EXACT_SOFT;
   if (countExact) {
-    if (!_data->lastExactDeviceTimeWhen
-        || !(++_data->exactDeviceTimeCounter % kQueryExactTimeEach)) {
-      alGetSourcei64vSOFT(
-          _data->source,
-          kAL_SAMPLE_OFFSET_CLOCK_EXACT_SOFT,
-          values.data());
+    if (!_data->lastExactDeviceTimeWhen ||
+        !(++_data->exactDeviceTimeCounter % kQueryExactTimeEach)) {
+      alGetSourcei64vSOFT(_data->source, kAL_SAMPLE_OFFSET_CLOCK_EXACT_SOFT,
+                          values.data());
       _data->lastExactDeviceTime = exactDeviceTime;
       _data->lastExactDeviceTimeWhen = now;
     } else {
-      alGetSourcei64vSOFT(
-          _data->source,
-          kAL_SAMPLE_OFFSET_CLOCK_SOFT,
-          values.data());
+      alGetSourcei64vSOFT(_data->source, kAL_SAMPLE_OFFSET_CLOCK_SOFT,
+                          values.data());
 
       // The exactDeviceTime is in nanoseconds.
-      exactDeviceTime = _data->lastExactDeviceTime
-                        + (now - _data->lastExactDeviceTimeWhen) * 1'000'000;
+      exactDeviceTime = _data->lastExactDeviceTime +
+                        (now - _data->lastExactDeviceTimeWhen) * 1'000'000;
     }
   } else {
     auto offset = ALint(0);
@@ -739,27 +733,24 @@ crl::time CustomAudioDeviceModule::countExactQueuedMsForLatency(
     sampleOffset = (AL_INT64_TYPE(offset) << 32);
   }
 
-  const auto queuedSamples = (AL_INT64_TYPE(
-                                  _data->queuedBuffersCount * kPlayoutPart) << 32);
+  const auto queuedSamples =
+      (AL_INT64_TYPE(_data->queuedBuffersCount * kPlayoutPart) << 32);
   const auto processedInOpenAL = playing ? sampleOffset : queuedSamples;
-  const auto secondsQueuedInDevice = std::max(
-                                         clockTime - exactDeviceTime,
-                                         AL_INT64_TYPE(0)
-                                             ) / 1'000'000'000.;
-  const auto secondsQueuedInOpenAL
-      = (double((queuedSamples - processedInOpenAL) >> (32 - 10))
-         / double(kPlayoutFrequency * (1 << 10)));
+  const auto secondsQueuedInDevice =
+      std::max(clockTime - exactDeviceTime, AL_INT64_TYPE(0)) / 1'000'000'000.;
+  const auto secondsQueuedInOpenAL =
+      (double((queuedSamples - processedInOpenAL) >> (32 - 10)) /
+       double(kPlayoutFrequency * (1 << 10)));
 
-  const auto queuedTotal = crl::time(SafeRound(
-      (secondsQueuedInDevice + secondsQueuedInOpenAL) * 1'000));
+  const auto queuedTotal = crl::time(
+      SafeRound((secondsQueuedInDevice + secondsQueuedInOpenAL) * 1'000));
 
-  return countExact
-             ? queuedTotal
-             : std::max(queuedTotal, kDefaultPlayoutLatency);
+  return countExact ? queuedTotal
+                    : std::max(queuedTotal, kDefaultPlayoutLatency);
 }
 
 int32_t CustomAudioDeviceModule::RegisterAudioCallback(
-    webrtc::AudioTransport *audioCallback) {
+    webrtc::AudioTransport* audioCallback) {
   return GetAudioDeviceBuffer()->RegisterAudioCallback(audioCallback);
 }
 
@@ -779,34 +770,37 @@ bool CustomAudioDeviceModule::processPlayout() {
 
   const auto wereQueued = _data->queuedBuffers;
   while (_data->queuedBuffersCount < kBuffersKeepReadyCount) {
-    const auto available = GetAudioDeviceBuffer()->RequestPlayoutData(kPlayoutPart);
+    const auto available =
+        GetAudioDeviceBuffer()->RequestPlayoutData(kPlayoutPart);
     if (available == kPlayoutPart) {
-//      RTC_LOG(LS_ERROR) << "GetPlayoutData: 1";
+      //      RTC_LOG(LS_ERROR) << "GetPlayoutData: 1";
       GetAudioDeviceBuffer()->GetPlayoutData(_data->playoutSamples->data());
-//      RTC_LOG(LS_ERROR) << "GetPlayoutData: 2";
+      //      RTC_LOG(LS_ERROR) << "GetPlayoutData: 2";
     } else {
       // ranges::fill(_data->playoutSamples, 0);
       break;
     }
-//    const auto now = crl::now();
-//    _playoutLatency = countExactQueuedMsForLatency(now, wasPlaying);
-//     RTC_LOG(LS_ERROR) << "PLAYOUT LATENCY: " <<  _playoutChannels;
+    //    const auto now = crl::now();
+    //    _playoutLatency = countExactQueuedMsForLatency(now, wasPlaying);
+    //     RTC_LOG(LS_ERROR) << "PLAYOUT LATENCY: " <<  _playoutChannels;
 
-    const auto i = std::find(std::begin(_data->queuedBuffers), std::end(_data->queuedBuffers), false);
+    const auto i = std::find(std::begin(_data->queuedBuffers),
+                             std::end(_data->queuedBuffers), false);
     const auto index = int(i - std::begin(_data->queuedBuffers));
     alBufferData(
         _data->buffers[index],
         (_playoutChannels == 2) ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16,
         _data->playoutSamples->data(), _data->playoutSamples->size(),
         kPlayoutFrequency);
-//
-//#ifdef WEBRTC_WIN
-//    if (IsLoopbackCaptureActive() && _playoutChannels == 2) {
-//      LoopbackCapturePushFarEnd(now + _playoutLatency, _data->playoutSamples,
-//                                kPlayoutFrequency, _playoutChannels);
-//    }
-//#endif  // WEBRTC_WIN
-//
+    //
+    //#ifdef WEBRTC_WIN
+    //    if (IsLoopbackCaptureActive() && _playoutChannels == 2) {
+    //      LoopbackCapturePushFarEnd(now + _playoutLatency,
+    //      _data->playoutSamples,
+    //                                kPlayoutFrequency, _playoutChannels);
+    //    }
+    //#endif  // WEBRTC_WIN
+    //
     _data->queuedBuffers[index] = true;
     ++_data->queuedBuffersCount;
     if (wasPlaying) {
@@ -820,7 +814,7 @@ bool CustomAudioDeviceModule::processPlayout() {
     if (wasPlaying) {
       // While we were queueing buffers the source stopped.
       // Now we can't unqueue only old buffers, so we
-          // of them and then re-queue the ones we queued right
+      // of them and then re-queue the ones we queued right
       unqueueAllBuffers();
       for (auto i = 0; i != int(_data->buffers.size()); ++i) {
         if (!wereQueued[i] && _data->queuedBuffers[i]) {
@@ -833,9 +827,9 @@ bool CustomAudioDeviceModule::processPlayout() {
       alSourceQueueBuffers(_data->source, _data->queuedBuffersCount,
                            _data->buffers.data());
     }
-//    RTC_LOG(LS_ERROR) << "PlayAudio: 1";
+    //    RTC_LOG(LS_ERROR) << "PlayAudio: 1";
     alSourcePlay(_data->source);
-//    RTC_LOG(LS_ERROR) << "PlayAudio: 2";
+    //    RTC_LOG(LS_ERROR) << "PlayAudio: 2";
   }
 
   if (Failed(_playoutDevice)) {
