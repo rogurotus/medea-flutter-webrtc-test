@@ -461,8 +461,9 @@ int32_t CustomAudioDeviceModule::StartPlayout() {
   if (_playoutFailed) {
     _playoutFailed = false;
     RTC_LOG(LS_ERROR) << "StartPlayout 3";
-    openPlayoutDevice();
+//    openPlayoutDevice();
   }
+  openPlayoutDevice();
   RTC_LOG(LS_ERROR) << "StartPlayout 4";
   RTC_LOG(LS_ERROR) << "PlayoutChannels" << _playoutChannels;
   GetAudioDeviceBuffer()->SetPlayoutSampleRate(kPlayoutFrequency);
@@ -629,9 +630,9 @@ void CustomAudioDeviceModule::handleEvent(ALenum eventType,
 }
 
 void CustomAudioDeviceModule::ensureThreadStarted() {
-  if (_data) {
-    return;
-  }
+//  if (_data) {
+//    return;
+//  }
   _thread = rtc::Thread::Current();
   if (_thread && !_thread->IsOwned()) {
     _thread->UnwrapCurrent();
@@ -639,8 +640,8 @@ void CustomAudioDeviceModule::ensureThreadStarted() {
   }
   //  _data = std::make_unique<Data>();
 
-  _data->_playoutThread->Start();
-  _thread->AllowInvokesToThread(_data->_playoutThread.get());
+//  _data->_playoutThread->Start();
+//  _thread->AllowInvokesToThread(_data->_playoutThread.get());
 
   processPlayoutQueued();
   //  _data->_playoutThread->PostTask([=] {
@@ -887,9 +888,9 @@ bool CustomAudioDeviceModule::validatePlayoutDeviceId() {
 
 void CustomAudioDeviceModule::startPlayingOnThread() {
   RTC_LOG(LS_ERROR) << "StartPlayingOnThread 1";
-  //  _data->_playoutThread->Start();
+    _data->_playoutThread->Start();
   RTC_LOG(LS_ERROR) << "StartPlayingOnThread 2";
-  //  _thread->AllowInvokesToThread(_data->_playoutThread.get());
+//    _thread->AllowInvokesToThread(_data->_playoutThread.get());
   RTC_LOG(LS_ERROR) << "StartPlayingOnThread 3";
   _data->_playoutThread->PostTask([this] {
     _data->playing = true;
@@ -899,11 +900,11 @@ void CustomAudioDeviceModule::startPlayingOnThread() {
       return;
     }
     RTC_LOG(LS_ERROR) << "StartPlayingOnThread 4";
-    ALuint source = 0;
-    //    unsigned int sources[1];
-    alGenSources(1, &source);
+//    ALuint source = 0;
+    unsigned int sources[1];
+    alGenSources(1, sources);
     RTC_LOG(LS_ERROR) << "StartPlayingOnThread 5";
-    //    ALuint source = sources[0];
+    ALuint source = sources[0];
     if (source) {
       RTC_LOG(LS_ERROR) << "StartPlayingOnThread 6";
       alSourcef(source, AL_PITCH, 1.f);
