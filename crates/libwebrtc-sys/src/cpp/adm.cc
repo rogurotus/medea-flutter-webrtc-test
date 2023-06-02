@@ -292,6 +292,8 @@ void CustomAudioDeviceModule::RecordProcess() {
       [this] {
         webrtc::AudioFrame frame;
         auto cb = GetAudioDeviceBuffer();
+        cb->SetRecordingChannels(1);
+        cb->SetRecordingSampleRate(48000);
         while (!quit) {
           {
             std::unique_lock<std::mutex> lock(source_mutex);
@@ -299,8 +301,6 @@ void CustomAudioDeviceModule::RecordProcess() {
           }
 
           mixer->Mix(audio_recorder->RecordingChannels(), &frame);
-          cb->SetRecordingChannels(frame.num_channels());
-          cb->SetRecordingSampleRate(frame.sample_rate_hz());
           cb->SetRecordedBuffer(frame.data(), frame.sample_rate_hz() / 100);
           cb->DeliverRecordedData();
         }
@@ -438,9 +438,9 @@ int32_t CustomAudioDeviceModule::InitPlayout() {
   _playoutInitialized = true;
 
   RTC_LOG(LS_ERROR) << "InitPlayout 1";
-  ensureThreadStarted();
   RTC_LOG(LS_ERROR) << "InitPlayout 2";
-  openPlayoutDevice();
+  _data = std::make_unique<Data>();
+//  openPlayoutDevice();
   RTC_LOG(LS_ERROR) << "InitPlayout 3";
   return 0;
 }
@@ -468,7 +468,7 @@ int32_t CustomAudioDeviceModule::StartPlayout() {
   GetAudioDeviceBuffer()->SetPlayoutSampleRate(kPlayoutFrequency);
   GetAudioDeviceBuffer()->SetPlayoutChannels(_playoutChannels);
   GetAudioDeviceBuffer()->StartPlayout();
-  //  TODO: startPlayingOnThread();
+  startPlayingOnThread();
   return 0;
 }
 
@@ -637,14 +637,15 @@ void CustomAudioDeviceModule::ensureThreadStarted() {
     _thread->UnwrapCurrent();
     _thread = nullptr;
   }
-  _data = std::make_unique<Data>();
+//  _data = std::make_unique<Data>();
 
   _data->_playoutThread->Start();
   _thread->AllowInvokesToThread(_data->_playoutThread.get());
 
   _data->_playoutThread->PostTask([=] {
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+//    std::this_thread::sleep_for(std::chrono::seconds(2));
     while (processPlayout()) {
+        std::this_thread::sleep_for(std::chrono::seconds(10));
     }
   });
 }
@@ -871,40 +872,60 @@ bool CustomAudioDeviceModule::validatePlayoutDeviceId() {
 }
 
 void CustomAudioDeviceModule::startPlayingOnThread() {
-  _data->_playoutThread->Invoke<void>(RTC_FROM_HERE, [this] {
+  RTC_LOG(LS_ERROR) << "StartPlayingOnThread 1";
+//  _data->_playoutThread->Start();
+  RTC_LOG(LS_ERROR) << "StartPlayingOnThread 2";
+//  _thread->AllowInvokesToThread(_data->_playoutThread.get());
+  RTC_LOG(LS_ERROR) << "StartPlayingOnThread 3";
+//  _data->_playoutThread->Invoke<void>(RTC_FROM_HERE, [this] {
     _data->playing = true;
+  RTC_LOG(LS_ERROR) << "StartPlayingOnThread is failed?";
     if (_playoutFailed) {
+      RTC_LOG(LS_ERROR) << "Fuck it's failed";
       return;
     }
-    ALuint source = 0;
-    alGenSources(1, &source);
+    RTC_LOG(LS_ERROR) << "StartPlayingOnThread 4";
+//    ALuint source = 0;
+    unsigned int sources[1];
+    alGenSources(1, sources);
+    RTC_LOG(LS_ERROR) << "StartPlayingOnThread 5";
+    ALuint source = sources[0];
     if (source) {
+      RTC_LOG(LS_ERROR) << "StartPlayingOnThread 6";
       alSourcef(source, AL_PITCH, 1.f);
       alSource3f(source, AL_POSITION, 0, 0, 0);
       alSource3f(source, AL_VELOCITY, 0, 0, 0);
       alSourcei(source, AL_LOOPING, 0);
       alSourcei(source, AL_SOURCE_RELATIVE, 1);
       alSourcei(source, AL_ROLLOFF_FACTOR, 0);
+      RTC_LOG(LS_ERROR) << "StartPlayingOnThread 7";
       if (alIsExtensionPresent("AL_SOFT_direct_channels_remix")) {
         alSourcei(source, alGetEnumValue("AL_DIRECT_CHANNELS_SOFT"),
                   alGetEnumValue("AL_REMIX_UNMATCHED_SOFT"));
       }
       _data->source = source;
+      RTC_LOG(LS_ERROR) << "StartPlayingOnThread 8";
       alGenBuffers(_data->buffers.size(), _data->buffers.data());
+      RTC_LOG(LS_ERROR) << "StartPlayingOnThread 8";
 
       _data->exactDeviceTimeCounter = 0;
       _data->lastExactDeviceTime = 0;
       _data->lastExactDeviceTimeWhen = 0;
+      RTC_LOG(LS_ERROR) << "StartPlayingOnThread 9";
 
       const auto bufferSize = kPlayoutPart * sizeof(int16_t) * _playoutChannels;
+      RTC_LOG(LS_ERROR) << "StartPlayingOnThread 10";
 
-      // _data->playoutSamples = QByteArray(bufferSize, 0);
+      ensureThreadStarted();
+      RTC_LOG(LS_ERROR) << "StartPlayingOnThread 11";
+
+//       _data->playoutSamples = QByteArray(bufferSize, 0);
 
       // if (!_data->timer.isActive()) {
       //	_data->timer.callEach(kProcessInterval);
       // }
     }
-  });
+//  });
 }
 
 void CustomAudioDeviceModule::stopPlayingOnThread() {
