@@ -214,6 +214,8 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl,
                    ALsizei length,
                    const ALchar* message);
 
+  void processPlayoutQueued();
+
   rtc::Thread* _thread = nullptr;
   std::string _playoutDeviceId;
   bool _playoutInitialized = false;
