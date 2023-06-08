@@ -183,6 +183,12 @@ fn get_path_to_openal() -> anyhow::Result<PathBuf> {
             .join("lib")
             .join(get_target()?.as_str())
             .join("libopenal.so"),
+        "x86_64-pc-windows-msvc" => workspace_path
+            .join("windows")
+            .join("rust")
+            .join("lib")
+            .join(get_target()?.as_str())
+            .join("libopenal.dll"),
         _ => return Err(anyhow::anyhow!("Platform isn't supported")),
     })
 }
@@ -274,6 +280,9 @@ fn compile_openal() -> anyhow::Result<()> {
         }
         "x86_64-unknown-linux-gnu" => {
             fs::copy(openal_src_path.join("libopenal.so"), openal_path)?;
+        }
+        "x86_64-pc-windows-msvc" => {
+            fs::copy(openal_src_path.join("libopenal.dll"), openal_path)?;
         }
         _ => (),
     }
