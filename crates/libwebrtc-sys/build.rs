@@ -33,8 +33,8 @@ static OPENAL_URL: &str =
     "https://github.com/kcat/openal-soft/archive/refs/tags";
 
 fn main() -> anyhow::Result<()> {
-    compile_openal()?;
     download_libwebrtc()?;
+    compile_openal()?;
 
     let path = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
     let libpath = libpath()?;
@@ -197,10 +197,10 @@ fn compile_openal() -> anyhow::Result<()> {
     let is_already_installed = fs::metadata(&openal_path)
         .map(|m| m.is_dir())
         .unwrap_or_default();
-    let is_install_openal_enabled =
+    let is_install_openal_disabled =
         env::var("INSTALL_OPENAL").as_deref().unwrap_or("0") == "0";
 
-    if is_install_openal_enabled || is_already_installed {
+    if is_already_installed || is_install_openal_disabled {
         return Ok(());
     }
 
