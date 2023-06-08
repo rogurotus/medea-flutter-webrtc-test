@@ -271,7 +271,7 @@ int OpenALPlayoutADM::restartPlayout() {
   stopPlayingOnThread();
   closePlayoutDevice();
   if (!validatePlayoutDeviceId()) {
-    _data->_playoutThread->Invoke<void>(RTC_FROM_HERE, [this] {
+    _data->_playoutThread->PostTask([this] {
       _data->playing = true;
       _playoutFailed = true;
     });
