@@ -6,7 +6,7 @@ use std::ffi::OsString;
 use std::process;
 use std::{
     env, fs,
-    fs::File,
+    fs::{create_dir_all, File},
     io::{BufReader, BufWriter, Read, Write},
     path::{Path, PathBuf},
     process::Command,
@@ -29,7 +29,8 @@ static LIBWEBRTC_URL: &str =
 static OPENAL_VERSION: &str = "1.23.1";
 
 /// URL for downloading `openal-soft` source code.
-static OPENAL_URL: &str = "https://github.com/kcat/openal-soft/archive/refs/tags";
+static OPENAL_URL: &str =
+    "https://github.com/kcat/openal-soft/archive/refs/tags";
 
 fn main() -> anyhow::Result<()> {
     compile_openal()?;
@@ -159,19 +160,15 @@ fn copy_dir_all(
     Ok(())
 }
 
-/// Returns [`PathBuf`] to the OpenAL dynamic library destination within Flutter files.
+/// Returns [`PathBuf`] to the OpenAL dynamic library destination within
+/// Flutter files.
 fn get_path_to_openal() -> anyhow::Result<PathBuf> {
     let mut workspace_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
     workspace_path.pop();
     workspace_path.pop();
 
     Ok(match get_target()?.as_str() {
-        "aarch64-apple-darwin" => workspace_path
-            .join("macos")
-            .join("rust")
-            .join("lib")
-            .join("libopenal.1.dylib"),
-        "x86_64-apple-darwin" => workspace_path
+        "aarch64-apple-darwin" | "x86_64-apple-darwin" => workspace_path
             .join("macos")
             .join("rust")
             .join("lib")
@@ -197,13 +194,14 @@ fn compile_openal() -> anyhow::Result<()> {
 
     let archive = temp_dir.join(format!("{OPENAL_VERSION}.tar.gz"));
 
-    if env::var("INSTALL_OPENAL").as_deref().unwrap_or("0") == "0" {
-        if fs::metadata(&openal_path)
-            .map(|m| m.is_dir())
-            .unwrap_or_default()
-        {
-            return Ok(());
-        }
+    let is_already_installed = fs::metadata(&openal_path)
+        .map(|m| m.is_dir())
+        .unwrap_or_default();
+    let is_install_openal_enabled =
+        env::var("INSTALL_OPENAL").as_deref().unwrap_or("0") == "0";
+
+    if is_install_openal_enabled || is_already_installed {
+        return Ok(());
     }
 
     if temp_dir.exists() {
@@ -212,7 +210,9 @@ fn compile_openal() -> anyhow::Result<()> {
     fs::create_dir_all(&temp_dir)?;
 
     {
-        let mut resp = BufReader::new(reqwest::blocking::get(format!("{OPENAL_URL}/{OPENAL_VERSION}.tar.gz"))?);
+        let mut resp = BufReader::new(reqwest::blocking::get(format!(
+            "{OPENAL_URL}/{OPENAL_VERSION}.tar.gz"
+        ))?);
         let mut out_file = BufWriter::new(fs::File::create(&archive)?);
 
         let mut buffer = [0; 512];
@@ -257,6 +257,11 @@ fn compile_openal() -> anyhow::Result<()> {
             .output()?,
     );
 
+    {
+        let mut openal_dir_path = openal_path.clone();
+        openal_dir_path.pop();
+        create_dir_all(&openal_dir_path)?;
+    }
     match get_target()?.as_str() {
         "aarch64-apple-darwin" | "x86_64-apple-darwin" => {
             fs::copy(openal_src_path.join("libopenal.dylib"), openal_path)?;
