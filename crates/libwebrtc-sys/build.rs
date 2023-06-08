@@ -197,9 +197,14 @@ fn compile_openal() -> anyhow::Result<()> {
 
     let archive = temp_dir.join(format!("{OPENAL_VERSION}.tar.gz"));
 
-    let is_already_installed = fs::metadata(&openal_path)
-        .map(|m| m.is_dir())
-        .unwrap_or_default();
+    let is_already_installed = fs::metadata(
+        manifest_path
+            .join("lib")
+            .join(get_target()?.as_str())
+            .join("include")
+            .join("AL"),
+    )
+    .is_ok();
     let is_install_openal =
         env::var("INSTALL_OPENAL").as_deref().unwrap_or("0") == "0";
 
@@ -236,7 +241,10 @@ fn compile_openal() -> anyhow::Result<()> {
 
     copy_dir_all(
         openal_src_path.join("include"),
-        manifest_path.join("lib").join(get_target()?.as_str()),
+        manifest_path
+            .join("lib")
+            .join(get_target()?.as_str())
+            .join("include"),
     )
     .unwrap();
 
