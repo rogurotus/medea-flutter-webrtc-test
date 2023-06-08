@@ -33,6 +33,10 @@ static OPENAL_URL: &str =
     "https://github.com/kcat/openal-soft/archive/refs/tags";
 
 fn main() -> anyhow::Result<()> {
+    let lib_dir = libpath()?;
+    if lib_dir.exists() {
+        fs::create_dir_all(&lib_dir)?;
+    }
     download_libwebrtc()?;
     compile_openal()?;
 
@@ -189,7 +193,6 @@ fn get_path_to_openal() -> anyhow::Result<PathBuf> {
 fn compile_openal() -> anyhow::Result<()> {
     let manifest_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
     let temp_dir = manifest_path.join("temp");
-    let lib_dir = libpath()?;
     let openal_path = get_path_to_openal()?;
 
     let archive = temp_dir.join(format!("{OPENAL_VERSION}.tar.gz"));
@@ -224,11 +227,6 @@ fn compile_openal() -> anyhow::Result<()> {
             _ = out_file.write(&buffer[0..count])?;
         }
     }
-
-    if lib_dir.exists() {
-        fs::remove_dir_all(&lib_dir)?;
-    }
-    fs::create_dir_all(&lib_dir)?;
 
     let mut archive = Archive::new(GzDecoder::new(File::open(archive)?));
     archive.unpack(&temp_dir)?;
@@ -348,12 +346,6 @@ fn download_libwebrtc() -> anyhow::Result<()> {
             bail!("SHA-256 checksum doesn't match");
         }
     }
-
-    // Clean up `lib` directory.
-    if lib_dir.exists() {
-        fs::remove_dir_all(&lib_dir)?;
-    }
-    fs::create_dir_all(&lib_dir)?;
 
     // Unpack the downloaded `libwebrtc` archive.
     let mut archive = Archive::new(GzDecoder::new(File::open(archive)?));
