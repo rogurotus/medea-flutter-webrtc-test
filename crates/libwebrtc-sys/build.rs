@@ -197,10 +197,10 @@ fn compile_openal() -> anyhow::Result<()> {
     let is_already_installed = fs::metadata(&openal_path)
         .map(|m| m.is_dir())
         .unwrap_or_default();
-    let is_install_openal_disabled =
+    let is_install_openal =
         env::var("INSTALL_OPENAL").as_deref().unwrap_or("0") == "0";
 
-    if is_already_installed || is_install_openal_disabled {
+    if is_install_openal && is_already_installed {
         return Ok(());
     }
 
