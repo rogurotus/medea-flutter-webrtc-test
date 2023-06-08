@@ -72,7 +72,7 @@ ALCSETTHREADCONTEXT alcSetThreadContext /* = nullptr*/;
 ALGETSOURCEI64VSOFT alGetSourcei64vSOFT /* = nullptr*/;
 ALCGETINTEGER64VSOFT alcGetInteger64vSOFT /* = nullptr*/;
 
-struct OpenALPLayoutADM::Data {
+struct OpenALPlayoutADM::Data {
   Data() { _playoutThread = rtc::Thread::Create(); }
 
   std::unique_ptr<rtc::Thread> _playoutThread;
@@ -91,7 +91,7 @@ struct OpenALPLayoutADM::Data {
 };
 
 // Main initializaton and termination
-int32_t OpenALPLayoutADM::Init() {
+int32_t OpenALPlayoutADM::Init() {
   if (webrtc::AudioDeviceModuleImpl::Init() != 0) {
     return -1;
   }
@@ -130,15 +130,15 @@ int32_t OpenALPLayoutADM::Init() {
   return 0;
 };
 
-OpenALPLayoutADM::~OpenALPLayoutADM() {}
+OpenALPlayoutADM::~OpenALPlayoutADM() {}
 
-rtc::scoped_refptr<OpenALPLayoutADM> OpenALPLayoutADM::Create(
+rtc::scoped_refptr<OpenALPlayoutADM> OpenALPlayoutADM::Create(
     AudioLayer audio_layer,
     webrtc::TaskQueueFactory* task_queue_factory) {
-  return OpenALPLayoutADM::CreateForTest(audio_layer, task_queue_factory);
+  return OpenALPlayoutADM::CreateForTest(audio_layer, task_queue_factory);
 }
 
-rtc::scoped_refptr<OpenALPLayoutADM> OpenALPLayoutADM::CreateForTest(
+rtc::scoped_refptr<OpenALPlayoutADM> OpenALPlayoutADM::CreateForTest(
     AudioLayer audio_layer,
     webrtc::TaskQueueFactory* task_queue_factory) {
   // The "AudioDeviceModule::kWindowsCoreAudio2" audio layer has its own
@@ -149,7 +149,7 @@ rtc::scoped_refptr<OpenALPLayoutADM> OpenALPLayoutADM::CreateForTest(
 
   // Create the generic reference counted (platform independent) implementation.
   auto audio_device =
-      rtc::make_ref_counted<OpenALPLayoutADM>(audio_layer, task_queue_factory);
+      rtc::make_ref_counted<OpenALPlayoutADM>(audio_layer, task_queue_factory);
 
   // Ensure that the current platform is supported.
   if (audio_device->CheckPlatform() == -1) {
@@ -170,7 +170,7 @@ rtc::scoped_refptr<OpenALPLayoutADM> OpenALPLayoutADM::CreateForTest(
   return audio_device;
 }
 
-OpenALPLayoutADM::OpenALPLayoutADM(AudioLayer audio_layer,
+OpenALPlayoutADM::OpenALPlayoutADM(AudioLayer audio_layer,
                                    webrtc::TaskQueueFactory* task_queue_factory)
     : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory) {
   GetAudioDeviceBuffer()->SetPlayoutSampleRate(kPlayoutFrequency);
@@ -253,18 +253,18 @@ void SetStringToArray(const std::string& string, char* array, int size) {
   return 0;
 }
 
-int32_t OpenALPLayoutADM::SetPlayoutDevice(uint16_t index) {
+int32_t OpenALPlayoutADM::SetPlayoutDevice(uint16_t index) {
   const auto result =
       DeviceName(ALC_ALL_DEVICES_SPECIFIER, index, nullptr, &_playoutDeviceId);
   return result ? result : restartPlayout();
 }
 
-int32_t OpenALPLayoutADM::SetPlayoutDevice(WindowsDeviceType /*device*/) {
+int32_t OpenALPlayoutADM::SetPlayoutDevice(WindowsDeviceType /*device*/) {
   _playoutDeviceId = ComputeDefaultDeviceId(ALC_DEFAULT_DEVICE_SPECIFIER);
   return _playoutDeviceId.empty() ? -1 : restartPlayout();
 }
 
-int OpenALPLayoutADM::restartPlayout() {
+int OpenALPlayoutADM::restartPlayout() {
   if (!_data || !_data->playing) {
     return 0;
   }
@@ -284,18 +284,18 @@ int OpenALPLayoutADM::restartPlayout() {
   return 0;
 }
 
-int16_t OpenALPLayoutADM::PlayoutDevices() {
+int16_t OpenALPlayoutADM::PlayoutDevices() {
   return DevicesCount(ALC_ALL_DEVICES_SPECIFIER);
 }
 
-int32_t OpenALPLayoutADM::PlayoutDeviceName(
+int32_t OpenALPlayoutADM::PlayoutDeviceName(
     uint16_t index,
     char name[webrtc::kAdmMaxDeviceNameSize],
     char guid[webrtc::kAdmMaxGuidSize]) {
   return DeviceName(ALC_ALL_DEVICES_SPECIFIER, index, name, guid);
 }
 
-int32_t OpenALPLayoutADM::InitPlayout() {
+int32_t OpenALPlayoutADM::InitPlayout() {
   if (!_initialized) {
     return -1;
   } else if (_playoutInitialized) {
@@ -304,16 +304,15 @@ int32_t OpenALPLayoutADM::InitPlayout() {
   _playoutInitialized = true;
 
   _data = std::make_unique<Data>();
-  //  openPlayoutDevice();
 
   return 0;
 }
 
-bool OpenALPLayoutADM::PlayoutIsInitialized() const {
+bool OpenALPlayoutADM::PlayoutIsInitialized() const {
   return _playoutInitialized;
 }
 
-int32_t OpenALPLayoutADM::StartPlayout() {
+int32_t OpenALPlayoutADM::StartPlayout() {
   if (!_playoutInitialized) {
     return -1;
   } else if (Playing()) {
@@ -321,7 +320,6 @@ int32_t OpenALPLayoutADM::StartPlayout() {
   }
   if (_playoutFailed) {
     _playoutFailed = false;
-    //    openPlayoutDevice();
   }
   openPlayoutDevice();
   GetAudioDeviceBuffer()->SetPlayoutSampleRate(kPlayoutFrequency);
@@ -331,7 +329,7 @@ int32_t OpenALPLayoutADM::StartPlayout() {
   return 0;
 }
 
-int32_t OpenALPLayoutADM::StopPlayout() {
+int32_t OpenALPlayoutADM::StopPlayout() {
   if (_data) {
     stopPlayingOnThread();
     GetAudioDeviceBuffer()->StopPlayout();
@@ -343,27 +341,27 @@ int32_t OpenALPLayoutADM::StopPlayout() {
   return 0;
 }
 
-bool OpenALPLayoutADM::Playing() const {
+bool OpenALPlayoutADM::Playing() const {
   return _data && _data->playing;
 }
 
-int32_t OpenALPLayoutADM::InitSpeaker() {
+int32_t OpenALPlayoutADM::InitSpeaker() {
   _speakerInitialized = true;
   return 0;
 }
 
-bool OpenALPLayoutADM::SpeakerIsInitialized() const {
+bool OpenALPlayoutADM::SpeakerIsInitialized() const {
   return _speakerInitialized;
 }
 
-int32_t OpenALPLayoutADM::StereoPlayoutIsAvailable(bool* available) const {
+int32_t OpenALPlayoutADM::StereoPlayoutIsAvailable(bool* available) const {
   if (available) {
     *available = true;
   }
   return 0;
 }
 
-int32_t OpenALPLayoutADM::SetStereoPlayout(bool enable) {
+int32_t OpenALPlayoutADM::SetStereoPlayout(bool enable) {
   if (Playing()) {
     return -1;
   }
@@ -371,62 +369,62 @@ int32_t OpenALPLayoutADM::SetStereoPlayout(bool enable) {
   return 0;
 }
 
-int32_t OpenALPLayoutADM::StereoPlayout(bool* enabled) const {
+int32_t OpenALPlayoutADM::StereoPlayout(bool* enabled) const {
   if (enabled) {
     *enabled = (_playoutChannels == 2);
   }
   return 0;
 }
 
-int32_t OpenALPLayoutADM::PlayoutDelay(uint16_t* delayMS) const {
+int32_t OpenALPlayoutADM::PlayoutDelay(uint16_t* delayMS) const {
   if (delayMS) {
     *delayMS = 0;
   }
   return 0;
 }
 
-int32_t OpenALPLayoutADM::SpeakerVolumeIsAvailable(bool* available) {
+int32_t OpenALPlayoutADM::SpeakerVolumeIsAvailable(bool* available) {
   if (available) {
     *available = false;
   }
   return 0;
 }
 
-int32_t OpenALPLayoutADM::SetSpeakerVolume(uint32_t volume) {
+int32_t OpenALPlayoutADM::SetSpeakerVolume(uint32_t volume) {
   return -1;
 }
 
-int32_t OpenALPLayoutADM::SpeakerVolume(uint32_t* volume) const {
+int32_t OpenALPlayoutADM::SpeakerVolume(uint32_t* volume) const {
   return -1;
 }
 
-int32_t OpenALPLayoutADM::MaxSpeakerVolume(uint32_t* maxVolume) const {
+int32_t OpenALPlayoutADM::MaxSpeakerVolume(uint32_t* maxVolume) const {
   return -1;
 }
 
-int32_t OpenALPLayoutADM::MinSpeakerVolume(uint32_t* minVolume) const {
+int32_t OpenALPlayoutADM::MinSpeakerVolume(uint32_t* minVolume) const {
   return -1;
 }
 
-int32_t OpenALPLayoutADM::SpeakerMuteIsAvailable(bool* available) {
+int32_t OpenALPlayoutADM::SpeakerMuteIsAvailable(bool* available) {
   if (available) {
     *available = false;
   }
   return 0;
 }
 
-int32_t OpenALPLayoutADM::SetSpeakerMute(bool enable) {
+int32_t OpenALPlayoutADM::SetSpeakerMute(bool enable) {
   return -1;
 }
 
-int32_t OpenALPLayoutADM::SpeakerMute(bool* enabled) const {
+int32_t OpenALPlayoutADM::SpeakerMute(bool* enabled) const {
   if (enabled) {
     *enabled = false;
   }
   return 0;
 }
 
-void OpenALPLayoutADM::openPlayoutDevice() {
+void OpenALPlayoutADM::openPlayoutDevice() {
   if (_playoutDevice || _playoutFailed) {
     return;
   }
@@ -449,40 +447,23 @@ void OpenALPLayoutADM::openPlayoutDevice() {
       [=] { alcSetThreadContext(_playoutContext); });
 }
 
-void OpenALPLayoutADM::ensureThreadStarted() {
-  //  if (_data) {
-  //    return;
-  //  }
+void OpenALPlayoutADM::ensureThreadStarted() {
   _thread = rtc::Thread::Current();
   if (_thread && !_thread->IsOwned()) {
     _thread->UnwrapCurrent();
     _thread = nullptr;
   }
-  //  _data = std::make_unique<Data>();
-
-  //  _data->_playoutThread->Start();
-  //  _thread->AllowInvokesToThread(_data->_playoutThread.get());
 
   processPlayoutQueued();
-  //  _data->_playoutThread->PostTask([=] {
-  ////    std::this_thread::sleep_for(std::chrono::seconds(2));
-  //    while (processPlayout()) {
-  //        std::this_thread::sleep_for(std::chrono::seconds(10));
-  //    }
-  //  });
 }
 
-void OpenALPLayoutADM::processPlayoutQueued() {
+void OpenALPlayoutADM::processPlayoutQueued() {
   _data->_playoutThread->PostDelayedHighPrecisionTask(
       [=] {
         processPlayout();
         processPlayoutQueued();
       },
       webrtc::TimeDelta::Millis(10));
-  //  _data->_playoutThread->PostTask([=] {
-  //    processPlayout();
-  //    processPlayoutQueued();
-  //  });
 }
 
 [[nodiscard]] bool Failed(ALCdevice* device) {
@@ -494,7 +475,7 @@ void OpenALPLayoutADM::processPlayoutQueued() {
   return false;
 }
 
-bool OpenALPLayoutADM::clearProcessedBuffer() {
+bool OpenALPlayoutADM::clearProcessedBuffer() {
   auto processed = ALint(0);
   alGetSourcei(_data->source, AL_BUFFERS_PROCESSED, &processed);
   if (processed < 1) {
@@ -511,7 +492,7 @@ bool OpenALPLayoutADM::clearProcessedBuffer() {
   }
 }
 
-void OpenALPLayoutADM::clearProcessedBuffers() {
+void OpenALPlayoutADM::clearProcessedBuffers() {
   while (true) {
     if (!clearProcessedBuffer()) {
       break;
@@ -519,7 +500,7 @@ void OpenALPLayoutADM::clearProcessedBuffers() {
   }
 }
 
-void OpenALPLayoutADM::unqueueAllBuffers() {
+void OpenALPlayoutADM::unqueueAllBuffers() {
   alSourcei(_data->source, AL_BUFFER, AL_NONE);
   std::fill(_data->queuedBuffers.begin(), _data->queuedBuffers.end(), false);
   _data->queuedBuffersCount = 0;
@@ -539,7 +520,7 @@ void OpenALPLayoutADM::unqueueAllBuffers() {
   }
 }
 
-crl::time OpenALPLayoutADM::countExactQueuedMsForLatency(crl::time now,
+crl::time OpenALPlayoutADM::countExactQueuedMsForLatency(crl::time now,
                                                          bool playing) {
   auto values = std::array<AL_INT64_TYPE, kALMaxValues>{};
   auto& sampleOffset = values[0];
@@ -584,12 +565,12 @@ crl::time OpenALPLayoutADM::countExactQueuedMsForLatency(crl::time now,
                     : std::max(queuedTotal, kDefaultPlayoutLatency);
 }
 
-int32_t OpenALPLayoutADM::RegisterAudioCallback(
+int32_t OpenALPlayoutADM::RegisterAudioCallback(
     webrtc::AudioTransport* audioCallback) {
   return GetAudioDeviceBuffer()->RegisterAudioCallback(audioCallback);
 }
 
-bool OpenALPLayoutADM::processPlayout() {
+bool OpenALPlayoutADM::processPlayout() {
   const auto playing = [&] {
     auto state = ALint(AL_INITIAL);
     alGetSourcei(_data->source, AL_SOURCE_STATE, &state);
@@ -614,9 +595,8 @@ bool OpenALPLayoutADM::processPlayout() {
                 0);
       break;
     }
-    //    const auto now = crl::now();
-    //    _playoutLatency = countExactQueuedMsForLatency(now, wasPlaying);
-    //     RTC_LOG(LS_ERROR) << "PLAYOUT LATENCY: " <<  _playoutChannels;
+    const auto now = crl::now();
+    _playoutLatency = countExactQueuedMsForLatency(now, wasPlaying);
 
     const auto i = std::find(std::begin(_data->queuedBuffers),
                              std::end(_data->queuedBuffers), false);
@@ -626,15 +606,14 @@ bool OpenALPLayoutADM::processPlayout() {
         (_playoutChannels == 2) ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16,
         _data->playoutSamples->data(), _data->playoutSamples->size(),
         kPlayoutFrequency);
-    //
-    // #ifdef WEBRTC_WIN
-    //    if (IsLoopbackCaptureActive() && _playoutChannels == 2) {
-    //      LoopbackCapturePushFarEnd(now + _playoutLatency,
-    //      _data->playoutSamples,
-    //                                kPlayoutFrequency, _playoutChannels);
-    //    }
-    // #endif  // WEBRTC_WIN
-    //
+
+#ifdef WEBRTC_WIN
+    if (IsLoopbackCaptureActive() && _playoutChannels == 2) {
+      LoopbackCapturePushFarEnd(now + _playoutLatency, _data->playoutSamples,
+                                kPlayoutFrequency, _playoutChannels);
+    }
+#endif  // WEBRTC_WIN
+
     _data->queuedBuffers[index] = true;
     ++_data->queuedBuffersCount;
     if (wasPlaying) {
@@ -671,7 +650,7 @@ bool OpenALPLayoutADM::processPlayout() {
   return true;
 }
 
-void OpenALPLayoutADM::closePlayoutDevice() {
+void OpenALPlayoutADM::closePlayoutDevice() {
   if (_playoutContext) {
     alcDestroyContext(_playoutContext);
     _playoutContext = nullptr;
@@ -682,7 +661,7 @@ void OpenALPLayoutADM::closePlayoutDevice() {
   }
 }
 
-bool OpenALPLayoutADM::validatePlayoutDeviceId() {
+bool OpenALPlayoutADM::validatePlayoutDeviceId() {
   auto valid = false;
   EnumerateDevices(ALC_ALL_DEVICES_SPECIFIER, [&](const char* device) {
     if (!valid && _playoutDeviceId == std::string(device)) {
@@ -702,17 +681,13 @@ bool OpenALPLayoutADM::validatePlayoutDeviceId() {
   return false;
 }
 
-void OpenALPLayoutADM::startPlayingOnThread() {
+void OpenALPlayoutADM::startPlayingOnThread() {
   _data->_playoutThread->Start();
-  //    _thread->AllowInvokesToThread(_data->_playoutThread.get());
   _data->_playoutThread->PostTask([this] {
     _data->playing = true;
-    RTC_LOG(LS_ERROR) << "StartPlayingOnThread is failed?";
     if (_playoutFailed) {
-      RTC_LOG(LS_ERROR) << "Fuck it's failed";
       return;
     }
-    //    ALuint source = 0;
     unsigned int sources[1];
     alGenSources(1, sources);
     ALuint source = sources[0];
@@ -737,43 +712,27 @@ void OpenALPLayoutADM::startPlayingOnThread() {
       const auto bufferSize = kPlayoutPart * sizeof(int16_t) * _playoutChannels;
 
       ensureThreadStarted();
-
-      //       _data->playoutSamples = QByteArray(bufferSize, 0);
-
-      // if (!_data->timer.isActive()) {
-      //	_data->timer.callEach(kProcessInterval);
-      // }
     }
   });
 }
 
-void OpenALPLayoutADM::stopPlayingOnThread() {
-  // Expects(_data != nullptr);
-  /*
-         sync([&] {
-                 const auto guard = gsl::finally([&] {
-                         if (alEventCallbackSOFT) {
-                                 alEventCallbackSOFT(nullptr, nullptr);
-                         }
-                         alcSetThreadContext(nullptr);
-                 });
-                 if (!_data->playing) {
-                         return;
-                 }
-                 _data->playing = false;
-                 if (_playoutFailed) {
-                         return;
-                 }
-                 if (!_data->recording) {
-                         _data->timer.cancel();
-                 }
-                 if (_data->source) {
-                         alSourceStop(_data->source);
-                         unqueueAllBuffers();
-                         alDeleteBuffers(_data->buffers.size(),
-     _data->buffers.data()); alDeleteSources(1, &_data->source); _data->source =
-     0; ranges::fill(_data->buffers, ALuint(0));
-                 }
-         });
-         */
+void OpenALPlayoutADM::stopPlayingOnThread() {
+  if (!_data->playing) {
+    alcSetThreadContext(nullptr);
+    return;
+  }
+  _data->playing = false;
+  if (_playoutFailed) {
+    alcSetThreadContext(nullptr);
+    return;
+  }
+  if (_data->source) {
+    alSourceStop(_data->source);
+    unqueueAllBuffers();
+    alDeleteBuffers(_data->buffers.size(), _data->buffers.data());
+    alDeleteSources(1, &_data->source);
+    _data->source = 0;
+    std::fill(_data->buffers.begin(), _data->buffers.end(), ALuint(0));
+  }
+  alcSetThreadContext(nullptr);
 }

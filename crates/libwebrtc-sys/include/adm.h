@@ -28,50 +28,23 @@
 
 #include "api/audio/audio_frame.h"
 
+#include "crl.h"
+
 #if defined(WEBRTC_USE_X11)
 #include <X11/Xlib.h>
 #endif
 
-namespace crl {
-
-using time = std::int64_t;
-using profile_time = std::int64_t;
-
-namespace details {
-
-using inner_time_type = std::int64_t;
-using inner_profile_type = std::int64_t;
-
-void init();
-
-inner_time_type current_value();
-time convert(inner_time_type value);
-
-inner_profile_type current_profile_value();
-profile_time convert_profile(inner_profile_type);
-
-}  // namespace details
-
-// Thread-safe.
-time now();
-profile_time profile();
-
-// Returns true if some adjustment was made.
-bool adjust_time();
-
-}  // namespace crl
-
-class OpenALPLayoutADM : public webrtc::AudioDeviceModuleImpl {
+class OpenALPlayoutADM : public webrtc::AudioDeviceModuleImpl {
  public:
-  OpenALPLayoutADM(AudioLayer audio_layer,
-                          webrtc::TaskQueueFactory* task_queue_factory);
-  ~OpenALPLayoutADM();
+  OpenALPlayoutADM(AudioLayer audio_layer,
+                   webrtc::TaskQueueFactory* task_queue_factory);
+  ~OpenALPlayoutADM();
 
-  static rtc::scoped_refptr<OpenALPLayoutADM> Create(
+  static rtc::scoped_refptr<OpenALPlayoutADM> Create(
       AudioLayer audio_layer,
       webrtc::TaskQueueFactory* task_queue_factory);
 
-  static rtc::scoped_refptr<OpenALPLayoutADM> CreateForTest(
+  static rtc::scoped_refptr<OpenALPlayoutADM> CreateForTest(
       AudioLayer audio_layer,
       webrtc::TaskQueueFactory* task_queue_factory);
 

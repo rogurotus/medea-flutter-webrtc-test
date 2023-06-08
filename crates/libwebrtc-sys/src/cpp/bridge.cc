@@ -115,7 +115,7 @@ std::unique_ptr<AudioDeviceModule> create_audio_device_module(
 
   AudioDeviceModule adm = worker_thread.Invoke<AudioDeviceModule>(
       RTC_FROM_HERE, [audio_layer, &task_queue_factory] {
-        return ::OpenALPLayoutADM::Create(audio_layer, &task_queue_factory);
+        return ::OpenALPlayoutADM::Create(audio_layer, &task_queue_factory);
       });
 
   if (adm == nullptr) {
