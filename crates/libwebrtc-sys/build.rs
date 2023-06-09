@@ -188,7 +188,7 @@ fn get_path_to_openal() -> anyhow::Result<PathBuf> {
             .join("rust")
             .join("lib")
             .join(get_target()?.as_str())
-            .join("libopenal.dll"),
+            .join("OpenAL32.dll"),
         _ => return Err(anyhow::anyhow!("Platform isn't supported")),
     })
 }
