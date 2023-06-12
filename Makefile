@@ -57,7 +57,7 @@ lint: cargo.lint flutter.analyze
 
 run: flutter.run
 
-test: cargo.test flutter.test
+test: cargo.test flutter.test.desktop flutter.test.mobile
 
 
 
@@ -103,7 +103,7 @@ flutter.build:
 #	make flutter.fmt [check=(no|yes)]
 
 flutter.fmt:
-	flutter format $(if $(call eq,$(check),yes),-n --set-exit-if-changed,) .
+	dart format $(if $(call eq,$(check),yes), --set-exit-if-changed,) .
 ifeq ($(wildcard .packages),)
 	flutter pub get
 endif
@@ -131,12 +131,22 @@ flutter.run:
 		$(if $(call eq,$(device),),,-d $(device))
 
 
-# Run Flutter plugin integration tests on an attached device.
+# Run Flutter plugin integration tests on the current host as desktop.
 #
 # Usage:
-#	make flutter.test [device=<device-id>] [debug=(no|yes)]
+#	make flutter.test [debug=(no|yes)]
 
-flutter.test:
+flutter.test.desktop:
+	cd example/ && \
+	flutter test integration_test -d $(CURRENT_OS)
+
+
+# Run Flutter plugin integration tests on an attached mobile device.
+#
+# Usage:
+#	make flutter.test.mobile [device=<device-id>] [debug=(no|yes)]
+
+flutter.test.mobile:
 	cd example/ && \
 	flutter drive --driver=test_driver/integration_driver.dart \
 	              --target=integration_test/webrtc_test.dart \
@@ -159,8 +169,8 @@ cargo.clean:
 	cargo clean
 
 
-# Build `flutter-webrtc-native` crate and copy final artifacts to appropriate
-# platform-specific directories.
+# Build `medea-flutter-webrtc-native` crate and copy final artifacts to
+# appropriate platform-specific directories.
 #
 # Usage:
 #	make cargo.build [debug=(yes|no)]
@@ -176,7 +186,6 @@ cargo-build-targets-macos = $(strip \
 cargo-build-targets-windows = $(strip \
 	$(subst $(comma), ,$(or $(targets),$(WINDOWS_TARGETS))))
 
-
 cargo.build:
 ifeq ($(platform),all)
 	@make cargo.build platform=linux
@@ -184,56 +193,54 @@ ifeq ($(platform),all)
 	@make cargo.build platform=windows
 endif
 ifeq ($(platform),linux)
-	@mkdir -p linux/rust/include/flutter-webrtc-native/include/
+	@mkdir -p linux/rust/include/medea-flutter-webrtc-native/include/
 	@mkdir -p linux/rust/src/
 	$(foreach t,$(cargo-build-targets-linux),\
 		$(call cargo.build.target,$(t)))
 	$(foreach t,$(cargo-build-targets-linux),\
 		mkdir -p linux/rust/lib/$(t)/)
 	$(foreach t,$(cargo-build-targets-linux),\
-		cp -f target/$(t)/$(if $(call eq,$(debug),no),release,debug)/libflutter_webrtc_native.so \
-			linux/rust/lib/$(target)/libflutter_webrtc_native.so)
-	cp -f target/$(word 1,$(cargo-build-targets-linux))/cxxbridge/flutter-webrtc-native/src/renderer.rs.h \
-		linux/rust/include/flutter_webrtc_native.h
-	cp -f target/$(word 1,$(cargo-build-targets-linux))/cxxbridge/flutter-webrtc-native/src/renderer.rs.cc \
-		linux/rust/src/flutter_webrtc_native.cc
+		cp -f target/$(t)/$(if $(call eq,$(debug),no),release,debug)/libmedea_flutter_webrtc_native.so \
+			linux/rust/lib/$(target)/libmedea_flutter_webrtc_native.so)
+	cp -f target/$(word 1,$(cargo-build-targets-linux))/cxxbridge/medea-flutter-webrtc-native/src/renderer.rs.h \
+		linux/rust/include/medea_flutter_webrtc_native.h
+	cp -f target/$(word 1,$(cargo-build-targets-linux))/cxxbridge/medea-flutter-webrtc-native/src/renderer.rs.cc \
+		linux/rust/src/medea_flutter_webrtc_native.cc
 	cp -f crates/native/include/api.h \
-		linux/rust/include/flutter-webrtc-native/include/api.h
-	cp -f target/x86_64-unknown-linux-gnu/$(if $(call eq,$(debug),no),release,debug)/libflutter_webrtc_native.so \
-		/media/alexlapa/drive2/CLionProjects3/flutter-webrtc/example/build/linux/x64/debug/bundle/lib/libflutter_webrtc_native.so
+		linux/rust/include/medea-flutter-webrtc-native/include/api.h
 endif
 ifeq ($(platform),macos)
 	$(foreach t,$(cargo-build-targets-macos),\
 		$(call cargo.build.target,$(t)))
 	@mkdir -p macos/rust/lib/
 	lipo -create $(foreach t,$(cargo-build-targets-macos),\
-	             target/$(t)/$(if $(call eq,$(debug),no),release,debug)/libflutter_webrtc_native.dylib) \
-	     -output macos/rust/lib/libflutter_webrtc_native.dylib
+	             target/$(t)/$(if $(call eq,$(debug),no),release,debug)/libmedea_flutter_webrtc_native.dylib) \
+	     -output macos/rust/lib/libmedea_flutter_webrtc_native.dylib
 endif
 ifeq ($(platform),windows)
 	@mkdir -p windows/rust/include/
 	@mkdir -p windows/rust/src/
-	@mkdir -p windows/rust/include/flutter-webrtc-native/include/
+	@mkdir -p windows/rust/include/medea-flutter-webrtc-native/include/
 	$(foreach t,$(cargo-build-targets-windows),\
 		$(call cargo.build.target,$(t)))
 	$(foreach t,$(cargo-build-targets-windows),\
 		mkdir -p windows/rust/lib/$(t)/)
 	$(foreach t,$(cargo-build-targets-windows),\
-		cp -f target/$(t)/$(if $(call eq,$(debug),no),release,debug)/flutter_webrtc_native.dll \
-			windows/rust/lib/$(target)/flutter_webrtc_native.dll)
+		cp -f target/$(t)/$(if $(call eq,$(debug),no),release,debug)/medea_flutter_webrtc_native.dll \
+			windows/rust/lib/$(target)/medea_flutter_webrtc_native.dll)
 	$(foreach t,$(cargo-build-targets-windows),\
-        cp -f target/$(t)/$(if $(call eq,$(debug),no),release,debug)/flutter_webrtc_native.dll.lib \
-			windows/rust/lib/$(target)/flutter_webrtc_native.dll.lib)
-	cp -f target/$(word 1,$(cargo-build-targets-windows))/cxxbridge/flutter-webrtc-native/src/renderer.rs.h \
-		windows/rust/include/flutter_webrtc_native.h
-	cp -f target/$(word 1,$(cargo-build-targets-windows))/cxxbridge/flutter-webrtc-native/src/renderer.rs.cc \
-		windows/rust/src/flutter_webrtc_native.cc
+        cp -f target/$(t)/$(if $(call eq,$(debug),no),release,debug)/medea_flutter_webrtc_native.dll.lib \
+			windows/rust/lib/$(target)/medea_flutter_webrtc_native.dll.lib)
+	cp -f target/$(word 1,$(cargo-build-targets-windows))/cxxbridge/medea-flutter-webrtc-native/src/renderer.rs.h \
+		windows/rust/include/medea_flutter_webrtc_native.h
+	cp -f target/$(word 1,$(cargo-build-targets-windows))/cxxbridge/medea-flutter-webrtc-native/src/renderer.rs.cc \
+		windows/rust/src/medea_flutter_webrtc_native.cc
 	cp -f crates/native/include/api.h \
-		windows/rust/include/flutter-webrtc-native/include/api.h
+		windows/rust/include/medea-flutter-webrtc-native/include/api.h
 endif
 define cargo.build.target
 	$(eval target := $(strip $(1)))
-	cargo build -p flutter-webrtc-native --target $(target) \
+	cargo build -p medea-flutter-webrtc-native --target $(target) \
 		$(if $(call eq,$(debug),no),--release,)
 endef
 
@@ -432,4 +439,4 @@ test.flutter: flutter.test
         kt.fmt \
         rustup.targets \
         swift.fmt \
-        test.cargo test.flutter
+        test.cargo test.flutter.desktop test.flutter.mobile
