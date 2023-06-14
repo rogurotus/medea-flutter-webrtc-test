@@ -589,7 +589,7 @@ int32_t MicrophoneModule::StartRecording() {
 
   // The audio thread will signal when recording has started.
   _timeEventRec.Set();
-  if (!_recStartEvent.Wait(10000)) {
+  if (!_recStartEvent.Wait(webrtc::TimeDelta::Millis(10000))) {
     {
       webrtc::MutexLock lock(&mutex_);
       _startRec = false;
@@ -840,7 +840,7 @@ void MicrophoneModule::PaStreamStateCallback(pa_stream* p, void* pThis) {
 }
 
 bool MicrophoneModule::RecThreadProcess() {
-  if (!_timeEventRec.Wait(1000)) {
+  if (!_timeEventRec.Wait(webrtc::TimeDelta::Millis(1000))) {
     return true;
   }
 

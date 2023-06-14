@@ -10,7 +10,9 @@ webrtc::AudioMixer::Source::AudioFrameInfo AudioSource::GetAudioFrameWithInfo(
     int sample_rate_hz,
     webrtc::AudioFrame* audio_frame) {
   std::unique_lock<std::mutex> lock(mutex_);
+
   cv_.wait(lock, [&]() { return frame_available_; });
+
   auto* source = frame_.data();
   getAudioFrame++;
   if (getAudioFrame % 100 == 0) {
