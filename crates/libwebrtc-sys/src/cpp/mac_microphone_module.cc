@@ -416,6 +416,8 @@ bool MicrophoneModule::SpeakerIsInitialized() const {
   return (_mixerManager.SpeakerIsInitialized());
 }
 
+int updateFrameCount = 0;
+
 bool MicrophoneModule::CaptureWorkerThread() {
   OSStatus err = noErr;
   UInt32 noRecSamples =
@@ -441,6 +443,10 @@ bool MicrophoneModule::CaptureWorkerThread() {
     }
   }
   if (source != nullptr) {
+    updateFrameCount++;
+    if (updateFrameCount % 100 == 0) {
+      RTC_LOG(LS_ERROR) << "UpdateFrameCount: " << updateFrameCount;
+    }
     source->UpdateFrame(recordBuffer, size,
                         webrtc::N_REC_SAMPLES_PER_SEC, _inDesiredFormat.mChannelsPerFrame);
   }
@@ -1478,15 +1484,25 @@ int32_t MicrophoneModule::StopRecording() {
       _recording = false;
       _doStopRec = true;  // Signal to io proc to stop audio device
       mutex_.Unlock();    // Cannot be under lock, risk of deadlock
-      if (!_stopEventRec.Wait(2000)) {
+      if (!_stopEventRec.Wait(webrtc::TimeDelta::Seconds(2))) {
+        std::chrono::time_point<std::chrono::steady_clock> start = std::chrono::steady_clock::now();
         webrtc::MutexLock lockScoped(&mutex_);
+        std::chrono::time_point<std::chrono::steady_clock> end = std::chrono::steady_clock::now();
+        std::chrono::duration<double> duration = end - start;
+        RTC_LOG(LS_ERROR) << "[Mutex lock #1] Elapsed time: " << duration.count() << " seconds";
+
         RTC_LOG(LS_WARNING) << "Timed out stopping the capture IOProc."
                                "We may have failed to detect a device removal.";
         WEBRTC_CA_LOG_WARN(AudioDeviceStop(_inputDeviceID, _inDeviceIOProcID));
         WEBRTC_CA_LOG_WARN(
             AudioDeviceDestroyIOProcID(_inputDeviceID, _inDeviceIOProcID));
       }
+      std::chrono::time_point<std::chrono::steady_clock> start = std::chrono::steady_clock::now();
       mutex_.Lock();
+      std::chrono::time_point<std::chrono::steady_clock> end = std::chrono::steady_clock::now();
+      std::chrono::duration<double> duration = end - start;
+      RTC_LOG(LS_ERROR) << "[Mutex lock #2] Elapsed time: " << duration.count() << " seconds";
+
       _doStopRec = false;
       RTC_LOG(LS_INFO) << "Recording stopped (input device)";
     } else if (_recIsInitialized) {
@@ -1506,7 +1522,7 @@ int32_t MicrophoneModule::StopRecording() {
       _recording = false;
       _doStop = true;   // Signal to io proc to stop audio device
       mutex_.Unlock();  // Cannot be under lock, risk of deadlock
-      if (!_stopEvent.Wait(2000)) {
+      if (!_stopEvent.Wait(webrtc::TimeDelta::Seconds(2))) {
         webrtc::MutexLock lockScoped(&mutex_);
         RTC_LOG(LS_WARNING) << "Timed out stopping the shared IOProc."
                                "We may have failed to detect a device removal.";
@@ -1516,7 +1532,12 @@ int32_t MicrophoneModule::StopRecording() {
         WEBRTC_CA_LOG_WARN(
             AudioDeviceDestroyIOProcID(_outputDeviceID, _deviceIOProcID));
       }
+      std::chrono::time_point<std::chrono::steady_clock> start = std::chrono::steady_clock::now();
       mutex_.Lock();
+      std::chrono::time_point<std::chrono::steady_clock> end = std::chrono::steady_clock::now();
+      std::chrono::duration<double> duration = end - start;
+      RTC_LOG(LS_ERROR) << "[Mutex lock #2] Elapsed time: " << duration.count() << " seconds";
+
       _doStop = false;
       RTC_LOG(LS_INFO) << "Recording stopped (shared device)";
     } else if (_recIsInitialized && !_playing && !_playIsInitialized) {
@@ -1530,7 +1551,11 @@ int32_t MicrophoneModule::StopRecording() {
   if (!capture_worker_thread_.empty()) {
     mutex_.Unlock();
     capture_worker_thread_.Finalize();
+    std::chrono::time_point<std::chrono::steady_clock> start = std::chrono::steady_clock::now();
     mutex_.Lock();
+    std::chrono::time_point<std::chrono::steady_clock> end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> duration = end - start;
+    RTC_LOG(LS_ERROR) << "[Mutex lock #2] Elapsed time: " << duration.count() << " seconds";
   }
   WEBRTC_CA_LOG_WARN(AudioConverterDispose(_captureConverter));
   // Remove listeners.

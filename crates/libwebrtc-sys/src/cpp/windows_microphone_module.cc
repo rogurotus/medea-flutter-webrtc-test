@@ -2181,7 +2181,7 @@ int32_t MicrophoneModule::InitRecordingDMO() {
   ptrWav->nChannels = 1;
   // 16000 is the highest we can support with our resampler.
   ptrWav->nSamplesPerSec = 16000;
-  ptrWav->nAvgBytesPerSec = 32000;
+  ptrWav->nAvgBytesPerSec = 48000;
   ptrWav->nBlockAlign = 2;
   ptrWav->wBitsPerSample = 16;
   ptrWav->cbSize = 0;

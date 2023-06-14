@@ -162,8 +162,8 @@ std::unique_ptr<CustomAudioDeviceModule> create_custom_audio_device_module(
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory) {
 
-  CustomAudioDeviceModule adm = worker_thread.Invoke<CustomAudioDeviceModule>(
-      RTC_FROM_HERE, [audio_layer, &task_queue_factory] {
+  CustomAudioDeviceModule adm = worker_thread.BlockingCall(
+      [audio_layer, &task_queue_factory] {
         return ::CustomAudioDeviceModule::Create(audio_layer, &task_queue_factory);
       });
 
