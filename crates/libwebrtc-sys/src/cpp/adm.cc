@@ -315,7 +315,7 @@ void CustomAudioDeviceModule::RecordProcess() {
           }
           cb->DeliverRecordedData();
           std::chrono::duration<double> deliver_recorded_end = std::chrono::steady_clock::now() - start;
-          RTC_LOG(LS_ERROR) << "mix_end: " << mix_end.count() << " set_recorded_buffer_end: " << set_recorded_buffer_end.count() << " deliver_recorded_end: " << deliver_recorded_end.count();
+//          RTC_LOG(LS_ERROR) << "mix_end: " << mix_end.count() << " set_recorded_buffer_end: " << set_recorded_buffer_end.count() << " deliver_recorded_end: " << deliver_recorded_end.count();
         }
       },
       "audio_device_module_rec_thread", attributes);
