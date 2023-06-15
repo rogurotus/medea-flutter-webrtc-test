@@ -14,7 +14,6 @@
 #include <cfenv>
 #include <chrono>
 #include <cmath>
-#include <ranges>
 #include <thread>
 #include <vector>
 #include "adm.h"
@@ -24,15 +23,10 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/platform_thread.h"
-#ifdef WEBRTC_WIN
-#include "webrtc/win/webrtc_loopback_adm_win.h"
-#endif  // WEBRTC_WIN
 
 constexpr auto kPlayoutFrequency = 48000;
 constexpr auto kBufferSizeMs = crl::time(10);
 constexpr auto kPlayoutPart = (kPlayoutFrequency * kBufferSizeMs + 999) / 1000;
-constexpr auto kRestartAfterEmptyData = 50;  // Half a second with no data.
-constexpr auto kProcessInterval = crl::time(10);
 constexpr auto kBuffersFullCount = 7;
 constexpr auto kBuffersKeepReadyCount = 5;
 constexpr auto kDefaultPlayoutLatency = crl::time(20);
@@ -76,8 +70,6 @@ struct OpenALPlayoutADM::Data {
   Data() { _playoutThread = rtc::Thread::Create(); }
 
   std::unique_ptr<rtc::Thread> _playoutThread;
-
-  //	QByteArray playoutSamples;
   ALuint source = 0;
   int queuedBuffersCount = 0;
   std::array<ALuint, kBuffersFullCount> buffers = {{0}};
@@ -189,21 +181,22 @@ void EnumerateDevices(ALCenum specifier, Callback&& callback) {
   }
 }
 
-[[nodiscard]] int DevicesCount(ALCenum specifier) {
+int DevicesCount(ALCenum specifier) {
   auto result = 0;
   EnumerateDevices(specifier, [&](const char* device) { ++result; });
+
   return result;
 }
 
-[[nodiscard]] std::string ComputeDefaultDeviceId(ALCenum specifier) {
+std::string GetDefaultDeviceId(ALCenum specifier) {
   const auto device = alcGetString(nullptr, specifier);
   return device ? std::string(device) : std::string();
 }
 
-[[nodiscard]] int DeviceName(ALCenum specifier,
-                             int index,
-                             std::string* name,
-                             std::string* guid) {
+int DeviceName(ALCenum specifier,
+               int index,
+               std::string* name,
+               std::string* guid) {
   EnumerateDevices(specifier, [&](const char* device) {
     if (index < 0) {
       return;
@@ -227,6 +220,7 @@ void EnumerateDevices(ALCenum specifier, Callback&& callback) {
     }
     index = -1;
   });
+
   return (index > 0) ? -1 : 0;
 }
 
@@ -238,18 +232,21 @@ void SetStringToArray(const std::string& string, char* array, int size) {
   array[length] = 0;
 }
 
-[[nodiscard]] int DeviceName(ALCenum specifier,
-                             int index,
-                             char name[webrtc::kAdmMaxDeviceNameSize],
-                             char guid[webrtc::kAdmMaxGuidSize]) {
+int DeviceName(ALCenum specifier,
+               int index,
+               char name[webrtc::kAdmMaxDeviceNameSize],
+               char guid[webrtc::kAdmMaxGuidSize]) {
   auto sname = std::string();
   auto sguid = std::string();
+
   const auto result = DeviceName(specifier, index, &sname, &sguid);
   if (result) {
     return result;
   }
+
   SetStringToArray(sname, name, webrtc::kAdmMaxDeviceNameSize);
   SetStringToArray(sguid, guid, webrtc::kAdmMaxGuidSize);
+
   return 0;
 }
 
@@ -259,8 +256,9 @@ int32_t OpenALPlayoutADM::SetPlayoutDevice(uint16_t index) {
   return result ? result : restartPlayout();
 }
 
-int32_t OpenALPlayoutADM::SetPlayoutDevice(WindowsDeviceType /*device*/) {
-  _playoutDeviceId = ComputeDefaultDeviceId(ALC_DEFAULT_DEVICE_SPECIFIER);
+// TODO: remove?
+int32_t OpenALPlayoutADM::SetPlayoutDevice(WindowsDeviceType device) {
+  _playoutDeviceId = GetDefaultDeviceId(ALC_DEFAULT_DEVICE_SPECIFIER);
   return _playoutDeviceId.empty() ? -1 : restartPlayout();
 }
 
@@ -338,6 +336,7 @@ int32_t OpenALPlayoutADM::StopPlayout() {
   }
   closePlayoutDevice();
   _playoutInitialized = false;
+
   return 0;
 }
 
@@ -466,12 +465,13 @@ void OpenALPlayoutADM::processPlayoutQueued() {
       webrtc::TimeDelta::Millis(10));
 }
 
-[[nodiscard]] bool Failed(ALCdevice* device) {
+bool CheckDeviceFailed(ALCdevice* device) {
   if (auto code = alcGetError(device); code != ALC_NO_ERROR) {
     RTC_LOG(LS_ERROR) << "OpenAL Error " << code << ": "
                       << (const char*)alcGetString(device, code);
     return true;
   }
+
   return false;
 }
 
@@ -506,11 +506,10 @@ void OpenALPlayoutADM::unqueueAllBuffers() {
   _data->queuedBuffersCount = 0;
 }
 
-[[nodiscard]] double SafeRound(double value) {
+double SafeRound(double value) {
   if (const auto result = std::round(value); !std::isnan(result)) {
     return result;
   }
-  const auto errors = std::fetestexcept(FE_ALL_EXCEPT);
   if (const auto result = std::round(value); !std::isnan(result)) {
     return result;
   }
@@ -607,13 +606,6 @@ bool OpenALPlayoutADM::processPlayout() {
         _data->playoutSamples->data(), _data->playoutSamples->size(),
         kPlayoutFrequency);
 
-#ifdef WEBRTC_WIN
-    if (IsLoopbackCaptureActive() && _playoutChannels == 2) {
-      LoopbackCapturePushFarEnd(now + _playoutLatency, _data->playoutSamples,
-                                kPlayoutFrequency, _playoutChannels);
-    }
-#endif  // WEBRTC_WIN
-
     _data->queuedBuffers[index] = true;
     ++_data->queuedBuffersCount;
     if (wasPlaying) {
@@ -625,9 +617,9 @@ bool OpenALPlayoutADM::processPlayout() {
   }
   if (!playing()) {
     if (wasPlaying) {
-      // While we were queueing buffers the source stopped.
-      // Now we can't unqueue only old buffers, so we
-      // of them and then re-queue the ones we queued right
+      // While we were queueing buffers the source stopped. Now we can't unqueue
+      // only old buffers, so we unqueue all of them and then re-queue the ones
+      // we queued right now.
       unqueueAllBuffers();
       for (auto i = 0; i != int(_data->buffers.size()); ++i) {
         if (!wereQueued[i] && _data->queuedBuffers[i]) {
@@ -635,15 +627,14 @@ bool OpenALPlayoutADM::processPlayout() {
         }
       }
     } else {
-      // We were not playing and had no buffers,
-      // so queue them all at once.
+      // We were not playing and had no buffers, so queue them all at once.
       alSourceQueueBuffers(_data->source, _data->queuedBuffersCount,
                            _data->buffers.data());
     }
     alSourcePlay(_data->source);
   }
 
-  if (Failed(_playoutDevice)) {
+  if (CheckDeviceFailed(_playoutDevice)) {
     _playoutFailed = true;
   }
 
@@ -671,12 +662,13 @@ bool OpenALPlayoutADM::validatePlayoutDeviceId() {
   if (valid) {
     return true;
   }
-  const auto defaultDeviceId =
-      ComputeDefaultDeviceId(ALC_DEFAULT_DEVICE_SPECIFIER);
+  const auto defaultDeviceId = GetDefaultDeviceId(ALC_DEFAULT_DEVICE_SPECIFIER);
   if (!defaultDeviceId.empty()) {
     _playoutDeviceId = defaultDeviceId;
+
     return true;
   }
+
   RTC_LOG(LS_ERROR) << "Could not find any OpenAL devices.";
   return false;
 }
@@ -688,9 +680,9 @@ void OpenALPlayoutADM::startPlayingOnThread() {
     if (_playoutFailed) {
       return;
     }
-    unsigned int sources[1];
-    alGenSources(1, sources);
-    ALuint source = sources[0];
+
+    ALuint source = 0;
+    alGenSources(1, &source);
     if (source) {
       alSourcef(source, AL_PITCH, 1.f);
       alSource3f(source, AL_POSITION, 0, 0, 0);
@@ -734,5 +726,8 @@ void OpenALPlayoutADM::stopPlayingOnThread() {
     _data->source = 0;
     std::fill(_data->buffers.begin(), _data->buffers.end(), ALuint(0));
   }
+  // TODO: this is being called on a current thread (worker, since its being
+  //       proxied) instead of a playout thread.
+  //       also, we need to stop/pause playout thread somehow.
   alcSetThreadContext(nullptr);
 }

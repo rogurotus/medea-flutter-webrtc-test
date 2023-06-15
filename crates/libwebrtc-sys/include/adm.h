@@ -1,34 +1,31 @@
 #pragma once
 
 #define WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE 1
-#include <AL/al.h>
-#include <AL/alc.h>
-#include <iostream>
-#include "api/task_queue/task_queue_factory.h"
-#include "modules/audio_device/audio_device_impl.h"
 
+#include <iostream>
 #include <memory>
 
+#include <AL/al.h>
+#include <AL/alc.h>
+
+#include "crl.h"
+
+#include "api/audio/audio_frame.h"
+#include "api/audio/audio_mixer.h"
 #include "api/media_stream_interface.h"
 #include "api/sequence_checker.h"
+#include "api/task_queue/task_queue_factory.h"
 #include "modules/audio_device/audio_device_buffer.h"
 #include "modules/audio_device/audio_device_generic.h"
+#include "modules/audio_device/audio_device_impl.h"
 #include "modules/audio_device/include/audio_device.h"
 #include "modules/audio_device/include/audio_device_defines.h"
-
+#include "modules/audio_mixer/audio_mixer_impl.h"
 #include "rtc_base/event.h"
 #include "rtc_base/platform_thread.h"
 #include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/thread.h"
 #include "rtc_base/thread_annotations.h"
-
-#include "modules/audio_mixer/audio_mixer_impl.h"
-
-#include "api/audio/audio_mixer.h"
-
-#include "api/audio/audio_frame.h"
-
-#include "crl.h"
 
 #if defined(WEBRTC_USE_X11)
 #include <X11/Xlib.h>

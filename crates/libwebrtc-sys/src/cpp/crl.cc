@@ -3,16 +3,16 @@
 #include <chrono>
 
 namespace crl {
+
 time StartValue;
-using seconds_type = std::uint32_t;
-std::atomic<seconds_type> AdjustSeconds;
+std::atomic<std::uint32_t> AdjustSeconds;
 
 time current_value() {
   auto now = std::chrono::steady_clock::now();
   auto duration = now.time_since_epoch();
-  auto milliseconds =
+  auto millis =
       std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-  return time(milliseconds);
+  return time(millis);
 }
 
 time compute_adjustment() {
@@ -32,5 +32,4 @@ StaticInit::StaticInit() {
   StartValue = current_value();
 }
 
-StaticInit StaticInitObject;
 }  // namespace crl
