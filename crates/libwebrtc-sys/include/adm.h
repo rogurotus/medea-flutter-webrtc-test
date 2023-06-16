@@ -100,9 +100,6 @@ class OpenALPlayoutADM : public webrtc::AudioDeviceModuleImpl {
 
   void unqueueAllBuffers();
 
-  [[nodiscard]] crl::time countExactQueuedMsForLatency(crl::time now,
-                                                       bool playing);
-
   bool processPlayout();
 
   // NB! closePlayoutDevice should be called after this, so that next time
@@ -116,7 +113,6 @@ class OpenALPlayoutADM : public webrtc::AudioDeviceModuleImpl {
   bool _playoutInitialized = false;
   bool _playoutFailed = false;
   int _playoutChannels = 2;
-  crl::time _playoutLatency = 0;
   bool _speakerInitialized = false;
   ALCcontext* _playoutContext = nullptr;
   ALCdevice* _playoutDevice = nullptr;

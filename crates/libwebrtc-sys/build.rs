@@ -6,7 +6,7 @@ use std::ffi::OsString;
 use std::process;
 use std::{
     env, fs,
-    fs::{create_dir_all, File},
+    fs::File,
     io::{BufReader, BufWriter, Read, Write},
     path::{Path, PathBuf},
     process::Command,
@@ -271,7 +271,7 @@ fn compile_openal() -> anyhow::Result<()> {
 
     let mut openal_dir_path = openal_path.clone();
     openal_dir_path.pop();
-    create_dir_all(&openal_dir_path)?;
+    fs::create_dir_all(&openal_dir_path)?;
 
     match get_target()?.as_str() {
         "aarch64-apple-darwin" | "x86_64-apple-darwin" => {

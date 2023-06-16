@@ -250,15 +250,17 @@ int DeviceName(ALCenum specifier,
   return 0;
 }
 
+// TODO: doesnt work
 int32_t OpenALPlayoutADM::SetPlayoutDevice(uint16_t index) {
   const auto result =
       DeviceName(ALC_ALL_DEVICES_SPECIFIER, index, nullptr, &_playoutDeviceId);
+
   return result ? result : restartPlayout();
 }
 
-// TODO: remove?
 int32_t OpenALPlayoutADM::SetPlayoutDevice(WindowsDeviceType device) {
   _playoutDeviceId = GetDefaultDeviceId(ALC_DEFAULT_DEVICE_SPECIFIER);
+
   return _playoutDeviceId.empty() ? -1 : restartPlayout();
 }
 
@@ -269,9 +271,10 @@ int OpenALPlayoutADM::restartPlayout() {
   stopPlayingOnThread();
   closePlayoutDevice();
   if (!validatePlayoutDeviceId()) {
-    _data->_playoutThread->PostTask([this] {
-      _data->playing = true;
-      _playoutFailed = true;
+    // TODO: added BlockingCall supposed to be ok
+    _data->_playoutThread->BlockingCall([this] {
+        _data->playing = true;
+        _playoutFailed = true;
     });
     return 0;
   }
@@ -427,7 +430,8 @@ void OpenALPlayoutADM::openPlayoutDevice() {
   if (_playoutDevice || _playoutFailed) {
     return;
   }
-  _playoutDevice = alcOpenDevice(nullptr);
+  _playoutDevice = alcOpenDevice(
+    _playoutDeviceId.empty() ? nullptr : _playoutDeviceId.c_str());
   if (!_playoutDevice) {
     RTC_LOG(LS_ERROR) << "OpenAL Device open failed, deviceID: '"
                       << _playoutDeviceId << "'";
@@ -442,6 +446,7 @@ void OpenALPlayoutADM::openPlayoutDevice() {
     return;
   }
 
+    // TODO: not sure that current thread will see changes made in PostTask
   _data->_playoutThread->PostTask(
       [=] { alcSetThreadContext(_playoutContext); });
 }
@@ -506,64 +511,6 @@ void OpenALPlayoutADM::unqueueAllBuffers() {
   _data->queuedBuffersCount = 0;
 }
 
-double SafeRound(double value) {
-  if (const auto result = std::round(value); !std::isnan(result)) {
-    return result;
-  }
-  if (const auto result = std::round(value); !std::isnan(result)) {
-    return result;
-  }
-  std::feclearexcept(FE_ALL_EXCEPT);
-  if (const auto result = std::round(value); !std::isnan(result)) {
-    return result;
-  }
-}
-
-crl::time OpenALPlayoutADM::countExactQueuedMsForLatency(crl::time now,
-                                                         bool playing) {
-  auto values = std::array<AL_INT64_TYPE, kALMaxValues>{};
-  auto& sampleOffset = values[0];
-  auto& clockTime = values[1];
-  auto& exactDeviceTime = values[2];
-  const auto countExact = alGetSourcei64vSOFT && kAL_SAMPLE_OFFSET_CLOCK_SOFT &&
-                          kAL_SAMPLE_OFFSET_CLOCK_EXACT_SOFT;
-  if (countExact) {
-    if (!_data->lastExactDeviceTimeWhen ||
-        !(++_data->exactDeviceTimeCounter % kQueryExactTimeEach)) {
-      alGetSourcei64vSOFT(_data->source, kAL_SAMPLE_OFFSET_CLOCK_EXACT_SOFT,
-                          values.data());
-      _data->lastExactDeviceTime = exactDeviceTime;
-      _data->lastExactDeviceTimeWhen = now;
-    } else {
-      alGetSourcei64vSOFT(_data->source, kAL_SAMPLE_OFFSET_CLOCK_SOFT,
-                          values.data());
-
-      // The exactDeviceTime is in nanoseconds.
-      exactDeviceTime = _data->lastExactDeviceTime +
-                        (now - _data->lastExactDeviceTimeWhen) * 1'000'000;
-    }
-  } else {
-    auto offset = ALint(0);
-    alGetSourcei(_data->source, AL_SAMPLE_OFFSET, &offset);
-    sampleOffset = (AL_INT64_TYPE(offset) << 32);
-  }
-
-  const auto queuedSamples =
-      (AL_INT64_TYPE(_data->queuedBuffersCount * kPlayoutPart) << 32);
-  const auto processedInOpenAL = playing ? sampleOffset : queuedSamples;
-  const auto secondsQueuedInDevice =
-      std::max(clockTime - exactDeviceTime, AL_INT64_TYPE(0)) / 1'000'000'000.;
-  const auto secondsQueuedInOpenAL =
-      (double((queuedSamples - processedInOpenAL) >> (32 - 10)) /
-       double(kPlayoutFrequency * (1 << 10)));
-
-  const auto queuedTotal = crl::time(
-      SafeRound((secondsQueuedInDevice + secondsQueuedInOpenAL) * 1'000));
-
-  return countExact ? queuedTotal
-                    : std::max(queuedTotal, kDefaultPlayoutLatency);
-}
-
 int32_t OpenALPlayoutADM::RegisterAudioCallback(
     webrtc::AudioTransport* audioCallback) {
   return GetAudioDeviceBuffer()->RegisterAudioCallback(audioCallback);
@@ -594,8 +541,6 @@ bool OpenALPlayoutADM::processPlayout() {
                 0);
       break;
     }
-    const auto now = crl::now();
-    _playoutLatency = countExactQueuedMsForLatency(now, wasPlaying);
 
     const auto i = std::find(std::begin(_data->queuedBuffers),
                              std::end(_data->queuedBuffers), false);
@@ -675,6 +620,7 @@ bool OpenALPlayoutADM::validatePlayoutDeviceId() {
 
 void OpenALPlayoutADM::startPlayingOnThread() {
   _data->_playoutThread->Start();
+  // TODO: not sure that current thread will see changes made in PostTask
   _data->_playoutThread->PostTask([this] {
     _data->playing = true;
     if (_playoutFailed) {
