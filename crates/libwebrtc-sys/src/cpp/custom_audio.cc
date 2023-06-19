@@ -2,7 +2,11 @@
 
 // Creates a new `AudioSource`.
 AudioSource::AudioSource() {
+#if WEBRTC_MAC
+  frame_.sample_rate_hz_ = 48000;
+#else
   frame_.sample_rate_hz_ = 8000;
+#endif
 }
 
 // Overwrites `audio_frame`. The data_ field is overwritten with
@@ -28,6 +32,7 @@ webrtc::AudioMixer::Source::AudioFrameInfo AudioSource::GetAudioFrameWithInfo(
                            webrtc::AudioFrame::SpeechType::kNormalSpeech,
                            webrtc::AudioFrame::VADActivity::kVadActive);
   frame_available_ = false;
+  cv_.notify_all();
   return webrtc::AudioMixer::Source::AudioFrameInfo::kNormal;
 };
 
@@ -42,6 +47,7 @@ void AudioSource::UpdateFrame(const int16_t* source,
                      webrtc::AudioFrame::VADActivity::kVadActive, channels);
   frame_available_ = true;
   cv_.notify_all();
+  cv_.wait(lock, [&]() { return !frame_available_; });
 }
 
 // A way for a mixer implementation to distinguish participants.

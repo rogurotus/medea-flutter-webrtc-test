@@ -174,15 +174,23 @@ void CustomAudioDeviceModule::RecordProcess() {
       [this] {
         webrtc::AudioFrame frame;
         auto cb = GetAudioDeviceBuffer();
+        int last_sample_rate = frame.sample_rate_hz();
+        int last_num_channels = frame.num_channels();
         while (!quit) {
           {
             std::unique_lock<std::mutex> lock(source_mutex);
             cv.wait(lock, [&]() { return sources.size() > 0; });
           }
+          if (last_sample_rate != frame.sample_rate_hz()) {
+            cb->SetRecordingSampleRate(frame.sample_rate_hz());
+            last_sample_rate = frame.sample_rate_hz();
+          }
+          if (last_num_channels != frame.num_channels()) {
+            cb->SetRecordingChannels(frame.num_channels());
+            last_num_channels = frame.num_channels();
+          }
 
           mixer->Mix(audio_recorder->RecordingChannels(), &frame);
-          cb->SetRecordingChannels(frame.num_channels());
-          cb->SetRecordingSampleRate(frame.sample_rate_hz());
           cb->SetRecordedBuffer(frame.data(), frame.sample_rate_hz() / 100);
           cb->DeliverRecordedData();
         }

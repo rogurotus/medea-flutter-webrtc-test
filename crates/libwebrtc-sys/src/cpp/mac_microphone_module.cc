@@ -1,13 +1,14 @@
 #if WEBRTC_MAC
 
-#include "macos_microphone_module.h"
-#include "api/make_ref_counted.h"
-#include "rtc_base/logging.h"
+#include <ApplicationServices/ApplicationServices.h>
+#include <CoreAudio/CoreAudio.h>
 #include <mach/mach.h>   // mach_task_self()
 #include <sys/sysctl.h>  // sysctlbyname()
+#include "api/make_ref_counted.h"
+#include "macos_microphone_module.h"
 #include "modules/third_party/portaudio/pa_ringbuffer.h"
 #include "rtc_base/arraysize.h"
-#include <ApplicationServices/ApplicationServices.h>
+#include "rtc_base/logging.h"
 
 #define WEBRTC_CA_RETURN_ON_ERR(expr)                                \
   do {                                                               \
@@ -79,7 +80,7 @@ OSStatus MicrophoneModule::inConverterProc(
 }
 
 OSStatus MicrophoneModule::implInConverterProc(UInt32* numberDataPackets,
-                                             AudioBufferList* data) {
+                                               AudioBufferList* data) {
   RTC_DCHECK(data->mNumberBuffers == 1);
   ring_buffer_size_t numSamples =
       *numberDataPackets * _inStreamFormat.mChannelsPerFrame;
@@ -152,7 +153,7 @@ int32_t MicrophoneModule::SpeakerIsAvailableLocked(bool& available) {
 }
 
 OSStatus MicrophoneModule::implOutConverterProc(UInt32* numberDataPackets,
-                                              AudioBufferList* data) {
+                                                AudioBufferList* data) {
   RTC_DCHECK(data->mNumberBuffers == 1);
   ring_buffer_size_t numSamples =
       *numberDataPackets * _outDesiredFormat.mChannelsPerFrame;
@@ -172,21 +173,19 @@ OSStatus MicrophoneModule::implOutConverterProc(UInt32* numberDataPackets,
 }
 
 OSStatus MicrophoneModule::outConverterProc(AudioConverterRef,
-                                          UInt32* numberDataPackets,
-                                          AudioBufferList* data,
-                                          AudioStreamPacketDescription**,
-                                          void* userData) {
+                                            UInt32* numberDataPackets,
+                                            AudioBufferList* data,
+                                            AudioStreamPacketDescription**,
+                                            void* userData) {
   MicrophoneModule* ptrThis = (MicrophoneModule*)userData;
   RTC_DCHECK(ptrThis != NULL);
   return ptrThis->implOutConverterProc(numberDataPackets, data);
 }
 
-
-
 OSStatus MicrophoneModule::implDeviceIOProc(const AudioBufferList* inputData,
-                                          const AudioTimeStamp* inputTime,
-                                          AudioBufferList* outputData,
-                                          const AudioTimeStamp* outputTime) {
+                                            const AudioTimeStamp* inputTime,
+                                            AudioBufferList* outputData,
+                                            const AudioTimeStamp* outputTime) {
   OSStatus err = noErr;
   UInt64 outputTimeNs = AudioConvertHostTimeToNanos(outputTime->mHostTime);
   UInt64 nowNs = AudioConvertHostTimeToNanos(AudioGetCurrentHostTime());
@@ -249,12 +248,12 @@ OSStatus MicrophoneModule::implDeviceIOProc(const AudioBufferList* inputData,
 }
 
 OSStatus MicrophoneModule::deviceIOProc(AudioDeviceID,
-                                      const AudioTimeStamp*,
-                                      const AudioBufferList* inputData,
-                                      const AudioTimeStamp* inputTime,
-                                      AudioBufferList* outputData,
-                                      const AudioTimeStamp* outputTime,
-                                      void* clientData) {
+                                        const AudioTimeStamp*,
+                                        const AudioBufferList* inputData,
+                                        const AudioTimeStamp* inputTime,
+                                        AudioBufferList* outputData,
+                                        const AudioTimeStamp* outputTime,
+                                        void* clientData) {
   MicrophoneModule* ptrThis = (MicrophoneModule*)clientData;
   RTC_DCHECK(ptrThis != NULL);
   ptrThis->implDeviceIOProc(inputData, inputTime, outputData, outputTime);
@@ -263,7 +262,7 @@ OSStatus MicrophoneModule::deviceIOProc(AudioDeviceID,
 }
 
 OSStatus MicrophoneModule::implInDeviceIOProc(const AudioBufferList* inputData,
-                                            const AudioTimeStamp* inputTime) {
+                                              const AudioTimeStamp* inputTime) {
   OSStatus err = noErr;
   UInt64 inputTimeNs = AudioConvertHostTimeToNanos(inputTime->mHostTime);
   UInt64 nowNs = AudioConvertHostTimeToNanos(AudioGetCurrentHostTime());
@@ -311,12 +310,12 @@ OSStatus MicrophoneModule::implInDeviceIOProc(const AudioBufferList* inputData,
 }
 
 OSStatus MicrophoneModule::inDeviceIOProc(AudioDeviceID,
-                                        const AudioTimeStamp*,
-                                        const AudioBufferList* inputData,
-                                        const AudioTimeStamp* inputTime,
-                                        AudioBufferList*,
-                                        const AudioTimeStamp*,
-                                        void* clientData) {
+                                          const AudioTimeStamp*,
+                                          const AudioBufferList* inputData,
+                                          const AudioTimeStamp* inputTime,
+                                          AudioBufferList*,
+                                          const AudioTimeStamp*,
+                                          void* clientData) {
   MicrophoneModule* ptrThis = (MicrophoneModule*)clientData;
   RTC_DCHECK(ptrThis != NULL);
   ptrThis->implInDeviceIOProc(inputData, inputTime);
@@ -328,13 +327,9 @@ OSStatus MicrophoneModule::SetDesiredPlayoutFormat() {
   // Our preferred format to work with.
   _outDesiredFormat.mSampleRate = webrtc::N_PLAY_SAMPLES_PER_SEC;
   _outDesiredFormat.mChannelsPerFrame = _playChannels;
-  if (_ptrAudioBuffer) {
-    // Update audio buffer with the selected parameters.
-    _ptrAudioBuffer->SetPlayoutSampleRate(webrtc::N_PLAY_SAMPLES_PER_SEC);
-    _ptrAudioBuffer->SetPlayoutChannels((uint8_t)_playChannels);
-  }
   _renderDelayOffsetSamples =
-      _renderBufSizeSamples - webrtc::N_BUFFERS_OUT * webrtc::ENGINE_PLAY_BUF_SIZE_IN_SAMPLES *
+      _renderBufSizeSamples - webrtc::N_BUFFERS_OUT *
+                                  webrtc::ENGINE_PLAY_BUF_SIZE_IN_SAMPLES *
                                   _outDesiredFormat.mChannelsPerFrame;
   _outDesiredFormat.mBytesPerPacket =
       _outDesiredFormat.mChannelsPerFrame * sizeof(SInt16);
@@ -414,10 +409,12 @@ bool MicrophoneModule::SpeakerIsInitialized() const {
   return (_mixerManager.SpeakerIsInitialized());
 }
 
+int updateFrameCount = 0;
+
 bool MicrophoneModule::CaptureWorkerThread() {
   OSStatus err = noErr;
-  UInt32 noRecSamples =
-      webrtc::ENGINE_REC_BUF_SIZE_IN_SAMPLES * _inDesiredFormat.mChannelsPerFrame;
+  UInt32 noRecSamples = webrtc::ENGINE_REC_BUF_SIZE_IN_SAMPLES *
+                        _inDesiredFormat.mChannelsPerFrame;
   SInt16 recordBuffer[noRecSamples];
   UInt32 size = webrtc::ENGINE_REC_BUF_SIZE_IN_SAMPLES;
   AudioBufferList engineBuffer;
@@ -438,6 +435,14 @@ bool MicrophoneModule::CaptureWorkerThread() {
       return false;
     }
   }
+  if (source != nullptr) {
+    updateFrameCount++;
+    if (updateFrameCount % 100 == 0) {
+      RTC_LOG(LS_ERROR) << "UpdateFrameCount: " << updateFrameCount;
+    }
+    source->UpdateFrame(recordBuffer, size, webrtc::N_REC_SAMPLES_PER_SEC,
+                        _inDesiredFormat.mChannelsPerFrame);
+  }
   // TODO(xians): what if the returned size is incorrect?
   if (size == webrtc::ENGINE_REC_BUF_SIZE_IN_SAMPLES) {
     int32_t msecOnPlaySide;
@@ -448,22 +453,9 @@ bool MicrophoneModule::CaptureWorkerThread() {
         static_cast<int32_t>(1e-3 * (renderDelayUs + _renderLatencyUs) + 0.5);
     msecOnRecordSide =
         static_cast<int32_t>(1e-3 * (captureDelayUs + _captureLatencyUs) + 0.5);
-    if (!_ptrAudioBuffer) {
-      RTC_LOG(LS_ERROR) << "capture AudioBuffer is invalid";
-      return false;
-    }
-    // store the recorded buffer (no action will be taken if the
-    // #recorded samples is not a full buffer)
-    _ptrAudioBuffer->SetRecordedBuffer((int8_t*)&recordBuffer, (uint32_t)size);
-    _ptrAudioBuffer->SetVQEData(msecOnPlaySide, msecOnRecordSide);
-    _ptrAudioBuffer->SetTypingStatus(KeyPressed());
-    // deliver recorded samples at specified sample rate, mic level etc.
-    // to the observer using callback
-    _ptrAudioBuffer->DeliverRecordedData();
   }
   return true;
 }
-
 
 int32_t MicrophoneModule::InitRecording() {
   RTC_LOG(LS_INFO) << "InitRecording";
@@ -545,11 +537,6 @@ int32_t MicrophoneModule::InitRecording() {
     _recChannels = 1;
     RTC_LOG(LS_VERBOSE) << "Stereo recording unavailable on this device";
   }
-  if (_ptrAudioBuffer) {
-    // Update audio buffer with the selected parameters
-    _ptrAudioBuffer->SetRecordingSampleRate(webrtc::N_REC_SAMPLES_PER_SEC);
-    _ptrAudioBuffer->SetRecordingChannels((uint8_t)_recChannels);
-  }
   _inDesiredFormat.mSampleRate = webrtc::N_REC_SAMPLES_PER_SEC;
   _inDesiredFormat.mBytesPerPacket =
       _inDesiredFormat.mChannelsPerFrame * sizeof(SInt16);
@@ -568,8 +555,9 @@ int32_t MicrophoneModule::InitRecording() {
   // First try to set buffer size to desired value (10 ms * N_BLOCKS_IO)
   // TODO(xians): investigate this block.
   UInt32 bufByteCount =
-      (UInt32)((_inStreamFormat.mSampleRate / 1000.0) * 10.0 * webrtc::N_BLOCKS_IO *
-               _inStreamFormat.mChannelsPerFrame * sizeof(Float32));
+      (UInt32)((_inStreamFormat.mSampleRate / 1000.0) * 10.0 *
+               webrtc::N_BLOCKS_IO * _inStreamFormat.mChannelsPerFrame *
+               sizeof(Float32));
   if (_inStreamFormat.mFramesPerPacket != 0) {
     if (bufByteCount % _inStreamFormat.mFramesPerPacket != 0) {
       bufByteCount =
@@ -635,8 +623,8 @@ int32_t MicrophoneModule::InitRecording() {
 }
 
 int32_t MicrophoneModule::GetNumberDevices(const AudioObjectPropertyScope scope,
-                                         AudioDeviceID scopedDeviceIds[],
-                                         const uint32_t deviceListLength) {
+                                           AudioDeviceID scopedDeviceIds[],
+                                           const uint32_t deviceListLength) {
   OSStatus err = noErr;
   AudioObjectPropertyAddress propertyAddress = {
       kAudioHardwarePropertyDevices, kAudioObjectPropertyScopeGlobal,
@@ -726,8 +714,8 @@ int32_t MicrophoneModule::GetNumberDevices(const AudioObjectPropertyScope scope,
 }
 
 int32_t MicrophoneModule::InitDevice(const uint16_t userDeviceIndex,
-                                   AudioDeviceID& deviceId,
-                                   const bool isInput) {
+                                     AudioDeviceID& deviceId,
+                                     const bool isInput) {
   OSStatus err = noErr;
   UInt32 size = 0;
   AudioObjectPropertyScope deviceScope;
@@ -857,11 +845,6 @@ int32_t MicrophoneModule::HandleStreamFormatChange(
                       << streamFormat.mChannelsPerFrame << ")";
     return -1;
   }
-  if (_ptrAudioBuffer && streamFormat.mChannelsPerFrame != _recChannels) {
-    RTC_LOG(LS_ERROR) << "Changing channels not supported (mChannelsPerFrame = "
-                      << streamFormat.mChannelsPerFrame << ")";
-    return -1;
-  }
   RTC_LOG(LS_VERBOSE) << "Stream format:";
   RTC_LOG(LS_VERBOSE) << "mSampleRate = " << streamFormat.mSampleRate
                       << ", mChannelsPerFrame = "
@@ -972,12 +955,10 @@ OSStatus MicrophoneModule::implObjectListenerProc(
 
 // CoreAudio errors are best interpreted as four character strings.
 void MicrophoneModule::logCAMsg(const rtc::LoggingSeverity sev,
-                                    const char* msg,
-                                    const char* err) {
+                                const char* msg,
+                                const char* err) {
   RTC_DCHECK(msg != NULL);
   RTC_DCHECK(err != NULL);
-  // TODO(evdokimovs): This line panics
-//  RTC_DCHECK(sev == rtc::LS_ERROR || sev == rtc::LS_WARNING);
 #ifdef WEBRTC_ARCH_BIG_ENDIAN
   switch (sev) {
     case rtc::LS_ERROR:
@@ -1072,7 +1053,7 @@ MicrophoneModule::~MicrophoneModule() {
     Terminate();
   }
   RTC_DCHECK(capture_worker_thread_.empty());
-  RTC_DCHECK(render_worker_thread_.empty());
+  //  RTC_DCHECK(render_worker_thread_.empty());
   if (_paRenderBuffer) {
     delete _paRenderBuffer;
     _paRenderBuffer = NULL;
@@ -1335,6 +1316,8 @@ int32_t MicrophoneModule::MinMicrophoneVolume(uint32_t* minVolume) const {
 
 // Settings.
 int32_t MicrophoneModule::SetRecordingDevice(uint16_t index) {
+  auto start = _recIsInitialized;
+  StopRecording();
   if (_recIsInitialized) {
     return -1;
   }
@@ -1350,7 +1333,30 @@ int32_t MicrophoneModule::SetRecordingDevice(uint16_t index) {
   }
   _inputDeviceIndex = index;
   _inputDeviceIsSpecified = true;
+
+  if (start) {
+    InitRecording();
+    StartRecording();
+  }
+
   return 0;
+}
+
+int MicrophoneSource::sources_num = 0;
+MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
+  this->module = module;
+  if (sources_num == 0) {
+    module->StartRecording();
+  }
+  ++sources_num;
+}
+
+MicrophoneSource::~MicrophoneSource() {
+  --sources_num;
+  if (sources_num == 0) {
+    module->StopRecording();
+    module->ResetSource();
+  }
 }
 
 rtc::scoped_refptr<AudioSource> MicrophoneModule::CreateSource() {
@@ -1372,7 +1378,6 @@ void MicrophoneModule::ResetSource() {
 }
 
 int32_t MicrophoneModule::StopRecording() {
-  RTC_LOG(LS_INFO) << "StopRecording";
   webrtc::MutexLock lock(&mutex_);
   if (!_recIsInitialized) {
     return 0;
@@ -1385,7 +1390,7 @@ int32_t MicrophoneModule::StopRecording() {
       _recording = false;
       _doStopRec = true;  // Signal to io proc to stop audio device
       mutex_.Unlock();    // Cannot be under lock, risk of deadlock
-      if (!_stopEventRec.Wait(2000)) {
+      if (!_stopEventRec.Wait(webrtc::TimeDelta::Seconds(2))) {
         webrtc::MutexLock lockScoped(&mutex_);
         RTC_LOG(LS_WARNING) << "Timed out stopping the capture IOProc."
                                "We may have failed to detect a device removal.";
@@ -1394,6 +1399,7 @@ int32_t MicrophoneModule::StopRecording() {
             AudioDeviceDestroyIOProcID(_inputDeviceID, _inDeviceIOProcID));
       }
       mutex_.Lock();
+
       _doStopRec = false;
       RTC_LOG(LS_INFO) << "Recording stopped (input device)";
     } else if (_recIsInitialized) {
@@ -1413,7 +1419,7 @@ int32_t MicrophoneModule::StopRecording() {
       _recording = false;
       _doStop = true;   // Signal to io proc to stop audio device
       mutex_.Unlock();  // Cannot be under lock, risk of deadlock
-      if (!_stopEvent.Wait(2000)) {
+      if (!_stopEvent.Wait(webrtc::TimeDelta::Seconds(2))) {
         webrtc::MutexLock lockScoped(&mutex_);
         RTC_LOG(LS_WARNING) << "Timed out stopping the shared IOProc."
                                "We may have failed to detect a device removal.";
@@ -1424,6 +1430,7 @@ int32_t MicrophoneModule::StopRecording() {
             AudioDeviceDestroyIOProcID(_outputDeviceID, _deviceIOProcID));
       }
       mutex_.Lock();
+
       _doStop = false;
       RTC_LOG(LS_INFO) << "Recording stopped (shared device)";
     } else if (_recIsInitialized && !_playing && !_playIsInitialized) {
@@ -1454,7 +1461,6 @@ int32_t MicrophoneModule::StopRecording() {
 }
 
 int32_t MicrophoneModule::StartRecording() {
-  RTC_LOG(LS_INFO) << "StartRecording";
   webrtc::MutexLock lock(&mutex_);
   if (!_recIsInitialized) {
     return -1;
