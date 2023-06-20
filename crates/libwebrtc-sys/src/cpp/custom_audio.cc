@@ -2,7 +2,7 @@
 
 // Creates a new `AudioSource`.
 AudioSource::AudioSource() {
-#if WEBRTC_MAC
+#if __APPLE__
   frame_.sample_rate_hz_ = 48000;
 #else
   frame_.sample_rate_hz_ = 8000;
