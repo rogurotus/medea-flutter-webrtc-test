@@ -58,12 +58,10 @@ class AudioSourceManager {
   virtual void RemoveSource(rtc::scoped_refptr<AudioSource> source) = 0;
 };
 
-
 class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public AudioSourceManager {
  public:
   CustomAudioDeviceModule(AudioLayer audio_layer, webrtc::TaskQueueFactory* task_queue_factory);
   ~CustomAudioDeviceModule();
-
 
   static rtc::scoped_refptr<CustomAudioDeviceModule> Create(
       AudioLayer audio_layer,
