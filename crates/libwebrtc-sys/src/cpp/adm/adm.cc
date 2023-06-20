@@ -174,8 +174,8 @@ void CustomAudioDeviceModule::RecordProcess() {
       [this] {
         webrtc::AudioFrame frame;
         auto cb = GetAudioDeviceBuffer();
-        int last_sample_rate = -1;
-        int last_num_channels = -1;
+        int last_sample_rate = frame.sample_rate_hz();
+        int last_num_channels = frame.num_channels();
 
         while (!quit) {
           {
