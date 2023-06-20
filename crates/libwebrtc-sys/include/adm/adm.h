@@ -23,10 +23,9 @@
 #include "modules/audio_mixer/audio_mixer_impl.h"
 
 #include "api/audio/audio_mixer.h"
-
 #include "api/audio/audio_frame.h"
 
-#include "custom_audio.h"
+#include "audio_source/custom_audio.h"
 
 #if defined(WEBRTC_USE_X11)
 #include <X11/Xlib.h>

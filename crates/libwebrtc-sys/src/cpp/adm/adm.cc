@@ -12,7 +12,7 @@
 
 #include <chrono>
 #include <thread>
-#include "adm.h"
+#include "adm/adm.h"
 #include "api/make_ref_counted.h"
 #include "common_audio/wav_file.h"
 #include "modules/audio_device/include/test_audio_device.h"

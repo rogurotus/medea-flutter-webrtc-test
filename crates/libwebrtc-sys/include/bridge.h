@@ -31,8 +31,8 @@
 #include "media/base/fake_frame_source.h"
 #include "pc/test/fake_video_track_source.h"
 #include "modules/audio_device/include/test_audio_device.h"
-#include "audio_source_manager_proxy.h"
-#include "adm.h"
+#include "audio_source/audio_source_manager_proxy.h"
+#include "adm/adm.h"
 
 namespace bridge {
 

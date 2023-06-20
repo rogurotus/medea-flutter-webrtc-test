@@ -1,6 +1,16 @@
+/*
+ *  Copyright (c) 2012 The WebRTC project authors. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license
+ *  that can be found in the LICENSE file in the root of the source
+ *  tree. An additional intellectual property rights grant can be found
+ *  in the file PATENTS.  All contributing project authors may
+ *  be found in the AUTHORS file in the root of the source tree.
+ */
+
 #if WEBRTC_LINUX
 
-#include "linux_microphone_module.h"
+#include "adm/linux_microphone_module.h"
 #include "api/make_ref_counted.h"
 #include "rtc_base/logging.h"
 
@@ -589,7 +599,7 @@ int32_t MicrophoneModule::StartRecording() {
 
   // The audio thread will signal when recording has started.
   _timeEventRec.Set();
-  if (!_recStartEvent.Wait(10000)) {
+  if (!_recStartEvent.Wait(webrtc::TimeDelta::Millis(10000))) {
     {
       webrtc::MutexLock lock(&mutex_);
       _startRec = false;
@@ -840,7 +850,7 @@ void MicrophoneModule::PaStreamStateCallback(pa_stream* p, void* pThis) {
 }
 
 bool MicrophoneModule::RecThreadProcess() {
-  if (!_timeEventRec.Wait(1000)) {
+  if (!_timeEventRec.Wait(webrtc::TimeDelta::Millis(1000))) {
     return true;
   }
 
@@ -1021,8 +1031,6 @@ int32_t MicrophoneModule::ReadRecordedData(const void* bufferData,
       return 0;
     }
 
-    // nado=_recBuffer;
-
     // Provide data to VoiceEngine.
     if (ProcessRecordedData(_recBuffer, numRecSamples, recDelay) == -1) {
       // We have stopped recording.
@@ -1034,8 +1042,6 @@ int32_t MicrophoneModule::ReadRecordedData(const void* bufferData,
 
   // Now process full 10ms sample sets directly from the input.
   while (size >= _recordBufferSize) {
-    // nado=(int8_t*)bufferData;
-
     // Provide data to VoiceEngine.
     if (ProcessRecordedData(static_cast<int8_t*>(const_cast<void*>(bufferData)),
                             numRecSamples, recDelay) == -1) {
