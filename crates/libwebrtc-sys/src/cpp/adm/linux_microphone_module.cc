@@ -10,6 +10,9 @@
 
 #if WEBRTC_LINUX
 
+//todo
+#include <iostream>
+
 #include "adm/linux_microphone_module.h"
 #include "api/make_ref_counted.h"
 #include "rtc_base/logging.h"
@@ -33,9 +36,11 @@ void MicrophoneModule::PaServerInfoCallback(pa_context* c,
   static_cast<MicrophoneModule*>(pThis)->PaServerInfoCallbackHandler(i);
 }
 
-int MicrophoneSource::sources_num = 0;
-MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
+std::atomic<int> MicrophoneSource::sources_num = 0;
+MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module, rtc::Thread* thread) {
   this->module = module;
+  this->worker_thread = thread;
+
   if (sources_num == 0) {
     module->StartRecording();
   }
@@ -45,8 +50,10 @@ MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
 MicrophoneSource::~MicrophoneSource() {
   --sources_num;
   if (sources_num == 0) {
-    module->StopRecording();
-    module->ResetSource();
+     worker_thread->BlockingCall([this] {
+        this->module->StopRecording();
+        this->module->ResetSource();
+      });
   }
 }
 
@@ -65,7 +72,7 @@ rtc::scoped_refptr<AudioSource> MicrophoneModule::CreateSource() {
   }
 
   if (!source) {
-    source = rtc::scoped_refptr<MicrophoneSource>(new MicrophoneSource(this));
+    source = rtc::scoped_refptr<MicrophoneSource>(new MicrophoneSource(this, worker_thread));
   }
   auto result = source;
   source->Release();
@@ -435,7 +442,8 @@ int32_t MicrophoneModule::Terminate() {
   return 0;
 }
 
-MicrophoneModule::MicrophoneModule() {
+MicrophoneModule::MicrophoneModule(rtc::Thread* worker_thread)
+    : worker_thread(worker_thread) {
 #if defined(WEBRTC_USE_X11)
   memset(_oldKeyState, 0, sizeof(_oldKeyState));
 #endif

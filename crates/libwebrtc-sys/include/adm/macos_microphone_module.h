@@ -10,7 +10,7 @@
 
 class MicrophoneModule : public MicrophoneModuleInterface {
  public:
-  MicrophoneModule();
+  MicrophoneModule(rtc::Thread* worker_thread);
   ~MicrophoneModule();
 
   // MicrophoneModuleInterface
@@ -138,6 +138,7 @@ class MicrophoneModule : public MicrophoneModuleInterface {
   // Then convert the output to the OS setting using an AudioConverter.
   OSStatus SetDesiredPlayoutFormat();
 
+  rtc::Thread* worker_thread;
   webrtc::AudioDeviceBuffer* _ptrAudioBuffer;
   webrtc::Mutex mutex_;
   rtc::Event _stopEventRec;

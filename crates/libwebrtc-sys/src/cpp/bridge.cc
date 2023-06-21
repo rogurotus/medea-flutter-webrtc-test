@@ -165,10 +165,10 @@ std::unique_ptr<CustomAudioDeviceModule> create_custom_audio_device_module(
     Thread& worker_thread,
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory) {
-  CustomAudioDeviceModule adm =
-      worker_thread.BlockingCall([audio_layer, &task_queue_factory] {
-        return ::CustomAudioDeviceModule::Create(audio_layer,
-                                                 &task_queue_factory);
+  CustomAudioDeviceModule adm = worker_thread.BlockingCall(
+      [audio_layer, &task_queue_factory, &worker_thread] {
+        return ::CustomAudioDeviceModule::Create(
+            audio_layer, &task_queue_factory, &worker_thread);
       });
 
   if (adm == nullptr) {

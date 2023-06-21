@@ -39,9 +39,10 @@ CustomAudioDeviceModule::~CustomAudioDeviceModule() {
 
 rtc::scoped_refptr<CustomAudioDeviceModule> CustomAudioDeviceModule::Create(
     AudioLayer audio_layer,
-    webrtc::TaskQueueFactory* task_queue_factory) {
-  return CustomAudioDeviceModule::CreateForTest(audio_layer,
-                                                task_queue_factory);
+    webrtc::TaskQueueFactory* task_queue_factory,
+    rtc::Thread* worker_thread) {
+  return CustomAudioDeviceModule::CreateForTest(audio_layer, task_queue_factory,
+                                                worker_thread);
 }
 
 int32_t CustomAudioDeviceModule::SetRecordingDevice(uint16_t index) {
@@ -127,7 +128,8 @@ int32_t CustomAudioDeviceModule::StartRecording() {
 rtc::scoped_refptr<CustomAudioDeviceModule>
 CustomAudioDeviceModule::CreateForTest(
     AudioLayer audio_layer,
-    webrtc::TaskQueueFactory* task_queue_factory) {
+    webrtc::TaskQueueFactory* task_queue_factory,
+    rtc::Thread* worker_thread) {
   // The "AudioDeviceModule::kWindowsCoreAudio2" audio layer has its own
   // dedicated factory method which should be used instead.
   if (audio_layer == AudioDeviceModule::kWindowsCoreAudio2) {
@@ -136,7 +138,7 @@ CustomAudioDeviceModule::CreateForTest(
 
   // Create the generic reference counted (platform independent) implementation.
   auto audio_device = rtc::make_ref_counted<CustomAudioDeviceModule>(
-      audio_layer, task_queue_factory);
+      audio_layer, task_queue_factory, worker_thread);
 
   // Ensure that the current platform is supported.
   if (audio_device->CheckPlatform() == -1) {
@@ -161,11 +163,11 @@ CustomAudioDeviceModule::CreateForTest(
 
 CustomAudioDeviceModule::CustomAudioDeviceModule(
     AudioLayer audio_layer,
-    webrtc::TaskQueueFactory* task_queue_factory)
+    webrtc::TaskQueueFactory* task_queue_factory,
+    rtc::Thread* worker_thread)
     : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory),
-      audio_recorder(std::move(
-          std::unique_ptr<MicrophoneModuleInterface>(new MicrophoneModule()))) {
-}
+      audio_recorder(std::move(std::unique_ptr<MicrophoneModuleInterface>(
+          new MicrophoneModule(worker_thread)))) {}
 
 void CustomAudioDeviceModule::RecordProcess() {
   const auto attributes =

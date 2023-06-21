@@ -7,7 +7,7 @@
 
 class MicrophoneModule : public MicrophoneModuleInterface {
  public:
-  MicrophoneModule();
+  MicrophoneModule(rtc::Thread* worker_thread);
   ~MicrophoneModule();
 
   // MicrophoneModuleInterface
@@ -73,6 +73,7 @@ class MicrophoneModule : public MicrophoneModuleInterface {
   int32_t _GetDeviceID(IMMDevice* pDevice, LPWSTR pszBuffer, int bufferLen);
   int32_t _GetDefaultDevice(EDataFlow dir, ERole role, IMMDevice** ppDevice);
 
+  rtc::Thread* worker_thread;
   webrtc::ScopedCOMInitializer _comInit;
   webrtc::AudioDeviceBuffer* _ptrAudioBuffer;
   mutable webrtc::Mutex mutex_;

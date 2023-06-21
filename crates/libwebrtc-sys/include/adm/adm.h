@@ -23,6 +23,7 @@
 
 #include "api/audio/audio_frame.h"
 #include "api/audio/audio_mixer.h"
+#include "rtc_base/thread.h"
 
 #include "audio_source/custom_audio.h"
 
@@ -61,16 +62,19 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl,
                                 public AudioSourceManager {
  public:
   CustomAudioDeviceModule(AudioLayer audio_layer,
-                          webrtc::TaskQueueFactory* task_queue_factory);
+                          webrtc::TaskQueueFactory* task_queue_factory,
+                          rtc::Thread* worker_thread);
   ~CustomAudioDeviceModule();
 
   static rtc::scoped_refptr<CustomAudioDeviceModule> Create(
       AudioLayer audio_layer,
-      webrtc::TaskQueueFactory* task_queue_factory);
+      webrtc::TaskQueueFactory* task_queue_factory,
+      rtc::Thread* worker_thread);
 
   static rtc::scoped_refptr<CustomAudioDeviceModule> CreateForTest(
       AudioLayer audio_layer,
-      webrtc::TaskQueueFactory* task_queue_factory);
+      webrtc::TaskQueueFactory* task_queue_factory,
+      rtc::Thread* worker_thread);
 
   // Mixes source and sends on.
   void RecordProcess();

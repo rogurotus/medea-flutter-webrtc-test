@@ -9,7 +9,7 @@ WebRTCPulseSymbolTable* _GetPulseSymbolTable();
 
 class MicrophoneModule : public MicrophoneModuleInterface {
  public:
-  MicrophoneModule();
+  MicrophoneModule(rtc::Thread* worker_thread);
   ~MicrophoneModule();
 
   // MicrophoneModuleInterface
@@ -89,6 +89,7 @@ class MicrophoneModule : public MicrophoneModuleInterface {
   int32_t SetStereoRecording(bool enable);
   int32_t StereoRecording(bool& enabled) const;
 
+  rtc::Thread* worker_thread;
   rtc::scoped_refptr<MicrophoneSource> source = nullptr;
   bool _inputDeviceIsSpecified = false;
   int sample_rate_hz_ = 0;

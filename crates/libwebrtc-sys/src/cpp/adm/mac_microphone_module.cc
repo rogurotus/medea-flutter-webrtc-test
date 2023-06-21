@@ -1013,7 +1013,7 @@ OSStatus MicrophoneModule::objectListenerProc(
 /// ============================== PUBLIC METHODS ==============================
 /// ============================================================================
 
-MicrophoneModule::MicrophoneModule()
+MicrophoneModule::MicrophoneModule(rtc::Thread* worker_thread)
     : _ptrAudioBuffer(NULL),
       _mixerManager(),
       _inputDeviceIndex(0),
@@ -1048,7 +1048,8 @@ MicrophoneModule::MicrophoneModule()
       _paRenderBuffer(NULL),
       _captureBufSizeSamples(0),
       _renderBufSizeSamples(0),
-      prev_key_state_() {
+      prev_key_state_(),
+      worker_thread(worker_thread) {
   RTC_DLOG(LS_INFO) << __FUNCTION__ << " created";
   memset(_renderConvertData, 0, sizeof(_renderConvertData));
   memset(&_outStreamFormat, 0, sizeof(AudioStreamBasicDescription));
@@ -1352,9 +1353,12 @@ int32_t MicrophoneModule::SetRecordingDevice(uint16_t index) {
   return 0;
 }
 
-int MicrophoneSource::sources_num = 0;
-MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
+std::atomic<int> MicrophoneSource::sources_num = 0;
+MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module,
+                                   rtc::Thread* thread) {
   this->module = module;
+  this->worker_thread = thread;
+
   if (sources_num == 0) {
     module->StartRecording();
   }
@@ -1364,8 +1368,10 @@ MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
 MicrophoneSource::~MicrophoneSource() {
   --sources_num;
   if (sources_num == 0) {
-    module->StopRecording();
-    module->ResetSource();
+    worker_thread->BlockingCall([this] {
+      this->module->StopRecording();
+      this->module->ResetSource();
+    });
   }
 }
 

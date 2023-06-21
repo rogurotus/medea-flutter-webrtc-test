@@ -171,9 +171,12 @@ class MediaBufferImpl final : public IMediaBuffer {
 }  // namespace
 }  // namespace webrtc
 
-int MicrophoneSource::sources_num = 0;
-MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
+std::atomic<int> MicrophoneSource::sources_num = 0;
+MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module,
+                                   rtc::Thread* thread) {
   this->module = module;
+  this->worker_thread = thread;
+
   if (sources_num == 0) {
     module->StartRecording();
   }
@@ -183,8 +186,10 @@ MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
 MicrophoneSource::~MicrophoneSource() {
   --sources_num;
   if (sources_num == 0) {
-    module->StopRecording();
-    module->ResetSource();
+    worker_thread->BlockingCall([this] {
+      this->module->StopRecording();
+      this->module->ResetSource();
+    });
   }
 }
 
@@ -676,7 +681,7 @@ int32_t MicrophoneModule::Terminate() {
 //  MicrophoneModule() - ctor
 // ----------------------------------------------------------------------------
 
-MicrophoneModule::MicrophoneModule()
+MicrophoneModule::MicrophoneModule(rtc::Thread* worker_thread))
     : _avrtLibrary(nullptr),
       _winSupportAvrt(false),
       _comInit(webrtc::ScopedCOMInitializer::kMTA),
@@ -727,7 +732,8 @@ MicrophoneModule::MicrophoneModule()
       _inputDevice(webrtc::AudioDeviceModule::kDefaultCommunicationDevice),
       _outputDevice(webrtc::AudioDeviceModule::kDefaultCommunicationDevice),
       _inputDeviceIndex(0),
-      _outputDeviceIndex(0) {
+      _outputDeviceIndex(0),
+      worker_thread(worker_thread) {
   RTC_DLOG(LS_INFO) << __FUNCTION__ << " created";
   RTC_DCHECK(_comInit.Succeeded());
 

@@ -1,17 +1,20 @@
 
 #pragma once
 #include "audio_source/custom_audio.h"
+#include "rtc_base/thread.h"
+#include <atomic>
 
 class MicrophoneModuleInterface;
 
 class MicrophoneSource : public AudioSource {
  public:
-  MicrophoneSource(MicrophoneModuleInterface* module);
+  MicrophoneSource(MicrophoneModuleInterface* module, rtc::Thread* thread);
   ~MicrophoneSource();
 
  private:
   MicrophoneModuleInterface* module;
-  static int sources_num;
+  rtc::Thread* worker_thread;
+  static std::atomic<int> sources_num;
 };
 
 class MicrophoneModuleInterface {
