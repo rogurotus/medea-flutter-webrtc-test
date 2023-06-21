@@ -33,8 +33,6 @@ void MicrophoneModule::PaServerInfoCallback(pa_context* c,
   static_cast<MicrophoneModule*>(pThis)->PaServerInfoCallbackHandler(i);
 }
 
-
-
 int MicrophoneSource::sources_num = 0;
 MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
   this->module = module;
@@ -60,7 +58,6 @@ void MicrophoneModule::ResetSource() {
   webrtc::MutexLock lock(&mutex_);
   source = nullptr;
 }
-
 
 rtc::scoped_refptr<AudioSource> MicrophoneModule::CreateSource() {
   if (!_recording) {
@@ -103,7 +100,6 @@ int32_t MicrophoneModule::SetRecordingDevice(uint16_t index) {
   return 0;
 }
 
-
 int32_t MicrophoneModule::ProcessRecordedData(int8_t* bufferData,
                                               uint32_t bufferSizeInSamples,
                                               uint32_t recDelay)
@@ -131,13 +127,9 @@ int32_t MicrophoneModule::ProcessRecordedData(int8_t* bufferData,
   return 0;
 }
 
-
-
 // -------------------------------------------------------------------------------
 //  Everything below has been copied unchanged from audio_device_pulse_linux.cc
 // -------------------------------------------------------------------------------
-
-
 
 void MicrophoneModule::PaServerInfoCallbackHandler(const pa_server_info* i) {
   // Use PA native sampling rate
@@ -527,7 +519,6 @@ int16_t MicrophoneModule::RecordingDevices() {
 void MicrophoneModule::PaUnLock() {
   LATE(pa_threaded_mainloop_unlock)(_paMainloop);
 }
-
 
 int32_t MicrophoneModule::StopRecording() {
   RTC_DCHECK(thread_checker_.IsCurrent());
@@ -1117,7 +1108,6 @@ int32_t MicrophoneModule::StereoRecording(bool& enabled) const {
 
   return 0;
 }
-
 
 bool MicrophoneModule::KeyPressed() const {
 #if defined(WEBRTC_USE_X11)

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "custom_audio.h"
-#include "microphone_module.h"
-#include "modules/audio_device/mac/audio_device_mac.h"
 #include <AudioToolbox/AudioConverter.h>
 #include <CoreAudio/CoreAudio.h>
 #include <mach/semaphore.h>
+#include "custom_audio.h"
+#include "microphone_module.h"
+#include "modules/audio_device/mac/audio_device_mac.h"
 #include "rtc_base/logging.h"
 
 class MicrophoneModule : public MicrophoneModuleInterface {
@@ -100,7 +100,6 @@ class MicrophoneModule : public MicrophoneModuleInterface {
                                AudioBufferList* outputData,
                                const AudioTimeStamp* outputTime,
                                void* clientData);
-
 
   OSStatus implDeviceIOProc(const AudioBufferList* inputData,
                             const AudioTimeStamp* inputTime,

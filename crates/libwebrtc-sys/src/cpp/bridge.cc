@@ -129,8 +129,7 @@ std::unique_ptr<AudioDeviceModule> create_audio_device_module(
 std::unique_ptr<AudioSourceManager> create_source_manager(
     const CustomAudioDeviceModule& adm,
     Thread& worker_thread) {
-  auto a = AudioSourceManagerProxy::Create(&worker_thread, adm);
-  return a;
+  return AudioSourceManagerProxy::Create(&worker_thread, adm);
 }
 
 // Creates a new proxied `AudioDeviceModule` from the provided

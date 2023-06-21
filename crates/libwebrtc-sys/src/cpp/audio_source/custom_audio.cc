@@ -17,6 +17,7 @@ webrtc::AudioMixer::Source::AudioFrameInfo AudioSource::GetAudioFrameWithInfo(
     webrtc::AudioFrame* audio_frame) {
   std::unique_lock<std::mutex> lock(mutex_);
   cv_.wait(lock, [&]() { return frame_available_; });
+
   auto* source = frame_.data();
   if (frame_.sample_rate_hz() != sample_rate_hz) {
     render_resampler_.InitializeIfNeeded(frame_.sample_rate_hz(),
@@ -31,8 +32,10 @@ webrtc::AudioMixer::Source::AudioFrameInfo AudioSource::GetAudioFrameWithInfo(
                            sample_rate_hz,
                            webrtc::AudioFrame::SpeechType::kNormalSpeech,
                            webrtc::AudioFrame::VADActivity::kVadActive);
+
   frame_available_ = false;
   cv_.notify_all();
+
   return webrtc::AudioMixer::Source::AudioFrameInfo::kNormal;
 };
 
@@ -46,6 +49,7 @@ void AudioSource::UpdateFrame(const int16_t* source,
                      webrtc::AudioFrame::SpeechType::kNormalSpeech,
                      webrtc::AudioFrame::VADActivity::kVadActive, channels);
   frame_available_ = true;
+
   cv_.notify_all();
   cv_.wait(lock, [&]() { return !frame_available_; });
 }
