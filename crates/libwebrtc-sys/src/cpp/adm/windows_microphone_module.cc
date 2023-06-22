@@ -525,7 +525,7 @@ rtc::scoped_refptr<AudioSource> MicrophoneModule::CreateSource() {
   }
 
   if (!source) {
-    source = rtc::scoped_refptr<MicrophoneSource>(new MicrophoneSource(this));
+    source = rtc::scoped_refptr<MicrophoneSource>(new MicrophoneSource(this, worker_thread));
   }
   auto result = source;
   source->Release();
