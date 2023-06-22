@@ -681,7 +681,7 @@ int32_t MicrophoneModule::Terminate() {
 //  MicrophoneModule() - ctor
 // ----------------------------------------------------------------------------
 
-MicrophoneModule::MicrophoneModule(rtc::Thread* worker_thread))
+MicrophoneModule::MicrophoneModule(rtc::Thread* worker_thread)
     : _avrtLibrary(nullptr),
       _winSupportAvrt(false),
       _comInit(webrtc::ScopedCOMInitializer::kMTA),
