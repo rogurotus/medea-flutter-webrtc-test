@@ -10,9 +10,6 @@
 
 #if WEBRTC_LINUX
 
-//todo
-#include <iostream>
-
 #include "adm/linux_microphone_module.h"
 #include "api/make_ref_counted.h"
 #include "rtc_base/logging.h"

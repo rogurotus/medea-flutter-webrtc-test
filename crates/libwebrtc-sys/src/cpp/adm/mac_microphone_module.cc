@@ -15,7 +15,7 @@
 #include <mach/mach.h>   // mach_task_self()
 #include <sys/sysctl.h>  // sysctlbyname()
 #include "api/make_ref_counted.h"
-#include "macos_microphone_module.h"
+#include "adm/macos_microphone_module.h"
 #include "modules/third_party/portaudio/pa_ringbuffer.h"
 #include "rtc_base/arraysize.h"
 #include "rtc_base/logging.h"

@@ -27,7 +27,7 @@
 // clang-format off
 // To get Windows includes in the right order, this must come before the Windows
 // includes below.
-#include "windows_microphone_module.h"
+#include "adm/windows_microphone_module.h"
 // clang-format on
 
 #include <string.h>
