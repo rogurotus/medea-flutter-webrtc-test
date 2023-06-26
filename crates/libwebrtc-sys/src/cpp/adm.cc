@@ -174,6 +174,9 @@ OpenALPlayoutADM::OpenALPlayoutADM(AudioLayer audio_layer,
 
 template <typename Callback>
 void EnumerateDevices(ALCenum specifier, Callback&& callback) {
+  auto defaultDevice = alcGetString(nullptr, ALC_DEFAULT_DEVICE_SPECIFIER);
+  callback(defaultDevice);
+
   auto devices = alcGetString(nullptr, specifier);
   while (*devices != 0) {
     callback(devices);
@@ -216,6 +219,9 @@ int DeviceName(ALCenum specifier,
       const auto prefix = std::string("OpenAL Soft on ");
       if (string.rfind(prefix, 0) == 0) {
         string = string.substr(prefix.size());
+      }
+      if (string == "OpenAL Soft") {
+        string = "Default";
       }
       *name = std::move(string);
     } else if (guid) {
