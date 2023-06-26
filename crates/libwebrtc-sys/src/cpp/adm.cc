@@ -67,7 +67,10 @@ ALGETSOURCEI64VSOFT alGetSourcei64vSOFT /* = nullptr*/;
 ALCGETINTEGER64VSOFT alcGetInteger64vSOFT /* = nullptr*/;
 
 struct OpenALPlayoutADM::Data {
-  Data() { _playoutThread = rtc::Thread::Create(); }
+  Data() {
+    _playoutThread = rtc::Thread::Create();
+    rtc::Thread::Current()->AllowInvokesToThread(_playoutThread.get());
+  }
 
   std::unique_ptr<rtc::Thread> _playoutThread;
   ALuint source = 0;
@@ -250,7 +253,6 @@ int DeviceName(ALCenum specifier,
   return 0;
 }
 
-// TODO: doesnt work
 int32_t OpenALPlayoutADM::SetPlayoutDevice(uint16_t index) {
   const auto result =
       DeviceName(ALC_ALL_DEVICES_SPECIFIER, index, nullptr, &_playoutDeviceId);
@@ -271,10 +273,9 @@ int OpenALPlayoutADM::restartPlayout() {
   stopPlayingOnThread();
   closePlayoutDevice();
   if (!validatePlayoutDeviceId()) {
-    // TODO: added BlockingCall supposed to be ok
     _data->_playoutThread->BlockingCall([this] {
-        _data->playing = true;
-        _playoutFailed = true;
+      _data->playing = true;
+      _playoutFailed = true;
     });
     return 0;
   }
@@ -322,6 +323,7 @@ int32_t OpenALPlayoutADM::StartPlayout() {
   if (_playoutFailed) {
     _playoutFailed = false;
   }
+  _data->_playoutThread->Start();
   openPlayoutDevice();
   GetAudioDeviceBuffer()->SetPlayoutSampleRate(kPlayoutFrequency);
   GetAudioDeviceBuffer()->SetPlayoutChannels(_playoutChannels);
@@ -427,15 +429,18 @@ int32_t OpenALPlayoutADM::SpeakerMute(bool* enabled) const {
 }
 
 void OpenALPlayoutADM::openPlayoutDevice() {
+  _mutex.lock();
   if (_playoutDevice || _playoutFailed) {
+    _mutex.unlock();
     return;
   }
   _playoutDevice = alcOpenDevice(
-    _playoutDeviceId.empty() ? nullptr : _playoutDeviceId.c_str());
+      _playoutDeviceId.empty() ? nullptr : _playoutDeviceId.c_str());
   if (!_playoutDevice) {
     RTC_LOG(LS_ERROR) << "OpenAL Device open failed, deviceID: '"
                       << _playoutDeviceId << "'";
     _playoutFailed = true;
+    _mutex.unlock();
     return;
   }
   _playoutContext = alcCreateContext(_playoutDevice, nullptr);
@@ -443,12 +448,14 @@ void OpenALPlayoutADM::openPlayoutDevice() {
     RTC_LOG(LS_ERROR) << "OpenAL Context create failed.";
     _playoutFailed = true;
     closePlayoutDevice();
+    _mutex.unlock();
     return;
   }
 
-    // TODO: not sure that current thread will see changes made in PostTask
-  _data->_playoutThread->PostTask(
-      [=] { alcSetThreadContext(_playoutContext); });
+  _data->_playoutThread->PostTask([=] {
+    alcSetThreadContext(_playoutContext);
+    _mutex.unlock();
+  });
 }
 
 void OpenALPlayoutADM::ensureThreadStarted() {
@@ -517,9 +524,11 @@ int32_t OpenALPlayoutADM::RegisterAudioCallback(
 }
 
 bool OpenALPlayoutADM::processPlayout() {
+  _mutex.lock();
   const auto playing = [&] {
     auto state = ALint(AL_INITIAL);
     alGetSourcei(_data->source, AL_SOURCE_STATE, &state);
+    _mutex.unlock();
     return (state == AL_PLAYING);
   };
   const auto wasPlaying = playing();
@@ -558,6 +567,7 @@ bool OpenALPlayoutADM::processPlayout() {
     }
   }
   if (!_data->queuedBuffersCount) {
+    _mutex.unlock();
     return false;
   }
   if (!playing()) {
@@ -583,6 +593,7 @@ bool OpenALPlayoutADM::processPlayout() {
     _playoutFailed = true;
   }
 
+  _mutex.unlock();
   return true;
 }
 
@@ -619,11 +630,11 @@ bool OpenALPlayoutADM::validatePlayoutDeviceId() {
 }
 
 void OpenALPlayoutADM::startPlayingOnThread() {
-  _data->_playoutThread->Start();
-  // TODO: not sure that current thread will see changes made in PostTask
+  _mutex.lock();
   _data->_playoutThread->PostTask([this] {
     _data->playing = true;
     if (_playoutFailed) {
+      _mutex.unlock();
       return;
     }
 
@@ -651,19 +662,29 @@ void OpenALPlayoutADM::startPlayingOnThread() {
 
       ensureThreadStarted();
     }
+    _mutex.unlock();
   });
 }
 
 void OpenALPlayoutADM::stopPlayingOnThread() {
   if (!_data->playing) {
-    alcSetThreadContext(nullptr);
+    _mutex.lock();
+    _data->_playoutThread->PostTask([this] {
+      alcSetThreadContext(nullptr);
+      _mutex.unlock();
+    });
     return;
   }
   _data->playing = false;
   if (_playoutFailed) {
-    alcSetThreadContext(nullptr);
+    _mutex.lock();
+    _data->_playoutThread->PostTask([this] {
+      alcSetThreadContext(nullptr);
+      _mutex.unlock();
+    });
     return;
   }
+  _mutex.lock();
   if (_data->source) {
     alSourceStop(_data->source);
     unqueueAllBuffers();
@@ -672,8 +693,7 @@ void OpenALPlayoutADM::stopPlayingOnThread() {
     _data->source = 0;
     std::fill(_data->buffers.begin(), _data->buffers.end(), ALuint(0));
   }
-  // TODO: this is being called on a current thread (worker, since its being
-  //       proxied) instead of a playout thread.
-  //       also, we need to stop/pause playout thread somehow.
-  alcSetThreadContext(nullptr);
+  _data->_playoutThread->PostTask([this] { alcSetThreadContext(nullptr); });
+  _data->_playoutThread->Stop();
+  _mutex.unlock();
 }

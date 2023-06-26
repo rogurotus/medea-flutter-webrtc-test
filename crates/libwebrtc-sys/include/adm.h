@@ -116,4 +116,6 @@ class OpenALPlayoutADM : public webrtc::AudioDeviceModuleImpl {
   bool _speakerInitialized = false;
   ALCcontext* _playoutContext = nullptr;
   ALCdevice* _playoutDevice = nullptr;
+
+  std::mutex _mutex;
 };
