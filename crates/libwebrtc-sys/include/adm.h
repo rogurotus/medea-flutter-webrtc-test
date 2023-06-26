@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <memory>
+#include <mutex>
 
 #include <AL/al.h>
 #include <AL/alc.h>
