@@ -67,6 +67,11 @@ class _LoopbackState extends State<Loopback> {
     caps.video.mandatory!.height = 480;
     caps.video.mandatory!.fps = 30;
 
+    print("Setting onDeviceChange");
+    onDeviceChange(() {
+      print("onDeviceChange!!!");
+    });
+
     try {
       _mediaDevicesList = await enumerateDevices();
       _tracks = await getUserMedia(caps);
