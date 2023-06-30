@@ -118,5 +118,5 @@ class OpenALPlayoutADM : public webrtc::AudioDeviceModuleImpl {
   ALCcontext* _playoutContext = nullptr;
   ALCdevice* _playoutDevice = nullptr;
 
-  std::mutex _mutex;
+  std::recursive_mutex _mutex;
 };
