@@ -432,9 +432,8 @@ int32_t OpenALPlayoutADM::SpeakerMute(bool* enabled) const {
 }
 
 void OpenALPlayoutADM::openPlayoutDevice() {
-  _mutex.lock();
+  std::lock_guard<std::mutex> lock(_mutex);
   if (_playoutDevice || _playoutFailed) {
-    _mutex.unlock();
     return;
   }
   _playoutDevice = alcOpenDevice(
@@ -443,7 +442,6 @@ void OpenALPlayoutADM::openPlayoutDevice() {
     RTC_LOG(LS_ERROR) << "OpenAL Device open failed, deviceID: '"
                       << _playoutDeviceId << "'";
     _playoutFailed = true;
-    _mutex.unlock();
     return;
   }
   _playoutContext = alcCreateContext(_playoutDevice, nullptr);
@@ -451,13 +449,11 @@ void OpenALPlayoutADM::openPlayoutDevice() {
     RTC_LOG(LS_ERROR) << "OpenAL Context create failed.";
     _playoutFailed = true;
     closePlayoutDevice();
-    _mutex.unlock();
     return;
   }
 
   _data->_playoutThread->PostTask([=] {
     alcSetThreadContext(_playoutContext);
-    _mutex.unlock();
   });
 }
 
@@ -527,11 +523,10 @@ int32_t OpenALPlayoutADM::RegisterAudioCallback(
 }
 
 bool OpenALPlayoutADM::processPlayout() {
-  _mutex.lock();
+  std::lock_guard<std::mutex> lock(_mutex);
   const auto playing = [&] {
     auto state = ALint(AL_INITIAL);
     alGetSourcei(_data->source, AL_SOURCE_STATE, &state);
-    _mutex.unlock();
     return (state == AL_PLAYING);
   };
   const auto wasPlaying = playing();
@@ -570,7 +565,6 @@ bool OpenALPlayoutADM::processPlayout() {
     }
   }
   if (!_data->queuedBuffersCount) {
-    _mutex.unlock();
     return false;
   }
   if (!playing()) {
@@ -596,7 +590,6 @@ bool OpenALPlayoutADM::processPlayout() {
     _playoutFailed = true;
   }
 
-  _mutex.unlock();
   return true;
 }
 
@@ -633,11 +626,10 @@ bool OpenALPlayoutADM::validatePlayoutDeviceId() {
 }
 
 void OpenALPlayoutADM::startPlayingOnThread() {
-  _mutex.lock();
+  std::lock_guard<std::mutex> lock(_mutex);
   _data->_playoutThread->PostTask([this] {
     _data->playing = true;
     if (_playoutFailed) {
-      _mutex.unlock();
       return;
     }
 
@@ -665,7 +657,6 @@ void OpenALPlayoutADM::startPlayingOnThread() {
 
       ensureThreadStarted();
     }
-    _mutex.unlock();
   });
 }
 
@@ -687,7 +678,7 @@ void OpenALPlayoutADM::stopPlayingOnThread() {
     });
     return;
   }
-  _mutex.lock();
+  std::lock_guard<std::mutex> lock(_mutex);
   if (_data->source) {
     alSourceStop(_data->source);
     unqueueAllBuffers();
@@ -698,5 +689,4 @@ void OpenALPlayoutADM::stopPlayingOnThread() {
   }
   _data->_playoutThread->PostTask([this] { alcSetThreadContext(nullptr); });
   _data->_playoutThread->Stop();
-  _mutex.unlock();
 }
