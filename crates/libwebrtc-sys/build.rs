@@ -267,7 +267,6 @@ fn compile_openal() -> anyhow::Result<()> {
     );
 
     let mut openal_dir_path = openal_path.clone();
-    openal_dir_path.pop();
     fs::create_dir_all(&openal_dir_path)?;
 
     match get_target()?.as_str() {
