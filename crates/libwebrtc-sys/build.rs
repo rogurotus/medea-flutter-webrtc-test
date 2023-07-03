@@ -45,7 +45,6 @@ fn main() -> anyhow::Result<()> {
     let cpp_files = get_cpp_files()?;
 
     println!("cargo:rustc-link-lib=webrtc");
-    println!("cargo:rustc-link-lib=OpenAL32");
 
     link_libs()?;
 
@@ -89,6 +88,7 @@ fn main() -> anyhow::Result<()> {
     }
     #[cfg(target_os = "windows")]
     {
+        println!("cargo:rustc-link-lib=OpenAL32");
         build.flag("-DWEBRTC_WIN").flag("/std:c++17");
     }
 
