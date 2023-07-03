@@ -287,7 +287,8 @@ fn compile_openal() -> anyhow::Result<()> {
             let path = manifest_path
                 .join("lib")
                 .join(get_target()?.as_str())
-                .join("release");
+                .join("release")
+                .join("OpenAL32.lib");
             fs::copy(openal_src_path.join("Debug").join("OpenAL32.lib"), path)?;
         }
         _ => (),
