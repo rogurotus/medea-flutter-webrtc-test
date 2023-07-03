@@ -45,6 +45,7 @@ fn main() -> anyhow::Result<()> {
     let cpp_files = get_cpp_files()?;
 
     println!("cargo:rustc-link-lib=webrtc");
+    println!("cargo:rustc-link-lib=OpenAL32");
 
     link_libs()?;
 
@@ -281,7 +282,13 @@ fn compile_openal() -> anyhow::Result<()> {
             fs::copy(openal_src_path.join("libopenal.so"), openal_path)?;
         }
         "x86_64-pc-windows-msvc" => {
-            fs::copy(openal_src_path.join("libopenal.dll"), openal_path)?;
+            fs::copy(openal_src_path.join("Debug").join("OpenAL32.dll"), openal_path.clone())?;
+            fs::copy(openal_src_path.join("Debug").join("OpenAL32.dll.lib"), openal_path)?;
+            let path = manifest_path
+                .join("lib")
+                .join(get_target()?.as_str())
+                .join("release");
+            fs::copy(openal_src_path.join("Debug").join("OpenAL32.dll.lib"), path)?;
         }
         _ => (),
     }
