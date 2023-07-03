@@ -286,7 +286,7 @@ fn compile_openal() -> anyhow::Result<()> {
         "x86_64-pc-windows-msvc" => {
             fs::copy(
                 openal_src_path.join("Debug").join("OpenAL32.dll"),
-                openal_path.clone().join("OpenAL32.dll"),
+                openal_path.join("OpenAL32.dll"),
             )?;
             fs::copy(
                 openal_src_path.join("Debug").join("OpenAL32.lib"),
