@@ -173,23 +173,19 @@ fn get_path_to_openal() -> anyhow::Result<PathBuf> {
     workspace_path.pop();
 
     Ok(match get_target()?.as_str() {
-        "aarch64-apple-darwin" | "x86_64-apple-darwin" => workspace_path
-            .join("macos")
-            .join("rust")
-            .join("lib")
-            .join("libopenal.1.dylib"),
+        "aarch64-apple-darwin" | "x86_64-apple-darwin" => {
+            workspace_path.join("macos").join("rust").join("lib")
+        }
         "x86_64-unknown-linux-gnu" => workspace_path
             .join("linux")
             .join("rust")
             .join("lib")
-            .join(get_target()?.as_str())
-            .join("libopenal.so"),
+            .join(get_target()?.as_str()),
         "x86_64-pc-windows-msvc" => workspace_path
             .join("windows")
             .join("rust")
             .join("lib")
-            .join(get_target()?.as_str())
-            .join("OpenAL32.dll"),
+            .join(get_target()?.as_str()),
         _ => return Err(anyhow::anyhow!("Platform isn't supported")),
     })
 }
@@ -276,19 +272,25 @@ fn compile_openal() -> anyhow::Result<()> {
 
     match get_target()?.as_str() {
         "aarch64-apple-darwin" | "x86_64-apple-darwin" => {
-            fs::copy(openal_src_path.join("libopenal.dylib"), openal_path)?;
+            fs::copy(
+                openal_src_path.join("libopenal.dylib"),
+                openal_path.join("libopenal.1.dylib"),
+            )?;
         }
         "x86_64-unknown-linux-gnu" => {
-            fs::copy(openal_src_path.join("libopenal.so"), openal_path)?;
+            fs::copy(
+                openal_src_path.join("libopenal.so"),
+                openal_path.join("libopenal.so"),
+            )?;
         }
         "x86_64-pc-windows-msvc" => {
             fs::copy(
                 openal_src_path.join("Debug").join("OpenAL32.dll"),
-                openal_path.clone(),
+                openal_path.clone().join("OpenAL32.dll"),
             )?;
             fs::copy(
                 openal_src_path.join("Debug").join("OpenAL32.lib"),
-                openal_path,
+                openal_path.join("OpenAL32.lib"),
             )?;
             let path = manifest_path
                 .join("lib")
