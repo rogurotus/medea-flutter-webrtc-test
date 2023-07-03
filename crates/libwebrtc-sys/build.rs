@@ -266,8 +266,7 @@ fn compile_openal() -> anyhow::Result<()> {
             .output()?,
     );
 
-    let mut openal_dir_path = openal_path.clone();
-    fs::create_dir_all(&openal_dir_path)?;
+    fs::create_dir_all(&openal_path)?;
 
     match get_target()?.as_str() {
         "aarch64-apple-darwin" | "x86_64-apple-darwin" => {
