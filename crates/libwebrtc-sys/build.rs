@@ -272,7 +272,7 @@ fn compile_openal() -> anyhow::Result<()> {
         "aarch64-apple-darwin" | "x86_64-apple-darwin" => {
             fs::copy(
                 openal_src_path.join("libopenal.dylib"),
-                openal_path.join("libopenal.1.dylib"),
+                openal_path.join("libopenal.dylib.1"),
             )?;
         }
         "x86_64-unknown-linux-gnu" => {
