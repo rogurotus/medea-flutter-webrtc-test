@@ -137,7 +137,7 @@ impl Webrtc {
             let count_recording = self.audio_device_module.recording_devices();
 
             #[allow(clippy::cast_sign_loss)]
-            let mut result =
+                let mut result =
                 Vec::with_capacity((count_playout + count_recording) as usize);
 
             for kind in [
@@ -150,7 +150,7 @@ impl Webrtc {
                     } else {
                         count_recording
                     }
-                    .try_into()?;
+                        .try_into()?;
 
                 for i in 0..count {
                     let (label, device_id) =
@@ -553,24 +553,23 @@ pub unsafe fn init() {
     set_on_device_change_mac(on_device_change);
 }
 
-mod windows_cb {
+#[cfg(target_os = "windows")]
+#[allow(unused_must_use)]
+mod win_default_device_callback {
+    use std::{
+        ptr,
+        sync::atomic::{AtomicPtr, Ordering},
+    };
+
     use windows::{
         core::*,
-        Win32::Foundation::*,
-        Win32::Media::Audio::Endpoints::*,
         Win32::Media::Audio::*,
         Win32::System::Com::*,
-        Win32::UI::WindowsAndMessaging::*,
-        Win32::{
-            Devices::FunctionDiscovery::PKEY_Device_FriendlyName,
-            System::Com::StructuredStorage::STGM_READ, UI::Shell::*,
-        },
-        Win32::{System::LibraryLoader::GetModuleHandleW, UI::Shell::PropertiesSystem::PROPERTYKEY},
+        Win32::{UI::Shell::PropertiesSystem::PROPERTYKEY},
     };
 
     #[windows::core::implement(IMMNotificationClient)]
-    struct AudioEndpointCallback {
-    }
+    struct AudioEndpointCallback;
 
     #[allow(non_snake_case)]
     impl IMMNotificationClient_Impl for AudioEndpointCallback {
@@ -588,10 +587,21 @@ mod windows_cb {
 
         fn OnDefaultDeviceChanged(
             &self,
-            _flow: EDataFlow,
-            _role: ERole,
+            flow: EDataFlow,
+            role: ERole,
             _pwstrdefaultdeviceid: &PCWSTR,
         ) -> Result<()> {
+            if role == ERole(0) && flow == EDataFlow(0) {
+                unsafe {
+                    let state = super::ON_DEVICE_CHANGE.load(Ordering::SeqCst);
+
+                    if !state.is_null() {
+                        let device_state = &mut *state;
+                        device_state.on_device_change();
+                    }
+                }
+            }
+
             Ok(())
         }
 
@@ -600,10 +610,28 @@ mod windows_cb {
         }
     }
 
+    static AUDIO_ENDPOINT_ENUMERATOR: AtomicPtr<IMMDeviceEnumerator> = AtomicPtr::new(ptr::null_mut());
+    static AUDIO_ENDPOINT_CALLBACK: AtomicPtr<IMMNotificationClient> = AtomicPtr::new(ptr::null_mut());
+
     pub fn register() {
-        let audio_endpoint_enumerator: IMMDeviceEnumerator =  unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) }?;
-        let audio_endpoint_callback = AudioEndpointCallback {};
-        unsafe { audio_endpoint_enumerator.RegisterEndpointNotificationCallback(&audio_endpoint_callback).unwrap(); };
+        unsafe {
+            let audio_endpoint_enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).unwrap();
+            let audio_endpoint_callback: IMMNotificationClient = AudioEndpointCallback.into();
+            audio_endpoint_enumerator.RegisterEndpointNotificationCallback(&audio_endpoint_callback).unwrap();
+
+            AUDIO_ENDPOINT_ENUMERATOR.swap(
+                Box::into_raw(Box::new(
+                    audio_endpoint_enumerator
+                )),
+                Ordering::SeqCst,
+            );
+            AUDIO_ENDPOINT_CALLBACK.swap(
+                Box::into_raw(Box::new(
+                    audio_endpoint_callback
+                )),
+                Ordering::SeqCst,
+            );
+        }
     }
 }
 
@@ -613,7 +641,6 @@ mod windows_cb {
 ///
 /// [`Thread`]: thread::Thread
 pub unsafe fn init() {
-    windows_cb::register();
     /// Message handler for an [`HWND`].
     unsafe extern "system" fn wndproc(
         hwnd: HWND,
@@ -652,34 +679,7 @@ pub unsafe fn init() {
         result
     }
 
-    thread::spawn(|| {
-        use cpal::traits::{DeviceTrait, HostTrait};
-
-        let host = cpal::default_host();
-        let mut last_default_output_device_name =
-            host.default_output_device().and_then(|d| d.name());
-
-        loop {
-            let current_default_output_device_name =
-                host.default_output_device().and_then(|d| d.name());
-
-            if current_default_output_device_name
-                != last_default_output_device_name
-            {
-                let state = ON_DEVICE_CHANGE.load(Ordering::SeqCst);
-                if !state.is_null() {
-                    let device_state = &mut *state;
-
-                    device_state.on_device_change();
-                }
-
-                last_default_output_device_name =
-                    current_default_output_device_name;
-            }
-
-            std::thread::sleep(std::time::Duration::from_millis(50));
-        }
-    });
+    win_default_device_callback::register();
 
     thread::spawn(|| {
         let lpsz_class_name = OsStr::new("EventWatcher")
@@ -689,7 +689,7 @@ pub unsafe fn init() {
         let lpsz_class_name_ptr = lpsz_class_name.as_ptr();
 
         #[allow(clippy::cast_possible_truncation)]
-        let class = WNDCLASSEXW {
+            let class = WNDCLASSEXW {
             cbSize: mem::size_of::<WNDCLASSEXW>() as u32,
             lpfnWndProc: Some(wndproc),
             lpszClassName: lpsz_class_name_ptr,
