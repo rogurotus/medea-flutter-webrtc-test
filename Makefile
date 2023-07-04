@@ -137,8 +137,13 @@ flutter.run:
 #	make flutter.test [debug=(no|yes)]
 
 flutter.test.desktop:
+ifeq ($(CURRENT_OS),linux)
+	cd example/ && \
+	flutter run -d linux --verbose
+else
 	cd example/ && \
 	flutter test integration_test -d $(CURRENT_OS)
+endif
 
 
 # Run Flutter plugin integration tests on an attached mobile device.
