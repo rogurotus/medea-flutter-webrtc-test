@@ -349,8 +349,6 @@ pub unsafe fn init() {
         pulse_audio::AudioMonitor, udev::monitoring,
     };
 
-    println!("Init audio_device watcher!");
-
     // Video devices monitoring via `libudev`.
     thread::spawn(move || {
         let context = libudev::Context::new().unwrap();
@@ -359,7 +357,6 @@ pub unsafe fn init() {
 
     // Audio devices monitoring via PulseAudio.
     thread::spawn(move || {
-        println!("AudioMonitor spawning!");
         let mut m = AudioMonitor::new().unwrap();
         loop {
             match m.main_loop.iterate(true) {
@@ -465,7 +462,6 @@ pub mod linux_device_change {
         impl AudioMonitor {
             /// Creates a new [`AudioMonitor`].
             pub fn new() -> anyhow::Result<Self> {
-                println!("AudioMonitor::new");
                 use Facility::{Sink, Source};
                 use Operation::{Changed, New, Removed};
 
@@ -477,12 +473,10 @@ pub mod linux_device_change {
                             anyhow!("PulseAudio context failed to start")
                         })?;
 
-                println!("set on_device_change");
                 context.set_subscribe_callback(Some(Box::new(
                     |facility, operation, _| {
                         if let Some(New | Removed | Changed) = operation {
                             if let Some(Sink | Source) = facility {
-                                println!("on_device_changed fired");
                                 let state =
                                     ON_DEVICE_CHANGE.load(Ordering::SeqCst);
                                 if !state.is_null() {
