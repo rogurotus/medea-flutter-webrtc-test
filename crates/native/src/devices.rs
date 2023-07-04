@@ -467,7 +467,7 @@ pub mod linux_device_change {
             pub fn new() -> anyhow::Result<Self> {
                 println!("AudioMonitor::new");
                 use Facility::{Sink, Source};
-                use Operation::{New, Removed, Changed};
+                use Operation::{Changed, New, Removed};
 
                 let mut main_loop = Mainloop::new()
                     .ok_or_else(|| anyhow!("PulseAudio mainloop is `null`"))?;
@@ -598,33 +598,32 @@ pub unsafe fn init() {
     }
 
     thread::spawn(|| {
-            let host = cpal::default_host();
-            let default_output_device = host.default_output_device().expect("No output device");
-            let mut last_default_output_device_id = default_output_device.id();
+        use cpal::traits::{DeviceTrait, HostTrait};
 
-            loop {
-                let current_default_output_device = host.default_output_device().expect("No output device");
-                let current_default_output_device_id = current_default_output_device.id();
+        let host = cpal::default_host();
+        let mut last_default_output_device_name =
+            host.default_output_device().and_then(|d| d.name());
 
-                if current_default_output_device_id != last_default_output_device_id {
-                    let state = ON_DEVICE_CHANGE.load(Ordering::SeqCst);
-                    if !state.is_null() {
-                        let device_state = &mut *state;
+        loop {
+            let current_default_output_device_name =
+                host.default_output_device().and_then(|d| d.name());
 
-                        device_state.on_device_change();
-                    }
+            if current_default_output_device_name
+                != last_default_output_device_name
+            {
+                let state = ON_DEVICE_CHANGE.load(Ordering::SeqCst);
+                if !state.is_null() {
+                    let device_state = &mut *state;
 
-
-                    // Perform actions based on the change in default output device
-                    last_default_output_device_id = current_default_output_device_id;
+                    device_state.on_device_change();
                 }
 
-                // Sleep for a duration before checking again
-                std::thread::sleep(std::time::Duration::from_secs(100));
+                last_default_output_device_name =
+                    current_default_output_device_name;
             }
 
-
-        use cpal::traits::{DeviceTrait, HostTrait};
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
     });
 
     thread::spawn(|| {

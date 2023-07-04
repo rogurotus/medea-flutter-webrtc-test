@@ -211,7 +211,7 @@ fn compile_openal() -> anyhow::Result<()> {
             .join("include")
             .join("AL"),
     )
-        .is_ok();
+    .is_ok();
     let is_install_openal =
         env::var("INSTALL_OPENAL").as_deref().unwrap_or("0") == "0";
 
@@ -253,7 +253,7 @@ fn compile_openal() -> anyhow::Result<()> {
             .join(get_target()?.as_str())
             .join("include"),
     )
-        .unwrap();
+    .unwrap();
 
     drop(
         Command::new("cmake")
@@ -282,13 +282,22 @@ fn compile_openal() -> anyhow::Result<()> {
             fs::copy(openal_src_path.join("libopenal.so"), openal_path)?;
         }
         "x86_64-pc-windows-msvc" => {
-            fs::copy(openal_src_path.join("Debug").join("OpenAL32.dll"), openal_path.clone())?;
-            fs::copy(openal_src_path.join("Debug").join("OpenAL32.dll.lib"), openal_path)?;
+            fs::copy(
+                openal_src_path.join("Debug").join("OpenAL32.dll"),
+                openal_path.clone(),
+            )?;
+            fs::copy(
+                openal_src_path.join("Debug").join("OpenAL32.dll.lib"),
+                openal_path,
+            )?;
             let path = manifest_path
                 .join("lib")
                 .join(get_target()?.as_str())
                 .join("release");
-            fs::copy(openal_src_path.join("Debug").join("OpenAL32.dll.lib"), path)?;
+            fs::copy(
+                openal_src_path.join("Debug").join("OpenAL32.dll.lib"),
+                path,
+            )?;
         }
         _ => (),
     }
@@ -335,7 +344,7 @@ fn download_libwebrtc() -> anyhow::Result<()> {
             .map(|m| m.is_dir())
             .unwrap_or_default()
             && fs::read(&checksum).unwrap_or_default().as_slice()
-            == expected_hash.as_bytes()
+                == expected_hash.as_bytes()
         {
             return Ok(());
         }
@@ -388,7 +397,7 @@ fn get_cpp_files() -> anyhow::Result<Vec<PathBuf>> {
         .join("cpp");
 
     #[allow(unused_mut)]
-        let mut files = get_files_from_dir(dir);
+    let mut files = get_files_from_dir(dir);
 
     #[cfg(not(target_os = "macos"))]
     files.retain(|e| !e.to_str().unwrap().contains(".mm"));
