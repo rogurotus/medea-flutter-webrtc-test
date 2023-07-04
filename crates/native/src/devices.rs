@@ -598,6 +598,36 @@ pub unsafe fn init() {
     }
 
     thread::spawn(|| {
+            let host = cpal::default_host();
+            let default_output_device = host.default_output_device().expect("No output device");
+            let mut last_default_output_device_id = default_output_device.id();
+
+            loop {
+                let current_default_output_device = host.default_output_device().expect("No output device");
+                let current_default_output_device_id = current_default_output_device.id();
+
+                if current_default_output_device_id != last_default_output_device_id {
+                    let state = ON_DEVICE_CHANGE.load(Ordering::SeqCst);
+                    if !state.is_null() {
+                        let device_state = &mut *state;
+
+                        device_state.on_device_change();
+                    }
+
+
+                    // Perform actions based on the change in default output device
+                    last_default_output_device_id = current_default_output_device_id;
+                }
+
+                // Sleep for a duration before checking again
+                std::thread::sleep(std::time::Duration::from_secs(100));
+            }
+
+
+        use cpal::traits::{DeviceTrait, HostTrait};
+    });
+
+    thread::spawn(|| {
         let lpsz_class_name = OsStr::new("EventWatcher")
             .encode_wide()
             .chain(Some(0).into_iter())
