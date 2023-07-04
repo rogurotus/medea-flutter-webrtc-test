@@ -553,12 +553,67 @@ pub unsafe fn init() {
     set_on_device_change_mac(on_device_change);
 }
 
+mod windows_cb {
+    use windows::{
+        core::*,
+        Win32::Foundation::*,
+        Win32::Media::Audio::Endpoints::*,
+        Win32::Media::Audio::*,
+        Win32::System::Com::*,
+        Win32::UI::WindowsAndMessaging::*,
+        Win32::{
+            Devices::FunctionDiscovery::PKEY_Device_FriendlyName,
+            System::Com::StructuredStorage::STGM_READ, UI::Shell::*,
+        },
+        Win32::{System::LibraryLoader::GetModuleHandleW, UI::Shell::PropertiesSystem::PROPERTYKEY},
+    };
+
+    #[windows::core::implement(IMMNotificationClient)]
+    struct AudioEndpointCallback {
+    }
+
+    #[allow(non_snake_case)]
+    impl IMMNotificationClient_Impl for AudioEndpointCallback {
+        fn OnDeviceStateChanged(&self, _pwstrdeviceid: &PCWSTR, _dwnewstate: u32) -> Result<()> {
+            Ok(())
+        }
+
+        fn OnDeviceAdded(&self, _pwstrdeviceid: &PCWSTR) -> Result<()> {
+            Ok(())
+        }
+
+        fn OnDeviceRemoved(&self, _pwstrdeviceid: &PCWSTR) -> Result<()> {
+            Ok(())
+        }
+
+        fn OnDefaultDeviceChanged(
+            &self,
+            _flow: EDataFlow,
+            _role: ERole,
+            _pwstrdefaultdeviceid: &PCWSTR,
+        ) -> Result<()> {
+            Ok(())
+        }
+
+        fn OnPropertyValueChanged(&self, _pwstrdeviceid: &PCWSTR, _key: &PROPERTYKEY) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    pub fn register() {
+        let audio_endpoint_enumerator: IMMDeviceEnumerator =  unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) }?;
+        let audio_endpoint_callback = AudioEndpointCallback {};
+        unsafe { audio_endpoint_enumerator.RegisterEndpointNotificationCallback(&audio_endpoint_callback).unwrap(); };
+    }
+}
+
 #[cfg(target_os = "windows")]
 /// Creates a detached [`Thread`] creating and registering a system message
 /// window - [`HWND`].
 ///
 /// [`Thread`]: thread::Thread
 pub unsafe fn init() {
+    windows_cb::register();
     /// Message handler for an [`HWND`].
     unsafe extern "system" fn wndproc(
         hwnd: HWND,
