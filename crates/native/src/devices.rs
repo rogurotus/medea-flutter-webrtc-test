@@ -137,7 +137,7 @@ impl Webrtc {
             let count_recording = self.audio_device_module.recording_devices();
 
             #[allow(clippy::cast_sign_loss)]
-                let mut result =
+            let mut result =
                 Vec::with_capacity((count_playout + count_recording) as usize);
 
             for kind in [
@@ -150,7 +150,7 @@ impl Webrtc {
                     } else {
                         count_recording
                     }
-                        .try_into()?;
+                    .try_into()?;
 
                 for i in 0..count {
                     let (label, device_id) =
@@ -555,6 +555,8 @@ pub unsafe fn init() {
 
 #[cfg(target_os = "windows")]
 #[allow(unused_must_use)]
+/// Implementation of the default audio output device
+/// changes detector for Windows.
 mod win_default_device_callback {
     use std::{
         ptr,
@@ -563,17 +565,24 @@ mod win_default_device_callback {
 
     use windows::{
         core::*,
-        Win32::Media::Audio::*,
-        Win32::System::Com::*,
-        Win32::{UI::Shell::PropertiesSystem::PROPERTYKEY},
+        Win32::{
+            Media::Audio::*, System::Com::*,
+            UI::Shell::PropertiesSystem::PROPERTYKEY,
+        },
     };
 
+    /// Implementation of the [`IMMNotificationClient`] used
+    /// for detecting default audio output device changes.
     #[windows::core::implement(IMMNotificationClient)]
     struct AudioEndpointCallback;
 
     #[allow(non_snake_case)]
     impl IMMNotificationClient_Impl for AudioEndpointCallback {
-        fn OnDeviceStateChanged(&self, _pwstrdeviceid: &PCWSTR, _dwnewstate: u32) -> Result<()> {
+        fn OnDeviceStateChanged(
+            &self,
+            _pwstrdeviceid: &PCWSTR,
+            _dwnewstate: u32,
+        ) -> Result<()> {
             Ok(())
         }
 
@@ -605,30 +614,46 @@ mod win_default_device_callback {
             Ok(())
         }
 
-        fn OnPropertyValueChanged(&self, _pwstrdeviceid: &PCWSTR, _key: &PROPERTYKEY) -> Result<()> {
+        fn OnPropertyValueChanged(
+            &self,
+            _pwstrdeviceid: &PCWSTR,
+            _key: &PROPERTYKEY,
+        ) -> Result<()> {
             Ok(())
         }
     }
 
-    static AUDIO_ENDPOINT_ENUMERATOR: AtomicPtr<IMMDeviceEnumerator> = AtomicPtr::new(ptr::null_mut());
-    static AUDIO_ENDPOINT_CALLBACK: AtomicPtr<IMMNotificationClient> = AtomicPtr::new(ptr::null_mut());
+    /// Storage for the [`IMMDeviceEnumerator`] used for detecting
+    /// default audio device changes.
+    static AUDIO_ENDPOINT_ENUMERATOR: AtomicPtr<IMMDeviceEnumerator> =
+        AtomicPtr::new(ptr::null_mut());
 
+    /// Storage for the [`EMMNotificationClient`] used for detecting
+    /// default audio device changes.
+    static AUDIO_ENDPOINT_CALLBACK: AtomicPtr<IMMNotificationClient> =
+        AtomicPtr::new(ptr::null_mut());
+
+    /// Registers default audio output callback for windows.
+    ///
+    /// Will call [`DeviceState::on_device_change`] callback when
+    /// default audio output is changed.
     pub fn register() {
         unsafe {
-            let audio_endpoint_enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).unwrap();
-            let audio_endpoint_callback: IMMNotificationClient = AudioEndpointCallback.into();
-            audio_endpoint_enumerator.RegisterEndpointNotificationCallback(&audio_endpoint_callback).unwrap();
+            let audio_endpoint_enumerator: IMMDeviceEnumerator =
+                CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
+                    .unwrap();
+            let audio_endpoint_callback: IMMNotificationClient =
+                AudioEndpointCallback.into();
+            audio_endpoint_enumerator
+                .RegisterEndpointNotificationCallback(&audio_endpoint_callback)
+                .unwrap();
 
             AUDIO_ENDPOINT_ENUMERATOR.swap(
-                Box::into_raw(Box::new(
-                    audio_endpoint_enumerator
-                )),
+                Box::into_raw(Box::new(audio_endpoint_enumerator)),
                 Ordering::SeqCst,
             );
             AUDIO_ENDPOINT_CALLBACK.swap(
-                Box::into_raw(Box::new(
-                    audio_endpoint_callback
-                )),
+                Box::into_raw(Box::new(audio_endpoint_callback)),
                 Ordering::SeqCst,
             );
         }
@@ -689,7 +714,7 @@ pub unsafe fn init() {
         let lpsz_class_name_ptr = lpsz_class_name.as_ptr();
 
         #[allow(clippy::cast_possible_truncation)]
-            let class = WNDCLASSEXW {
+        let class = WNDCLASSEXW {
             cbSize: mem::size_of::<WNDCLASSEXW>() as u32,
             lpfnWndProc: Some(wndproc),
             lpszClassName: lpsz_class_name_ptr,
