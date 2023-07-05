@@ -44,7 +44,7 @@ class OpenALPlayoutADM : public webrtc::AudioDeviceModuleImpl {
       AudioLayer audio_layer,
       webrtc::TaskQueueFactory* task_queue_factory);
 
-  // Main initializaton and termination.
+  // Main initialization and termination.
   int32_t Init() override;
 
   // Playout control.

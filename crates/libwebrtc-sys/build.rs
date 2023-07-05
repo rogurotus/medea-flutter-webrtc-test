@@ -147,7 +147,7 @@ fn libpath() -> anyhow::Result<PathBuf> {
     Ok(manifest_path.join("lib").join(target))
 }
 
-/// Recursively copies directory to a provided [`Path`].
+/// Recursively copies `src` directory to the provided `dst` [`Path`].
 fn copy_dir_all(
     src: impl AsRef<Path>,
     dst: impl AsRef<Path>,
@@ -165,7 +165,7 @@ fn copy_dir_all(
     Ok(())
 }
 
-/// Returns [`PathBuf`] to the OpenAL dynamic library destination within
+/// Returns a [`PathBuf`] to the OpenAL dynamic library destination within
 /// Flutter files.
 fn get_path_to_openal() -> anyhow::Result<PathBuf> {
     let mut workspace_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
@@ -222,9 +222,9 @@ fn compile_openal() -> anyhow::Result<()> {
 
     {
         let mut resp = BufReader::new(reqwest::blocking::get(format!(
-            "{OPENAL_URL}/{OPENAL_VERSION}.tar.gz"
+            "{OPENAL_URL}/{OPENAL_VERSION}.tar.gz",
         ))?);
-        let mut out_file = BufWriter::new(fs::File::create(&archive)?);
+        let mut out_file = BufWriter::new(File::create(&archive)?);
 
         let mut buffer = [0; 512];
         loop {

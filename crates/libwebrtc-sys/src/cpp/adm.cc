@@ -82,7 +82,7 @@ struct OpenALPlayoutADM::Data {
   bool playing = false;
 };
 
-// Main initializaton and termination
+// Main initialization and termination.
 int32_t OpenALPlayoutADM::Init() {
   if (webrtc::AudioDeviceModuleImpl::Init() != 0) {
     return -1;

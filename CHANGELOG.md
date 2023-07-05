@@ -13,10 +13,9 @@ All user visible changes to this project will be documented in this file. This p
 
 ### Changed
 
-- Refactor Audio Device Module to use [OpenAL] for playout ([#117])
+- Refactor Audio Device Module to use [OpenAL] library for playout. ([#117])
 
 [#117]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/113
-[OpenAL]: https://github.com/kcat/openal-soft
 
 
 
@@ -152,5 +151,6 @@ See [changelog in upstream repository](https://github.com/flutter-webrtc/flutter
 [libwebrtc]: https://github.com/instrumentisto/libwebrtc-bin
 [Linux]: https://www.linux.org
 [macOS]: https://www.apple.com/macos
-[Windows]: https://www.microsoft.com/windows
+[OpenAL]: https://github.com/kcat/openal-soft
 [Semantic Versioning 2.0.0]: https://semver.org
+[Windows]: https://www.microsoft.com/windows
