@@ -6,6 +6,21 @@ All user visible changes to this project will be documented in this file. This p
 
 
 
+## [0.8.3] · 2023-??-?? (unreleased)
+[0.8.3]: https://github.com/instrumentisto/medea-flutter-webrtc/tree/0.8.3
+
+[Diff](https://github.com/instrumentisto/medea-flutter-webrtc/compare/0.8.2...0.8.3)
+
+### Changed
+
+- Refactor Audio Device Module to use [OpenAL] for playout ([#117])
+
+[#117]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/113
+[OpenAL]: https://github.com/kcat/openal-soft
+
+
+
+
 ## [0.8.2] · 2023-06-09
 [0.8.2]: https://github.com/instrumentisto/medea-flutter-webrtc/tree/0.8.2
 

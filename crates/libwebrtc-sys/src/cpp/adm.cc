@@ -25,13 +25,10 @@
 #include "rtc_base/platform_thread.h"
 
 constexpr auto kPlayoutFrequency = 48000;
-constexpr auto kBufferSizeMs = crl::time(10);
+constexpr std::int64_t kBufferSizeMs = 10;
 constexpr auto kPlayoutPart = (kPlayoutFrequency * kBufferSizeMs + 999) / 1000;
 constexpr auto kBuffersFullCount = 7;
 constexpr auto kBuffersKeepReadyCount = 5;
-constexpr auto kDefaultPlayoutLatency = crl::time(20);
-constexpr auto kQueryExactTimeEach = 20;
-constexpr auto kALMaxValues = 6;
 
 auto kAL_EVENT_CALLBACK_FUNCTION_SOFT = ALenum();
 auto kAL_EVENT_CALLBACK_USER_PARAM_SOFT = ALenum();
@@ -81,7 +78,7 @@ struct OpenALPlayoutADM::Data {
   std::vector<char>* playoutSamples = new std::vector<char>(bufferSize, 0);
   int64_t exactDeviceTimeCounter = 0;
   int64_t lastExactDeviceTime = 0;
-  crl::time lastExactDeviceTimeWhen = 0;
+  std::int64_t lastExactDeviceTimeWhen = 0;
   bool playing = false;
 };
 
