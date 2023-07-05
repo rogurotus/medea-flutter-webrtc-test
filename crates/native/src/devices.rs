@@ -463,7 +463,7 @@ pub mod linux_device_change {
             /// Creates a new [`AudioMonitor`].
             pub fn new() -> anyhow::Result<Self> {
                 use Facility::{Sink, Source};
-                use Operation::{New, Removed};
+                use Operation::{Changed, New, Removed};
 
                 let mut main_loop = Mainloop::new()
                     .ok_or_else(|| anyhow!("PulseAudio mainloop is `null`"))?;
@@ -475,7 +475,7 @@ pub mod linux_device_change {
 
                 context.set_subscribe_callback(Some(Box::new(
                     |facility, operation, _| {
-                        if let Some(New | Removed) = operation {
+                        if let Some(New | Removed | Changed) = operation {
                             if let Some(Sink | Source) = facility {
                                 let state =
                                     ON_DEVICE_CHANGE.load(Ordering::SeqCst);
@@ -548,6 +548,113 @@ pub unsafe fn init() {
 }
 
 #[cfg(target_os = "windows")]
+#[allow(unused_must_use)]
+/// Implementation of the default audio output device
+/// changes detector for Windows.
+mod win_default_device_callback {
+    use std::{
+        ptr,
+        sync::atomic::{AtomicPtr, Ordering},
+    };
+
+    use windows::{
+        core::*,
+        Win32::{
+            Media::Audio::*, System::Com::*,
+            UI::Shell::PropertiesSystem::PROPERTYKEY,
+        },
+    };
+
+    /// Implementation of the [`IMMNotificationClient`] used
+    /// for detecting default audio output device changes.
+    #[windows::core::implement(IMMNotificationClient)]
+    struct AudioEndpointCallback;
+
+    #[allow(non_snake_case)]
+    impl IMMNotificationClient_Impl for AudioEndpointCallback {
+        fn OnDeviceStateChanged(
+            &self,
+            _pwstrdeviceid: &PCWSTR,
+            _dwnewstate: u32,
+        ) -> Result<()> {
+            Ok(())
+        }
+
+        fn OnDeviceAdded(&self, _pwstrdeviceid: &PCWSTR) -> Result<()> {
+            Ok(())
+        }
+
+        fn OnDeviceRemoved(&self, _pwstrdeviceid: &PCWSTR) -> Result<()> {
+            Ok(())
+        }
+
+        fn OnDefaultDeviceChanged(
+            &self,
+            flow: EDataFlow,
+            role: ERole,
+            _pwstrdefaultdeviceid: &PCWSTR,
+        ) -> Result<()> {
+            if role == ERole(0) && flow == EDataFlow(0) {
+                unsafe {
+                    let state = super::ON_DEVICE_CHANGE.load(Ordering::SeqCst);
+
+                    if !state.is_null() {
+                        let device_state = &mut *state;
+                        device_state.on_device_change();
+                    }
+                }
+            }
+
+            Ok(())
+        }
+
+        fn OnPropertyValueChanged(
+            &self,
+            _pwstrdeviceid: &PCWSTR,
+            _key: &PROPERTYKEY,
+        ) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    /// Storage for the [`IMMDeviceEnumerator`] used for detecting
+    /// default audio device changes.
+    static AUDIO_ENDPOINT_ENUMERATOR: AtomicPtr<IMMDeviceEnumerator> =
+        AtomicPtr::new(ptr::null_mut());
+
+    /// Storage for the [`EMMNotificationClient`] used for detecting
+    /// default audio device changes.
+    static AUDIO_ENDPOINT_CALLBACK: AtomicPtr<IMMNotificationClient> =
+        AtomicPtr::new(ptr::null_mut());
+
+    /// Registers default audio output callback for windows.
+    ///
+    /// Will call [`DeviceState::on_device_change`] callback when
+    /// default audio output is changed.
+    pub fn register() {
+        unsafe {
+            let audio_endpoint_enumerator: IMMDeviceEnumerator =
+                CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
+                    .unwrap();
+            let audio_endpoint_callback: IMMNotificationClient =
+                AudioEndpointCallback.into();
+            audio_endpoint_enumerator
+                .RegisterEndpointNotificationCallback(&audio_endpoint_callback)
+                .unwrap();
+
+            AUDIO_ENDPOINT_ENUMERATOR.swap(
+                Box::into_raw(Box::new(audio_endpoint_enumerator)),
+                Ordering::SeqCst,
+            );
+            AUDIO_ENDPOINT_CALLBACK.swap(
+                Box::into_raw(Box::new(audio_endpoint_callback)),
+                Ordering::SeqCst,
+            );
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
 /// Creates a detached [`Thread`] creating and registering a system message
 /// window - [`HWND`].
 ///
@@ -590,6 +697,8 @@ pub unsafe fn init() {
 
         result
     }
+
+    win_default_device_callback::register();
 
     thread::spawn(|| {
         let lpsz_class_name = OsStr::new("EventWatcher")
