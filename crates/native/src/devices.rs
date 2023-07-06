@@ -13,19 +13,20 @@ use libwebrtc_sys as sys;
 use pulse::mainloop::standard::IterateResult;
 
 #[cfg(target_os = "windows")]
-use winapi::{
-    shared::{
-        minwindef::{HINSTANCE, LPARAM, LRESULT, UINT, WPARAM},
-        windef::HWND,
-    },
-    um::{
-        dbt::DBT_DEVNODES_CHANGED,
-        winuser::{
-            CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW,
-            RegisterClassExW, ShowWindow, TranslateMessage, CW_USEDEFAULT, MSG,
-            SW_HIDE, WM_DEVICECHANGE, WM_QUIT, WNDCLASSEXW, WS_ICONIC,
+use windows::Win32::UI::WindowsAndMessaging::{
+    core::PCWSTR,
+    core::PCWSTR,
+    CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW,
+    RegisterClassExW, RegisterClassExW, ShowWindow, ShowWindow,
+    TranslateMessage, TranslateMessage,
+    Win32::{
+        Foundation::{HMODULE, HWND, LPARAM, LRESULT, WPARAM},
+        UI::WindowsAndMessaging::{
+            CW_USEDEFAULT, DBT_DEVNODES_CHANGED, MSG, SW_HIDE, WM_DEVICECHANGE,
+            WM_QUIT, WNDCLASSEXW, WS_ICONIC,
         },
     },
+    WINDOW_EX_STYLE,
 };
 
 use crate::{
@@ -663,18 +664,18 @@ pub unsafe fn init() {
     /// Message handler for an [`HWND`].
     unsafe extern "system" fn wndproc(
         hwnd: HWND,
-        msg: UINT,
+        msg: u32,
         wp: WPARAM,
         lp: LPARAM,
     ) -> LRESULT {
-        let mut result: LRESULT = 0;
+        let mut result: LRESULT = LRESULT(0);
 
         // The message that notifies an application of a change to the hardware
         // configuration of a device or the computer.
         if msg == WM_DEVICECHANGE {
             // The device event when a device has been added to or removed from
             // the system.
-            if DBT_DEVNODES_CHANGED == wp {
+            if DBT_DEVNODES_CHANGED == wp.0 as u32 {
                 let state = ON_DEVICE_CHANGE.load(Ordering::SeqCst);
 
                 if !state.is_null() {
@@ -711,7 +712,7 @@ pub unsafe fn init() {
         let class = WNDCLASSEXW {
             cbSize: mem::size_of::<WNDCLASSEXW>() as u32,
             lpfnWndProc: Some(wndproc),
-            lpszClassName: lpsz_class_name_ptr,
+            lpszClassName: PCWSTR(lpsz_class_name_ptr),
             ..WNDCLASSEXW::default()
         };
         RegisterClassExW(&class);
@@ -723,25 +724,25 @@ pub unsafe fn init() {
         let lp_window_name_ptr = lp_window_name.as_ptr();
 
         let hwnd = CreateWindowExW(
-            0,
+            WINDOW_EX_STYLE(0),
             class.lpszClassName,
-            lp_window_name_ptr,
+            PCWSTR::from_raw(lp_window_name_ptr),
             WS_ICONIC,
             0,
             0,
             CW_USEDEFAULT,
             0,
-            std::ptr::null_mut(),
-            std::ptr::null_mut(),
-            0 as HINSTANCE,
-            std::ptr::null_mut(),
+            None,
+            None,
+            HMODULE(0),
+            None,
         );
 
         ShowWindow(hwnd, SW_HIDE);
 
         let mut msg: MSG = mem::zeroed();
 
-        while GetMessageW(&mut msg, hwnd, 0, 0) > 0 {
+        while GetMessageW(&mut msg, hwnd, 0, 0).into() {
             if msg.message == WM_QUIT {
                 break;
             }
