@@ -1,12 +1,24 @@
 /*
- *  Copyright (c) 2012 The WebRTC project authors. All Rights Reserved.
- *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
- */
+* This file is part of Desktop App Toolkit, a set of libraries for developing nice desktop
+* applications.
+*
+* Copyright (c) 2014-2023 The Desktop App Toolkit Authors.
+*
+* Desktop App Toolkit is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* It is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*
+* In addition, as a special exception, the copyright holders give permission
+* to link the code of portions of this program with the OpenSSL library.
+*
+* Full license: https://github.com/desktop-app/legal/blob/master/LICENSE
+*/
 
 #include <iostream>
 
@@ -25,13 +37,10 @@
 #include "rtc_base/platform_thread.h"
 
 constexpr auto kPlayoutFrequency = 48000;
-constexpr auto kBufferSizeMs = crl::time(10);
+constexpr std::int64_t kBufferSizeMs = 10;
 constexpr auto kPlayoutPart = (kPlayoutFrequency * kBufferSizeMs + 999) / 1000;
 constexpr auto kBuffersFullCount = 7;
 constexpr auto kBuffersKeepReadyCount = 5;
-constexpr auto kDefaultPlayoutLatency = crl::time(20);
-constexpr auto kQueryExactTimeEach = 20;
-constexpr auto kALMaxValues = 6;
 
 auto kAL_EVENT_CALLBACK_FUNCTION_SOFT = ALenum();
 auto kAL_EVENT_CALLBACK_USER_PARAM_SOFT = ALenum();
@@ -81,11 +90,11 @@ struct OpenALPlayoutADM::Data {
   std::vector<char>* playoutSamples = new std::vector<char>(bufferSize, 0);
   int64_t exactDeviceTimeCounter = 0;
   int64_t lastExactDeviceTime = 0;
-  crl::time lastExactDeviceTimeWhen = 0;
+  std::int64_t lastExactDeviceTimeWhen = 0;
   bool playing = false;
 };
 
-// Main initializaton and termination
+// Main initialization and termination.
 int32_t OpenALPlayoutADM::Init() {
   if (webrtc::AudioDeviceModuleImpl::Init() != 0) {
     return -1;

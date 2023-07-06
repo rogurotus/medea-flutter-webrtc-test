@@ -9,8 +9,6 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 
-#include "crl.h"
-
 #include "api/audio/audio_frame.h"
 #include "api/audio/audio_mixer.h"
 #include "api/media_stream_interface.h"
@@ -46,7 +44,7 @@ class OpenALPlayoutADM : public webrtc::AudioDeviceModuleImpl {
       AudioLayer audio_layer,
       webrtc::TaskQueueFactory* task_queue_factory);
 
-  // Main initializaton and termination.
+  // Main initialization and termination.
   int32_t Init() override;
 
   // Playout control.
