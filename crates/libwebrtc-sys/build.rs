@@ -25,12 +25,9 @@ static LIBWEBRTC_URL: &str =
     "https://github.com/instrumentisto/libwebrtc-bin/releases/download\
                                                     /112.0.5615.165";
 
-/// Version of OpenAL library used by this crate.
-static OPENAL_VERSION: &str = "1.23.1";
-
 /// URL for downloading `openal-soft` source code.
 static OPENAL_URL: &str =
-    "https://github.com/kcat/openal-soft/archive/refs/tags";
+    "https://github.com/kcat/openal-soft/archive/refs/tags/1.23.1";
 
 fn main() -> anyhow::Result<()> {
     let lib_dir = libpath()?;
@@ -108,7 +105,7 @@ fn main() -> anyhow::Result<()> {
     println!("cargo:rerun-if-changed=src/bridge.rs");
     println!("cargo:rerun-if-changed=./lib");
     println!("cargo:rerun-if-env-changed=INSTALL_WEBRTC");
-    println!("cargo:rerun-if-env-changed=LIBWEBRTC_URL");
+    println!("cargo:rerun-if-env-changed=INSTALL_OPENAL");
 
     Ok(())
 }
@@ -194,11 +191,12 @@ fn get_path_to_openal() -> anyhow::Result<PathBuf> {
 ///
 /// Copies OpenAL headers and compiled library to the required locations.
 fn compile_openal() -> anyhow::Result<()> {
+    let openal_version = OPENAL_URL.split('/').last().unwrap();
     let manifest_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
     let temp_dir = manifest_path.join("temp");
     let openal_path = get_path_to_openal()?;
 
-    let archive = temp_dir.join(format!("{OPENAL_VERSION}.tar.gz"));
+    let archive = temp_dir.join(format!("{openal_version}.tar.gz"));
 
     let is_already_installed = fs::metadata(
         manifest_path
@@ -222,7 +220,7 @@ fn compile_openal() -> anyhow::Result<()> {
 
     {
         let mut resp = BufReader::new(reqwest::blocking::get(format!(
-            "{OPENAL_URL}/{OPENAL_VERSION}.tar.gz",
+            "{OPENAL_URL}/{openal_version}.tar.gz",
         ))?);
         let mut out_file = BufWriter::new(File::create(&archive)?);
 
@@ -240,7 +238,7 @@ fn compile_openal() -> anyhow::Result<()> {
     archive.unpack(&temp_dir)?;
 
     let openal_src_path =
-        temp_dir.join(format!("openal-soft-{OPENAL_VERSION}"));
+        temp_dir.join(format!("openal-soft-{openal_version}"));
 
     copy_dir_all(
         openal_src_path.join("include"),
