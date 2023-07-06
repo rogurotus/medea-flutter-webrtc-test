@@ -13,20 +13,17 @@ use libwebrtc_sys as sys;
 use pulse::mainloop::standard::IterateResult;
 
 #[cfg(target_os = "windows")]
-use windows::Win32::UI::WindowsAndMessaging::{
+use windows::{
     core::PCWSTR,
-    core::PCWSTR,
-    CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW,
-    RegisterClassExW, RegisterClassExW, ShowWindow, ShowWindow,
-    TranslateMessage, TranslateMessage,
     Win32::{
         Foundation::{HMODULE, HWND, LPARAM, LRESULT, WPARAM},
         UI::WindowsAndMessaging::{
-            CW_USEDEFAULT, DBT_DEVNODES_CHANGED, MSG, SW_HIDE, WM_DEVICECHANGE,
-            WM_QUIT, WNDCLASSEXW, WS_ICONIC,
+            CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW,
+            RegisterClassExW, ShowWindow, TranslateMessage, CW_USEDEFAULT,
+            DBT_DEVNODES_CHANGED, MSG, SW_HIDE, WINDOW_EX_STYLE,
+            WM_DEVICECHANGE, WM_QUIT, WNDCLASSEXW, WS_ICONIC,
         },
     },
-    WINDOW_EX_STYLE,
 };
 
 use crate::{
