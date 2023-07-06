@@ -556,9 +556,14 @@ mod win_default_device_callback {
     };
 
     use windows::{
-        core::*,
+        core::{ComInterface, Interface, Result, PCWSTR},
         Win32::{
-            Media::Audio::*, System::Com::*,
+            Media::Audio::{
+                EDataFlow, ERole, IMMDeviceEnumerator,
+                IMMDeviceEnumerator_Impl, IMMNotificationClient,
+                IMMNotificationClient_Impl, MMDeviceEnumerator,
+            },
+            System::Com::{CoCreateInstance, CLSCTX_ALL},
             UI::Shell::PropertiesSystem::PROPERTYKEY,
         },
     };
@@ -672,7 +677,7 @@ pub unsafe fn init() {
         if msg == WM_DEVICECHANGE {
             // The device event when a device has been added to or removed from
             // the system.
-            if DBT_DEVNODES_CHANGED == wp.0 as u32 {
+            if DBT_DEVNODES_CHANGED as usize == wp.0 {
                 let state = ON_DEVICE_CHANGE.load(Ordering::SeqCst);
 
                 if !state.is_null() {
