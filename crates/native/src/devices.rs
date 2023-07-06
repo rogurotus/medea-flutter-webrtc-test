@@ -556,11 +556,10 @@ mod win_default_device_callback {
     };
 
     use windows::{
-        core::{ComInterface, Interface, Result, PCWSTR},
+        core::{Result, PCWSTR},
         Win32::{
             Media::Audio::{
-                EDataFlow, ERole, IMMDeviceEnumerator,
-                IMMDeviceEnumerator_Impl, IMMNotificationClient,
+                EDataFlow, ERole, IMMDeviceEnumerator, IMMNotificationClient,
                 IMMNotificationClient_Impl, MMDeviceEnumerator,
             },
             System::Com::{CoCreateInstance, CLSCTX_ALL},
