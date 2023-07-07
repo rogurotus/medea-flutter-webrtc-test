@@ -567,6 +567,16 @@ mod win_default_device_callback {
         },
     };
 
+    /// Storage for the [`IMMDeviceEnumerator`] used for detecting
+    /// default audio device changes.
+    static AUDIO_ENDPOINT_ENUMERATOR: AtomicPtr<IMMDeviceEnumerator> =
+        AtomicPtr::new(ptr::null_mut());
+
+    /// Storage for the [`EMMNotificationClient`] used for detecting
+    /// default audio device changes.
+    static AUDIO_ENDPOINT_CALLBACK: AtomicPtr<IMMNotificationClient> =
+        AtomicPtr::new(ptr::null_mut());
+
     /// Implementation of the [`IMMNotificationClient`] used
     /// for detecting default audio output device changes.
     #[windows::core::implement(IMMNotificationClient)]
@@ -576,17 +586,17 @@ mod win_default_device_callback {
     impl IMMNotificationClient_Impl for AudioEndpointCallback {
         fn OnDeviceStateChanged(
             &self,
-            _pwstrdeviceid: &PCWSTR,
-            _dwnewstate: u32,
+            _: &PCWSTR,
+            _: u32,
         ) -> Result<()> {
             Ok(())
         }
 
-        fn OnDeviceAdded(&self, _pwstrdeviceid: &PCWSTR) -> Result<()> {
+        fn OnDeviceAdded(&self, _: &PCWSTR) -> Result<()> {
             Ok(())
         }
 
-        fn OnDeviceRemoved(&self, _pwstrdeviceid: &PCWSTR) -> Result<()> {
+        fn OnDeviceRemoved(&self, _: &PCWSTR) -> Result<()> {
             Ok(())
         }
 
@@ -594,7 +604,7 @@ mod win_default_device_callback {
             &self,
             flow: EDataFlow,
             role: ERole,
-            _pwstrdefaultdeviceid: &PCWSTR,
+            _: &PCWSTR,
         ) -> Result<()> {
             if role == ERole(0) && flow == EDataFlow(0) {
                 unsafe {
@@ -618,16 +628,6 @@ mod win_default_device_callback {
             Ok(())
         }
     }
-
-    /// Storage for the [`IMMDeviceEnumerator`] used for detecting
-    /// default audio device changes.
-    static AUDIO_ENDPOINT_ENUMERATOR: AtomicPtr<IMMDeviceEnumerator> =
-        AtomicPtr::new(ptr::null_mut());
-
-    /// Storage for the [`EMMNotificationClient`] used for detecting
-    /// default audio device changes.
-    static AUDIO_ENDPOINT_CALLBACK: AtomicPtr<IMMNotificationClient> =
-        AtomicPtr::new(ptr::null_mut());
 
     /// Registers default audio output callback for windows.
     ///

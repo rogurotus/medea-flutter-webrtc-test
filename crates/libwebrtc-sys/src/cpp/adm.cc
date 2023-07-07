@@ -442,6 +442,7 @@ int32_t OpenALPlayoutADM::SpeakerMute(bool* enabled) const {
 
 void OpenALPlayoutADM::openPlayoutDevice() {
   std::lock_guard<std::recursive_mutex> lk(_mutex);
+
   if (_playoutDevice || _playoutFailed) {
     return;
   }
@@ -463,6 +464,7 @@ void OpenALPlayoutADM::openPlayoutDevice() {
 
   _data->_playoutThread->PostTask([=]() {
     std::lock_guard<std::recursive_mutex> lk(_mutex);
+
     alcSetThreadContext(_playoutContext);
   });
 }
@@ -534,6 +536,7 @@ int32_t OpenALPlayoutADM::RegisterAudioCallback(
 
 bool OpenALPlayoutADM::processPlayout() {
   std::lock_guard<std::recursive_mutex> lk(_mutex);
+
   const auto playing = [&] {
     auto state = ALint(AL_INITIAL);
     alGetSourcei(_data->source, AL_SOURCE_STATE, &state);
@@ -638,6 +641,7 @@ bool OpenALPlayoutADM::validatePlayoutDeviceId() {
 void OpenALPlayoutADM::startPlayingOnThread() {
   _data->_playoutThread->PostTask([this] {
     std::lock_guard<std::recursive_mutex> lk(_mutex);
+
     _data->playing = true;
     if (_playoutFailed) {
       return;
@@ -672,9 +676,11 @@ void OpenALPlayoutADM::startPlayingOnThread() {
 
 void OpenALPlayoutADM::stopPlayingOnThread() {
   std::lock_guard<std::recursive_mutex> lk(_mutex);
+
   if (!_data->playing) {
     _data->_playoutThread->PostTask([this] {
       std::lock_guard<std::recursive_mutex> lk(_mutex);
+
       alcSetThreadContext(nullptr);
     });
     return;
@@ -683,6 +689,7 @@ void OpenALPlayoutADM::stopPlayingOnThread() {
   if (_playoutFailed) {
     _data->_playoutThread->PostTask([this] {
       std::lock_guard<std::recursive_mutex> lk(_mutex);
+
       alcSetThreadContext(nullptr);
     });
     return;
