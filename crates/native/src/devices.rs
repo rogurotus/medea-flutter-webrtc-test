@@ -584,11 +584,7 @@ mod win_default_device_callback {
 
     #[allow(non_snake_case)]
     impl IMMNotificationClient_Impl for AudioEndpointCallback {
-        fn OnDeviceStateChanged(
-            &self,
-            _: &PCWSTR,
-            _: u32,
-        ) -> Result<()> {
+        fn OnDeviceStateChanged(&self, _: &PCWSTR, _: u32) -> Result<()> {
             Ok(())
         }
 
