@@ -1,6 +1,5 @@
 #pragma once
 
-
 #define WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE 1
 #include <iostream>
 #include "api/task_queue/task_queue_factory.h"
@@ -22,11 +21,11 @@
 
 #include "modules/audio_mixer/audio_mixer_impl.h"
 
-#include "api/audio/audio_mixer.h"
-
 #include "api/audio/audio_frame.h"
+#include "api/audio/audio_mixer.h"
+#include "rtc_base/thread.h"
 
-#include "custom_audio.h"
+#include "audio_source/custom_audio.h"
 
 #if defined(WEBRTC_USE_X11)
 #include <X11/Xlib.h>
@@ -36,6 +35,7 @@
 #include "system_audio_module.h"
 
 #if defined(WEBRTC_LINUX)
+#include "linux_microphone_module.h"
 #include "modules/audio_device/linux/audio_mixer_manager_pulse_linux.h"
 #include "modules/audio_device/linux/pulseaudiosymboltable_linux.h"
 #include "linux_system_audio_module.h"
@@ -52,10 +52,8 @@
 #include "macos_system_audio_module.h"
 #endif
 
-
-
 class AudioSourceManager {
-  public:
+ public:
   // Creates a `AudioSource` from a microphone.
   virtual rtc::scoped_refptr<AudioSource> CreateMicrophoneSource() = 0;
   // Creates a `AudioSource` from a system audio.
@@ -74,20 +72,23 @@ class AudioSourceManager {
   virtual void RemoveSource(rtc::scoped_refptr<AudioSource> source) = 0;
 };
 
-
-class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public AudioSourceManager {
+class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl,
+                                public AudioSourceManager {
  public:
-  CustomAudioDeviceModule(AudioLayer audio_layer, webrtc::TaskQueueFactory* task_queue_factory);
+  CustomAudioDeviceModule(AudioLayer audio_layer,
+                          webrtc::TaskQueueFactory* task_queue_factory,
+                          rtc::Thread* worker_thread);
   ~CustomAudioDeviceModule();
-
 
   static rtc::scoped_refptr<CustomAudioDeviceModule> Create(
       AudioLayer audio_layer,
-      webrtc::TaskQueueFactory* task_queue_factory);
+      webrtc::TaskQueueFactory* task_queue_factory,
+      rtc::Thread* worker_thread);
 
   static rtc::scoped_refptr<CustomAudioDeviceModule> CreateForTest(
       AudioLayer audio_layer,
-      webrtc::TaskQueueFactory* task_queue_factory);
+      webrtc::TaskQueueFactory* task_queue_factory,
+      rtc::Thread* worker_thread);
 
   // Mixes source and sends on.
   void RecordProcess();
@@ -101,7 +102,7 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
   bool MicrophoneIsInitialized() const override;
 
   // Microphone volume controls.
-  int32_t MicrophoneVolumeIsAvailable(bool* available)  override;
+  int32_t MicrophoneVolumeIsAvailable(bool* available) override;
   int32_t SetMicrophoneVolume(uint32_t volume) override;
   int32_t MicrophoneVolume(uint32_t* volume) const override;
   int32_t MaxMicrophoneVolume(uint32_t* maxVolume) const override;
@@ -109,31 +110,32 @@ class CustomAudioDeviceModule : public webrtc::AudioDeviceModuleImpl, public Aud
 
   // AudioSourceManager interface.
   rtc::scoped_refptr<AudioSource> CreateMicrophoneSource() override;
-  rtc::scoped_refptr<AudioSource>  CreateSystemSource() override;
+  rtc::scoped_refptr<AudioSource> CreateSystemSource() override;
   std::vector<AudioSourceInfo> EnumerateSystemSource() const override;
   void SetRecordingSource(int id) override;
   void SetSystemAudioVolume(float level) override;
   float GetSystemAudioVolume() const override;
-  void AddSource(rtc::scoped_refptr<AudioSource>  source) override;
-  void RemoveSource(rtc::scoped_refptr<AudioSource>  source) override;
+  void AddSource(rtc::scoped_refptr<AudioSource> source) override;
+  void RemoveSource(rtc::scoped_refptr<AudioSource> source) override;
 
   // Microphone mute control.
   int32_t MicrophoneMuteIsAvailable(bool* available) override;
   int32_t SetMicrophoneMute(bool enable) override;
   int32_t MicrophoneMute(bool* enabled) const override;
 
-  private:
+ private:
   // Mixes `AudioSource` to send.
-  rtc::scoped_refptr<webrtc::AudioMixerImpl> mixer = webrtc::AudioMixerImpl::Create();
+  rtc::scoped_refptr<webrtc::AudioMixerImpl> mixer =
+      webrtc::AudioMixerImpl::Create();
 
   // `AudioSource` for mixing.
   std::vector<rtc::scoped_refptr<AudioSource>> sources;
   std::mutex source_mutex;
-  
+
   // Audio capture module.
   std::unique_ptr<MicrophoneModuleInterface> audio_recorder;
   std::unique_ptr<SystemModuleInterface> system_recorder;
-  
+
   // Thread for processing audio frames.
   rtc::PlatformThread ptrThreadRec;
 

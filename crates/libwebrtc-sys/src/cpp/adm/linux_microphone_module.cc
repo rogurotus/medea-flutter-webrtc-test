@@ -1,6 +1,16 @@
+/*
+ *  Copyright (c) 2012 The WebRTC project authors. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license
+ *  that can be found in the LICENSE file in the root of the source
+ *  tree. An additional intellectual property rights grant can be found
+ *  in the file PATENTS.  All contributing project authors may
+ *  be found in the AUTHORS file in the root of the source tree.
+ */
+
 #if WEBRTC_LINUX
 
-#include "linux_microphone_module.h"
+#include "adm/linux_microphone_module.h"
 #include "api/make_ref_counted.h"
 #include "rtc_base/logging.h"
 
@@ -23,11 +33,11 @@ void MicrophoneModule::PaServerInfoCallback(pa_context* c,
   static_cast<MicrophoneModule*>(pThis)->PaServerInfoCallbackHandler(i);
 }
 
-
-
-int MicrophoneSource::sources_num = 0;
-MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
+std::atomic<int> MicrophoneSource::sources_num = 0;
+MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module, rtc::Thread* thread) {
   this->module = module;
+  this->worker_thread = thread;
+
   if (sources_num == 0) {
     module->StartRecording();
   }
@@ -37,8 +47,10 @@ MicrophoneSource::MicrophoneSource(MicrophoneModuleInterface* module) {
 MicrophoneSource::~MicrophoneSource() {
   --sources_num;
   if (sources_num == 0) {
-    module->StopRecording();
-    module->ResetSource();
+     worker_thread->BlockingCall([this] {
+        this->module->StopRecording();
+        this->module->ResetSource();
+      });
   }
 }
 
@@ -51,14 +63,13 @@ void MicrophoneModule::ResetSource() {
   source = nullptr;
 }
 
-
 rtc::scoped_refptr<AudioSource> MicrophoneModule::CreateSource() {
   if (!_recording) {
     InitRecording();
   }
 
   if (!source) {
-    source = rtc::scoped_refptr<MicrophoneSource>(new MicrophoneSource(this));
+    source = rtc::scoped_refptr<MicrophoneSource>(new MicrophoneSource(this, worker_thread));
   }
   auto result = source;
   source->Release();
@@ -93,7 +104,6 @@ int32_t MicrophoneModule::SetRecordingDevice(uint16_t index) {
   return 0;
 }
 
-
 int32_t MicrophoneModule::ProcessRecordedData(int8_t* bufferData,
                                               uint32_t bufferSizeInSamples,
                                               uint32_t recDelay)
@@ -121,13 +131,9 @@ int32_t MicrophoneModule::ProcessRecordedData(int8_t* bufferData,
   return 0;
 }
 
-
-
 // -------------------------------------------------------------------------------
 //  Everything below has been copied unchanged from audio_device_pulse_linux.cc
 // -------------------------------------------------------------------------------
-
-
 
 void MicrophoneModule::PaServerInfoCallbackHandler(const pa_server_info* i) {
   // Use PA native sampling rate
@@ -433,7 +439,8 @@ int32_t MicrophoneModule::Terminate() {
   return 0;
 }
 
-MicrophoneModule::MicrophoneModule() {
+MicrophoneModule::MicrophoneModule(rtc::Thread* worker_thread)
+    : worker_thread(worker_thread) {
 #if defined(WEBRTC_USE_X11)
   memset(_oldKeyState, 0, sizeof(_oldKeyState));
 #endif
@@ -518,7 +525,6 @@ void MicrophoneModule::PaUnLock() {
   LATE(pa_threaded_mainloop_unlock)(_paMainloop);
 }
 
-
 int32_t MicrophoneModule::StopRecording() {
   RTC_DCHECK(thread_checker_.IsCurrent());
   webrtc::MutexLock lock(&mutex_);
@@ -589,7 +595,7 @@ int32_t MicrophoneModule::StartRecording() {
 
   // The audio thread will signal when recording has started.
   _timeEventRec.Set();
-  if (!_recStartEvent.Wait(10000)) {
+  if (!_recStartEvent.Wait(webrtc::TimeDelta::Millis(10000))) {
     {
       webrtc::MutexLock lock(&mutex_);
       _startRec = false;
@@ -840,7 +846,7 @@ void MicrophoneModule::PaStreamStateCallback(pa_stream* p, void* pThis) {
 }
 
 bool MicrophoneModule::RecThreadProcess() {
-  if (!_timeEventRec.Wait(1000)) {
+  if (!_timeEventRec.Wait(webrtc::TimeDelta::Millis(1000))) {
     return true;
   }
 
@@ -1021,8 +1027,6 @@ int32_t MicrophoneModule::ReadRecordedData(const void* bufferData,
       return 0;
     }
 
-    // nado=_recBuffer;
-
     // Provide data to VoiceEngine.
     if (ProcessRecordedData(_recBuffer, numRecSamples, recDelay) == -1) {
       // We have stopped recording.
@@ -1034,8 +1038,6 @@ int32_t MicrophoneModule::ReadRecordedData(const void* bufferData,
 
   // Now process full 10ms sample sets directly from the input.
   while (size >= _recordBufferSize) {
-    // nado=(int8_t*)bufferData;
-
     // Provide data to VoiceEngine.
     if (ProcessRecordedData(static_cast<int8_t*>(const_cast<void*>(bufferData)),
                             numRecSamples, recDelay) == -1) {
@@ -1111,7 +1113,6 @@ int32_t MicrophoneModule::StereoRecording(bool& enabled) const {
 
   return 0;
 }
-
 
 bool MicrophoneModule::KeyPressed() const {
 #if defined(WEBRTC_USE_X11)

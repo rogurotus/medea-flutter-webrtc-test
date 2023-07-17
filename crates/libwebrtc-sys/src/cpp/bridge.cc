@@ -1,7 +1,7 @@
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <chrono>
 #include <thread>
 
 #include "api/video/i420_buffer.h"
@@ -12,7 +12,7 @@
 #include "libwebrtc-sys/src/bridge.rs.h"
 
 namespace bridge {
- 
+
 // Creates a new `TrackEventObserver`.
 TrackEventObserver::TrackEventObserver(
     rust::Box<bridge::DynTrackEventCallback> cb)
@@ -110,11 +110,10 @@ std::unique_ptr<AudioDeviceModule> create_audio_device_module(
     Thread& worker_thread,
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory) {
-  AudioDeviceModule adm = worker_thread.Invoke<AudioDeviceModule>(
-      RTC_FROM_HERE, [audio_layer, &task_queue_factory] {
-        return webrtc::AudioDeviceModule::Create(audio_layer,
-                                                 &task_queue_factory);
-      });
+  AudioDeviceModule adm = worker_thread.BlockingCall([audio_layer,
+                                                      &task_queue_factory] {
+    return webrtc::AudioDeviceModule::Create(audio_layer, &task_queue_factory);
+  });
 
   if (adm == nullptr) {
     return nullptr;
@@ -127,23 +126,27 @@ std::unique_ptr<AudioDeviceModule> create_audio_device_module(
 }
 
 // Creates a new `AudioSourceManager` for the given `CustomAudioDeviceModule`.
-std::unique_ptr<AudioSourceManager> create_source_manager(const CustomAudioDeviceModule& adm, Thread& worker_thread) {
-    auto a = AudioSourceManagerProxy::Create(&worker_thread, adm);
-    return a;
+std::unique_ptr<AudioSourceManager> create_source_manager(
+    const CustomAudioDeviceModule& adm,
+    Thread& worker_thread) {
+  return AudioSourceManagerProxy::Create(&worker_thread, adm);
 }
 
-// Creates a new proxied `AudioDeviceModule` from the provided `CustomAudioDeviceModule`.
-std::unique_ptr<AudioDeviceModule> custom_audio_device_module_proxy_upcast(std::unique_ptr<CustomAudioDeviceModule> adm, Thread& worker_thread) {
-
-    AudioDeviceModule admm = *adm.get();
-    AudioDeviceModule proxied =
+// Creates a new proxied `AudioDeviceModule` from the provided
+// `CustomAudioDeviceModule`.
+std::unique_ptr<AudioDeviceModule> custom_audio_device_module_proxy_upcast(
+    std::unique_ptr<CustomAudioDeviceModule> adm,
+    Thread& worker_thread) {
+  AudioDeviceModule admm = *adm.get();
+  AudioDeviceModule proxied =
       webrtc::AudioDeviceModuleProxy::Create(&worker_thread, admm);
 
   return std::make_unique<AudioDeviceModule>(proxied);
 }
 
 // Creates a new `AudioSource` from microphone.
-std::unique_ptr<AudioSource> create_source_microphone(AudioSourceManager& manager) {
+std::unique_ptr<AudioSource> create_source_microphone(
+    AudioSourceManager& manager) {
   return std::make_unique<AudioSource>(manager.CreateMicrophoneSource());
 }
 
@@ -164,12 +167,13 @@ void remove_source(AudioSourceManager& manager, const AudioSource& source) {
 
 // Creates a new `CustomAudioDeviceModule`.
 std::unique_ptr<CustomAudioDeviceModule> create_custom_audio_device_module(
-  Thread& worker_thread,
+    Thread& worker_thread,
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory) {
-  CustomAudioDeviceModule adm = worker_thread.Invoke<CustomAudioDeviceModule>(
-      RTC_FROM_HERE, [audio_layer, &task_queue_factory] {
-        return ::CustomAudioDeviceModule::Create(audio_layer, &task_queue_factory);
+  CustomAudioDeviceModule adm = worker_thread.BlockingCall(
+      [audio_layer, &task_queue_factory, &worker_thread] {
+        return ::CustomAudioDeviceModule::Create(
+            audio_layer, &task_queue_factory, &worker_thread);
       });
 
   if (adm == nullptr) {
@@ -280,8 +284,9 @@ int32_t stop_playout(const AudioDeviceModule& audio_device_module) {
 }
 
 // Sets stereo availability of the specified playout device.
-int32_t stereo_playout_is_available(const AudioDeviceModule& audio_device_module,
-                                    bool available) {
+int32_t stereo_playout_is_available(
+    const AudioDeviceModule& audio_device_module,
+    bool available) {
   return audio_device_module->StereoPlayoutIsAvailable(&available);
 }
 
@@ -347,6 +352,11 @@ std::unique_ptr<rtc::Thread> create_thread() {
   return rtc::Thread::Create();
 }
 
+// Creates a default `TaskQueueFactory`, basing on the current platform.
+std::unique_ptr<TaskQueueFactory> create_default_task_queue_factory() {
+  return webrtc::CreateDefaultTaskQueueFactory();
+}
+
 // Calls `Thread->CreateWithSocketServer()`.
 std::unique_ptr<rtc::Thread> create_thread_with_socket_server() {
   return rtc::Thread::CreateWithSocketServer();
@@ -361,14 +371,11 @@ std::unique_ptr<VideoTrackSourceInterface> create_display_video_source(
     size_t width,
     size_t height,
     size_t fps) {
-
   rtc::scoped_refptr<ScreenVideoCapturer> capturer(
-      new rtc::RefCountedObject<ScreenVideoCapturer>(id, width,
-                                                     height, fps));
+      new rtc::RefCountedObject<ScreenVideoCapturer>(id, width, height, fps));
 
-  auto src = webrtc::CreateVideoTrackSourceProxy(&signaling_thread,
-                                                 &worker_thread,
-                                                 capturer.get());
+  auto src = webrtc::CreateVideoTrackSourceProxy(
+      &signaling_thread, &worker_thread, capturer.get());
 
   if (src == nullptr) {
     return nullptr;
@@ -381,8 +388,8 @@ std::unique_ptr<VideoTrackSourceInterface> create_display_video_source(
 // `AudioOptions`.
 std::unique_ptr<AudioSourceInterface> create_audio_source(
     const PeerConnectionFactoryInterface& peer_connection_factory) {
-  
-  auto src =  peer_connection_factory->CreateAudioSource(cricket::AudioOptions());
+  auto src =
+      peer_connection_factory->CreateAudioSource(cricket::AudioOptions());
   if (src == nullptr) {
     return nullptr;
   }
@@ -395,9 +402,8 @@ std::unique_ptr<VideoTrackInterface> create_video_track(
     const PeerConnectionFactoryInterface& peer_connection_factory,
     rust::String id,
     const VideoTrackSourceInterface& video_source) {
-  auto track =
-      peer_connection_factory->CreateVideoTrack(std::string(id),
-                                                video_source.get());
+  auto track = peer_connection_factory->CreateVideoTrack(std::string(id),
+                                                         video_source.get());
 
   if (track == nullptr) {
     return nullptr;
@@ -411,9 +417,8 @@ std::unique_ptr<AudioTrackInterface> create_audio_track(
     const PeerConnectionFactoryInterface& peer_connection_factory,
     rust::String id,
     const AudioSourceInterface& audio_source) {
-  auto track =
-      peer_connection_factory->CreateAudioTrack(std::string(id),
-                                                audio_source.get());
+  auto track = peer_connection_factory->CreateAudioTrack(std::string(id),
+                                                         audio_source.get());
 
   if (track == nullptr) {
     return nullptr;
@@ -522,8 +527,7 @@ void video_frame_to_argb(const webrtc::VideoFrame& frame,
 
   libyuv::I420ToARGB(buffer->DataY(), buffer->StrideY(), buffer->DataU(),
                      buffer->StrideU(), buffer->DataV(), buffer->StrideV(),
-                     dst_argb, argb_stride, buffer->width(),
-                     buffer->height());
+                     dst_argb, argb_stride, buffer->width(), buffer->height());
 }
 
 // Creates a new `PeerConnectionFactoryInterface`.
@@ -533,7 +537,6 @@ std::unique_ptr<PeerConnectionFactoryInterface> create_peer_connection_factory(
     const std::unique_ptr<Thread>& signaling_thread,
     const std::unique_ptr<AudioDeviceModule>& default_adm,
     const std::unique_ptr<AudioProcessing>& ap) {
-
   auto factory = webrtc::CreatePeerConnectionFactory(
       network_thread.get(), worker_thread.get(), signaling_thread.get(),
       default_adm ? *default_adm : nullptr,

@@ -31,8 +31,8 @@
 #include "media/base/fake_frame_source.h"
 #include "pc/test/fake_video_track_source.h"
 #include "modules/audio_device/include/test_audio_device.h"
-#include "audio_source_manager_proxy.h"
-#include "adm.h"
+#include "audio_source/audio_source_manager_proxy.h"
+#include "adm/adm.h"
 
 
 namespace bridge {
@@ -259,6 +259,9 @@ int32_t video_device_name(VideoDeviceInfo& device_info,
 
 // Creates a new `Thread`.
 std::unique_ptr<rtc::Thread> create_thread();
+
+// Creates a default `TaskQueueFactory`, basing on the current platform.
+std::unique_ptr<TaskQueueFactory> create_default_task_queue_factory();
 
 // Creates a new `Thread` with a socket server.
 std::unique_ptr<rtc::Thread> create_thread_with_socket_server();

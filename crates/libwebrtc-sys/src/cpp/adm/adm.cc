@@ -12,7 +12,7 @@
 
 #include <chrono>
 #include <thread>
-#include "adm.h"
+#include "adm/adm.h"
 #include "api/make_ref_counted.h"
 #include "common_audio/wav_file.h"
 #include "modules/audio_device/include/test_audio_device.h"
@@ -39,9 +39,10 @@ CustomAudioDeviceModule::~CustomAudioDeviceModule() {
 
 rtc::scoped_refptr<CustomAudioDeviceModule> CustomAudioDeviceModule::Create(
     AudioLayer audio_layer,
-    webrtc::TaskQueueFactory* task_queue_factory) {
-  return CustomAudioDeviceModule::CreateForTest(audio_layer,
-                                                task_queue_factory);
+    webrtc::TaskQueueFactory* task_queue_factory,
+    rtc::Thread* worker_thread) {
+  return CustomAudioDeviceModule::CreateForTest(audio_layer, task_queue_factory,
+                                                worker_thread);
 }
 
 int32_t CustomAudioDeviceModule::SetRecordingDevice(uint16_t index) {
@@ -89,8 +90,8 @@ void CustomAudioDeviceModule::AddSource(
   {
     std::unique_lock<std::mutex> lock(source_mutex);
     sources.push_back(source);
-    cv.notify_all();
   }
+  cv.notify_all();
   mixer->AddSource(source.get());
 }
 
@@ -144,7 +145,8 @@ int32_t CustomAudioDeviceModule::StartRecording() {
 rtc::scoped_refptr<CustomAudioDeviceModule>
 CustomAudioDeviceModule::CreateForTest(
     AudioLayer audio_layer,
-    webrtc::TaskQueueFactory* task_queue_factory) {
+    webrtc::TaskQueueFactory* task_queue_factory,
+    rtc::Thread* worker_thread) {
   // The "AudioDeviceModule::kWindowsCoreAudio2" audio layer has its own
   // dedicated factory method which should be used instead.
   if (audio_layer == AudioDeviceModule::kWindowsCoreAudio2) {
@@ -153,7 +155,7 @@ CustomAudioDeviceModule::CreateForTest(
 
   // Create the generic reference counted (platform independent) implementation.
   auto audio_device = rtc::make_ref_counted<CustomAudioDeviceModule>(
-      audio_layer, task_queue_factory);
+      audio_layer, task_queue_factory, worker_thread);
 
   // Ensure that the current platform is supported.
   if (audio_device->CheckPlatform() == -1) {
@@ -172,15 +174,18 @@ CustomAudioDeviceModule::CreateForTest(
   }
 
   audio_device->RecordProcess();
+
   return audio_device;
 }
 
 CustomAudioDeviceModule::CustomAudioDeviceModule(
     AudioLayer audio_layer,
-    webrtc::TaskQueueFactory* task_queue_factory)
+    webrtc::TaskQueueFactory* task_queue_factory,
+    rtc::Thread* worker_thread)
     : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory),
-      audio_recorder(new MicrophoneModule()),
-      system_recorder(new SystemModule()) {}
+      audio_recorder(std::move(std::unique_ptr<MicrophoneModuleInterface>(
+          new MicrophoneModule(worker_thread)))),
+          system_recorder(new SystemModule()) {}
 
 void CustomAudioDeviceModule::RecordProcess() {
   const auto attributes =
@@ -189,21 +194,26 @@ void CustomAudioDeviceModule::RecordProcess() {
       [this] {
         webrtc::AudioFrame frame;
         auto cb = GetAudioDeviceBuffer();
+        int last_sample_rate = frame.sample_rate_hz();
+        int last_num_channels = frame.num_channels();
+
         while (!quit) {
           {
             std::unique_lock<std::mutex> lock(source_mutex);
             cv.wait(lock, [&]() { return sources.size() > 0; });
           }
 
-          RTC_LOG(LS_ERROR) << "RecordProcess started 1";
-          RTC_LOG(LS_ERROR) << "Number of channels " << std::max(system_recorder->RecordingChannels(),
-                                                                 audio_recorder->RecordingChannels());
           mixer->Mix(std::max(system_recorder->RecordingChannels(),
-                              audio_recorder->RecordingChannels()),
-                     &frame);
-          RTC_LOG(LS_ERROR) << "RecordProcess started 2";
-          cb->SetRecordingChannels(frame.num_channels());
-          cb->SetRecordingSampleRate(frame.sample_rate_hz());
+                              audio_recorder->RecordingChannels()), &frame);
+          if (last_sample_rate != frame.sample_rate_hz()) {
+            cb->SetRecordingSampleRate(frame.sample_rate_hz());
+            last_sample_rate = frame.sample_rate_hz();
+          }
+          if (last_num_channels != frame.num_channels()) {
+            cb->SetRecordingChannels(frame.num_channels());
+            last_num_channels = frame.num_channels();
+          }
+
           cb->SetRecordedBuffer(frame.data(), frame.sample_rate_hz() / 100);
           cb->DeliverRecordedData();
         }
