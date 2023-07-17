@@ -50,7 +50,7 @@ class AudioSource : public rtc::RefCountedObject<RefCountedAudioSource> {
   // Provides synchronization for sending audio frames.
   std::mutex mutex_;
   std::condition_variable cv_;
-  std::atomic<bool> frame_available_ = false;
+  bool frame_available_ = false;
   std::atomic<bool> mute_ = false;
   std::chrono::time_point<std::chrono::system_clock> mute_clock_;
 };
