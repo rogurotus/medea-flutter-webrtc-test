@@ -2,6 +2,8 @@
 
 #include "linux_system_audio_module.h"
 #include <iostream>
+#include "rtc_base/logging.h"
+
 const int32_t WEBRTC_PA_NO_LATENCY_REQUIREMENTS = -1;
 const uint32_t WEBRTC_PA_ADJUST_LATENCY_PROTOCOL_VERSION = 13;
 const uint32_t WEBRTC_PA_LOW_CAPTURE_LATENCY_MSECS = 10;
@@ -309,7 +311,7 @@ bool SystemModule::RecThreadProcess() {
     }
   }
 
-  if (!_timeEventRec.Wait(1000)) {
+  if (!_timeEventRec.Wait(webrtc::TimeDelta::Millis(1000))) {
     return true;
   }
 
@@ -755,7 +757,7 @@ int32_t SystemModule::StartRecording() {
 
   // The audio thread will signal when recording has started.
   _timeEventRec.Set();
-  if (!_recStartEvent.Wait(10000)) {
+  if (!_recStartEvent.Wait(webrtc::TimeDelta::Millis(10000))) {
     {
       webrtc::MutexLock lock(&mutex_);
       _startRec = false;

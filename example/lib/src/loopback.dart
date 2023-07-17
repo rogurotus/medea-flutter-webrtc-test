@@ -59,8 +59,11 @@ class _LoopbackState extends State<Loopback> {
 
   // Platform messages are asynchronous, so we initialize in an async method.
   void _makeCall() async {
+    var systemAudioInfos = await enumerateSystemAudioSource();
+
     var caps = DeviceConstraints();
     caps.audio.mandatory = AudioConstraints();
+    caps.audio.mandatory!.systemId = systemAudioInfos[0].id;
     caps.video.mandatory = DeviceVideoConstraints();
     caps.video.mandatory!.width = 640;
     caps.video.mandatory!.height = 480;
