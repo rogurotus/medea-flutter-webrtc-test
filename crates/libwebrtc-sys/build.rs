@@ -301,6 +301,7 @@ fn link_libs() -> anyhow::Result<()> {
             "AVFoundation",
             "AppKit",
             "System",
+            "ScreenCaptureKit",
         ] {
             println!("cargo:rustc-link-lib=framework={framework}");
         }

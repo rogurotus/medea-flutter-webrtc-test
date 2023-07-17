@@ -195,9 +195,13 @@ void CustomAudioDeviceModule::RecordProcess() {
             cv.wait(lock, [&]() { return sources.size() > 0; });
           }
 
+          RTC_LOG(LS_ERROR) << "RecordProcess started 1";
+          RTC_LOG(LS_ERROR) << "Number of channels " << std::max(system_recorder->RecordingChannels(),
+                                                                 audio_recorder->RecordingChannels());
           mixer->Mix(std::max(system_recorder->RecordingChannels(),
                               audio_recorder->RecordingChannels()),
                      &frame);
+          RTC_LOG(LS_ERROR) << "RecordProcess started 2";
           cb->SetRecordingChannels(frame.num_channels());
           cb->SetRecordingSampleRate(frame.sample_rate_hz());
           cb->SetRecordedBuffer(frame.data(), frame.sample_rate_hz() / 100);
