@@ -313,15 +313,20 @@ impl AudioDeviceModule {
         if self.1.is_null() {
             return AudioSource(UniquePtr::null());
         }
+        println!("create_system_audio_source");
         let result = webrtc::create_system_audio_source(self.1.pin_mut());
         AudioSource(result)
     }
 
     /// Adds [`AudioSource`] to [`webrtc::AudioSourceManager`].
     pub fn add_source(&mut self, source: &AudioSource) {
+        println!("ARYAAAAA");
         // Fake media.
         if self.1.is_null() {
+            println!("add_source");
             return;
+        } else {
+            println!("is't not null");
         }
         webrtc::add_source(self.1.pin_mut(), &source.0);
     }

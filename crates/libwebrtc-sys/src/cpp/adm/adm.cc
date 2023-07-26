@@ -58,6 +58,7 @@ bool CustomAudioDeviceModule::MicrophoneIsInitialized() const {
 }
 
 rtc::scoped_refptr<AudioSource> CustomAudioDeviceModule::CreateSystemSource() {
+  RTC_LOG(LS_ERROR) << "Create source";
   auto system = system_recorder->CreateSource();
   return system;
 }
@@ -87,12 +88,17 @@ float CustomAudioDeviceModule::GetSystemAudioVolume() const {
 
 void CustomAudioDeviceModule::AddSource(
     rtc::scoped_refptr<AudioSource> source) {
+  RTC_LOG(LS_ERROR) << "Add source 1";
+//  return;
   {
     std::unique_lock<std::mutex> lock(source_mutex);
     sources.push_back(source);
   }
+  RTC_LOG(LS_ERROR) << "Add source 2";
   cv.notify_all();
+//  RTC_LOG(LS_ERROR, "source.get(): ", source.get());
   mixer->AddSource(source.get());
+  RTC_LOG(LS_ERROR) << "Add source 3";
 }
 
 void CustomAudioDeviceModule::RemoveSource(
@@ -185,9 +191,12 @@ CustomAudioDeviceModule::CustomAudioDeviceModule(
     : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory),
       audio_recorder(std::move(std::unique_ptr<MicrophoneModuleInterface>(
           new MicrophoneModule(worker_thread)))),
-          system_recorder(new SystemModule()) {}
+          system_recorder(new SystemModule()) {
+  system_recorder->Init();
+}
 
 void CustomAudioDeviceModule::RecordProcess() {
+//  return;
   const auto attributes =
       rtc::ThreadAttributes().SetPriority(rtc::ThreadPriority::kRealtime);
   ptrThreadRec = rtc::PlatformThread::SpawnJoinable(
@@ -203,6 +212,7 @@ void CustomAudioDeviceModule::RecordProcess() {
             cv.wait(lock, [&]() { return sources.size() > 0; });
           }
 
+//          RTC_LOG(LS_ERROR, "Mix start");
           mixer->Mix(std::max(system_recorder->RecordingChannels(),
                               audio_recorder->RecordingChannels()), &frame);
           if (last_sample_rate != frame.sample_rate_hz()) {
@@ -213,6 +223,7 @@ void CustomAudioDeviceModule::RecordProcess() {
             cb->SetRecordingChannels(frame.num_channels());
             last_num_channels = frame.num_channels();
           }
+//          RTC_LOG(LS_ERROR) << "Data: " << frame.data();
 
           cb->SetRecordedBuffer(frame.data(), frame.sample_rate_hz() / 100);
           cb->DeliverRecordedData();

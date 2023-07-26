@@ -152,11 +152,13 @@ std::unique_ptr<AudioSource> create_source_microphone(
 
 // Creates a new `AudioSource` from system.
 std::unique_ptr<AudioSource> create_system_audio_source(AudioSourceManager& manager) {
+  RTC_LOG(LS_ERROR) << "create_system_audio_source";
   return std::make_unique<AudioSource>(manager.CreateSystemSource());
 }
 
 // Adds `AudioSource` to `AudioSourceManager`.
 void add_source(AudioSourceManager& manager, const AudioSource& source) {
+  RTC_LOG(LS_ERROR) << "add_source";
   manager.AddSource(source);
 }
 
@@ -170,6 +172,7 @@ std::unique_ptr<CustomAudioDeviceModule> create_custom_audio_device_module(
     Thread& worker_thread,
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory) {
+  RTC_LOG(LS_ERROR) << "create a custom adm";
   CustomAudioDeviceModule adm = worker_thread.BlockingCall(
       [audio_layer, &task_queue_factory, &worker_thread] {
         return ::CustomAudioDeviceModule::Create(
@@ -185,6 +188,7 @@ std::unique_ptr<CustomAudioDeviceModule> create_custom_audio_device_module(
 
 // Calls `AudioDeviceModule->Init()`.
 int32_t init_audio_device_module(const AudioDeviceModule& audio_device_module) {
+  RTC_LOG(LS_ERROR) << "Init ADM";
   return audio_device_module->Init();
 }
 
