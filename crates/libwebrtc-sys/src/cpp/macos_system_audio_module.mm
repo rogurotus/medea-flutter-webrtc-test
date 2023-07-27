@@ -21,6 +21,7 @@
   - (void)stream:(SCStream *)stream didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer ofType:(SCStreamOutputType)type
   {
     RTC_LOG(LS_ERROR) << "didOutputSampleBuffer";
+
     if (self.sc != NULL) {
       if (type == SCStreamOutputTypeScreen && !self.sc->audio_only) {
 //        screen_stream_video_update(self.sc, sampleBuffer);
@@ -204,13 +205,13 @@ bool SystemModule::Init() {
   RTC_LOG(LS_ERROR) << "Init 10";
 
   sc->disp = [[SCStream alloc] initWithFilter:content_filter configuration:sc->stream_properties
-                                     delegate:sc->capture_delegate];
+                                     delegate:screenCaptureDelegate];
   RTC_LOG(LS_ERROR) << "Init 11";
 //  [content_filter release];
 
   //add a dummy video stream output to silence errors from SCK. frames are dropped by the delegate
   NSError *error = nil;
-  BOOL did_add_output = [sc->disp addStreamOutput:sc->capture_delegate type:SCStreamOutputTypeScreen
+  BOOL did_add_output = [sc->disp addStreamOutput:screenCaptureDelegate type:SCStreamOutputTypeScreen
                                sampleHandlerQueue:nil
                                             error:&error];
   RTC_LOG(LS_ERROR) << "Init 12";
@@ -225,7 +226,7 @@ bool SystemModule::Init() {
   }
   RTC_LOG(LS_ERROR) << "Init 13";
 
-  did_add_output = [sc->disp addStreamOutput:sc->capture_delegate type:SCStreamOutputTypeAudio sampleHandlerQueue:nil
+  did_add_output = [sc->disp addStreamOutput:screenCaptureDelegate type:SCStreamOutputTypeAudio sampleHandlerQueue:nil
                                        error:&error];
   if (!did_add_output) {
     RTC_LOG(LS_ERROR) << "NOT did_add_output";
