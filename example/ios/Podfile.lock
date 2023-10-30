@@ -1,12 +1,12 @@
 PODS:
   - Flutter (1.0.0)
-  - instrumentisto-libwebrtc-bin (116.0.5845.110)
+  - instrumentisto-libwebrtc-bin (118.0.5993.88)
   - integration_test (0.0.1):
     - Flutter
   - libyuv-iOS (1.0.2)
-  - medea_flutter_webrtc (0.8.3-dev):
+  - medea_flutter_webrtc (0.8.3):
     - Flutter
-    - instrumentisto-libwebrtc-bin (= 116.0.5845.110)
+    - instrumentisto-libwebrtc-bin (= 118.0.5993.88)
     - libyuv-iOS
 
 DEPENDENCIES:
