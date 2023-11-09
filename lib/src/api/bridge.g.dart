@@ -252,7 +252,10 @@ abstract class MedeaFlutterWebrtcNative {
 
   /// Disposes the specified [`MediaStreamTrack`].
   Future<void> disposeTrack(
-      {required String trackId, required MediaType kind, dynamic hint});
+      {required String trackId,
+      int? peerId,
+      required MediaType kind,
+      dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kDisposeTrackConstMeta;
 
@@ -261,7 +264,10 @@ abstract class MedeaFlutterWebrtcNative {
   ///
   /// [0]: https://w3.org/TR/mediacapture-streams#dfn-readystate
   Future<TrackState> trackState(
-      {required String trackId, required MediaType kind, dynamic hint});
+      {required String trackId,
+      int? peerId,
+      required MediaType kind,
+      dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kTrackStateConstMeta;
 
@@ -271,6 +277,7 @@ abstract class MedeaFlutterWebrtcNative {
   /// [1]: https://w3.org/TR/mediacapture-streams#track-enabled
   Future<void> setTrackEnabled(
       {required String trackId,
+      int? peerId,
       required MediaType kind,
       required bool enabled,
       dynamic hint});
@@ -279,13 +286,19 @@ abstract class MedeaFlutterWebrtcNative {
 
   /// Clones the specified [`MediaStreamTrack`].
   Future<MediaStreamTrack> cloneTrack(
-      {required String trackId, required MediaType kind, dynamic hint});
+      {required String trackId,
+      int? peerId,
+      required MediaType kind,
+      dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kCloneTrackConstMeta;
 
   /// Registers an observer to the [`MediaStreamTrack`] events.
   Stream<TrackEvent> registerTrackObserver(
-      {required String trackId, required MediaType kind, dynamic hint});
+      {int? peerId,
+      required String trackId,
+      required MediaType kind,
+      dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kRegisterTrackObserverConstMeta;
 
@@ -304,6 +317,7 @@ abstract class MedeaFlutterWebrtcNative {
   /// an [`OnFrameCallbackInterface`].
   Stream<TextureEvent> createVideoSink(
       {required int sinkId,
+      int? peerId,
       required String trackId,
       required int callbackPtr,
       required int textureId,
@@ -737,6 +751,12 @@ class MediaStreamTrack {
   /// Unique identifier (GUID) of this [`MediaStreamTrack`].
   final String id;
 
+  /// Unique identifier of the [`PeerConnection`] from which this
+  /// [`MediaStreamTrack`] was received.
+  ///
+  /// Always [`None`] for local [`MediaStreamTrack`]s.
+  final int? peerId;
+
   /// Label identifying the track source, as in "internal microphone".
   final String deviceId;
 
@@ -751,6 +771,7 @@ class MediaStreamTrack {
 
   const MediaStreamTrack({
     required this.id,
+    this.peerId,
     required this.deviceId,
     required this.kind,
     required this.enabled,
@@ -2538,15 +2559,20 @@ class MedeaFlutterWebrtcNativeImpl implements MedeaFlutterWebrtcNative {
       );
 
   Future<void> disposeTrack(
-      {required String trackId, required MediaType kind, dynamic hint}) {
+      {required String trackId,
+      int? peerId,
+      required MediaType kind,
+      dynamic hint}) {
     var arg0 = _platform.api2wire_String(trackId);
-    var arg1 = api2wire_media_type(kind);
+    var arg1 = _platform.api2wire_opt_box_autoadd_u64(peerId);
+    var arg2 = api2wire_media_type(kind);
     return _platform.executeNormal(FlutterRustBridgeTask(
-      callFfi: (port_) => _platform.inner.wire_dispose_track(port_, arg0, arg1),
+      callFfi: (port_) =>
+          _platform.inner.wire_dispose_track(port_, arg0, arg1, arg2),
       parseSuccessData: _wire2api_unit,
       parseErrorData: null,
       constMeta: kDisposeTrackConstMeta,
-      argValues: [trackId, kind],
+      argValues: [trackId, peerId, kind],
       hint: hint,
     ));
   }
@@ -2554,19 +2580,24 @@ class MedeaFlutterWebrtcNativeImpl implements MedeaFlutterWebrtcNative {
   FlutterRustBridgeTaskConstMeta get kDisposeTrackConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
         debugName: "dispose_track",
-        argNames: ["trackId", "kind"],
+        argNames: ["trackId", "peerId", "kind"],
       );
 
   Future<TrackState> trackState(
-      {required String trackId, required MediaType kind, dynamic hint}) {
+      {required String trackId,
+      int? peerId,
+      required MediaType kind,
+      dynamic hint}) {
     var arg0 = _platform.api2wire_String(trackId);
-    var arg1 = api2wire_media_type(kind);
+    var arg1 = _platform.api2wire_opt_box_autoadd_u64(peerId);
+    var arg2 = api2wire_media_type(kind);
     return _platform.executeNormal(FlutterRustBridgeTask(
-      callFfi: (port_) => _platform.inner.wire_track_state(port_, arg0, arg1),
+      callFfi: (port_) =>
+          _platform.inner.wire_track_state(port_, arg0, arg1, arg2),
       parseSuccessData: _wire2api_track_state,
       parseErrorData: _wire2api_FrbAnyhowException,
       constMeta: kTrackStateConstMeta,
-      argValues: [trackId, kind],
+      argValues: [trackId, peerId, kind],
       hint: hint,
     ));
   }
@@ -2574,24 +2605,26 @@ class MedeaFlutterWebrtcNativeImpl implements MedeaFlutterWebrtcNative {
   FlutterRustBridgeTaskConstMeta get kTrackStateConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
         debugName: "track_state",
-        argNames: ["trackId", "kind"],
+        argNames: ["trackId", "peerId", "kind"],
       );
 
   Future<void> setTrackEnabled(
       {required String trackId,
+      int? peerId,
       required MediaType kind,
       required bool enabled,
       dynamic hint}) {
     var arg0 = _platform.api2wire_String(trackId);
-    var arg1 = api2wire_media_type(kind);
-    var arg2 = enabled;
+    var arg1 = _platform.api2wire_opt_box_autoadd_u64(peerId);
+    var arg2 = api2wire_media_type(kind);
+    var arg3 = enabled;
     return _platform.executeNormal(FlutterRustBridgeTask(
       callFfi: (port_) =>
-          _platform.inner.wire_set_track_enabled(port_, arg0, arg1, arg2),
+          _platform.inner.wire_set_track_enabled(port_, arg0, arg1, arg2, arg3),
       parseSuccessData: _wire2api_unit,
       parseErrorData: _wire2api_FrbAnyhowException,
       constMeta: kSetTrackEnabledConstMeta,
-      argValues: [trackId, kind, enabled],
+      argValues: [trackId, peerId, kind, enabled],
       hint: hint,
     ));
   }
@@ -2599,19 +2632,24 @@ class MedeaFlutterWebrtcNativeImpl implements MedeaFlutterWebrtcNative {
   FlutterRustBridgeTaskConstMeta get kSetTrackEnabledConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
         debugName: "set_track_enabled",
-        argNames: ["trackId", "kind", "enabled"],
+        argNames: ["trackId", "peerId", "kind", "enabled"],
       );
 
   Future<MediaStreamTrack> cloneTrack(
-      {required String trackId, required MediaType kind, dynamic hint}) {
+      {required String trackId,
+      int? peerId,
+      required MediaType kind,
+      dynamic hint}) {
     var arg0 = _platform.api2wire_String(trackId);
-    var arg1 = api2wire_media_type(kind);
+    var arg1 = _platform.api2wire_opt_box_autoadd_u64(peerId);
+    var arg2 = api2wire_media_type(kind);
     return _platform.executeNormal(FlutterRustBridgeTask(
-      callFfi: (port_) => _platform.inner.wire_clone_track(port_, arg0, arg1),
+      callFfi: (port_) =>
+          _platform.inner.wire_clone_track(port_, arg0, arg1, arg2),
       parseSuccessData: _wire2api_media_stream_track,
       parseErrorData: _wire2api_FrbAnyhowException,
       constMeta: kCloneTrackConstMeta,
-      argValues: [trackId, kind],
+      argValues: [trackId, peerId, kind],
       hint: hint,
     ));
   }
@@ -2619,20 +2657,24 @@ class MedeaFlutterWebrtcNativeImpl implements MedeaFlutterWebrtcNative {
   FlutterRustBridgeTaskConstMeta get kCloneTrackConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
         debugName: "clone_track",
-        argNames: ["trackId", "kind"],
+        argNames: ["trackId", "peerId", "kind"],
       );
 
   Stream<TrackEvent> registerTrackObserver(
-      {required String trackId, required MediaType kind, dynamic hint}) {
-    var arg0 = _platform.api2wire_String(trackId);
-    var arg1 = api2wire_media_type(kind);
+      {int? peerId,
+      required String trackId,
+      required MediaType kind,
+      dynamic hint}) {
+    var arg0 = _platform.api2wire_opt_box_autoadd_u64(peerId);
+    var arg1 = _platform.api2wire_String(trackId);
+    var arg2 = api2wire_media_type(kind);
     return _platform.executeStream(FlutterRustBridgeTask(
       callFfi: (port_) =>
-          _platform.inner.wire_register_track_observer(port_, arg0, arg1),
+          _platform.inner.wire_register_track_observer(port_, arg0, arg1, arg2),
       parseSuccessData: _wire2api_track_event,
       parseErrorData: _wire2api_FrbAnyhowException,
       constMeta: kRegisterTrackObserverConstMeta,
-      argValues: [trackId, kind],
+      argValues: [peerId, trackId, kind],
       hint: hint,
     ));
   }
@@ -2640,7 +2682,7 @@ class MedeaFlutterWebrtcNativeImpl implements MedeaFlutterWebrtcNative {
   FlutterRustBridgeTaskConstMeta get kRegisterTrackObserverConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
         debugName: "register_track_observer",
-        argNames: ["trackId", "kind"],
+        argNames: ["peerId", "trackId", "kind"],
       );
 
   Stream<void> setOnDeviceChanged({dynamic hint}) {
@@ -2662,21 +2704,23 @@ class MedeaFlutterWebrtcNativeImpl implements MedeaFlutterWebrtcNative {
 
   Stream<TextureEvent> createVideoSink(
       {required int sinkId,
+      int? peerId,
       required String trackId,
       required int callbackPtr,
       required int textureId,
       dynamic hint}) {
     var arg0 = _platform.api2wire_i64(sinkId);
-    var arg1 = _platform.api2wire_String(trackId);
-    var arg2 = _platform.api2wire_u64(callbackPtr);
-    var arg3 = _platform.api2wire_i64(textureId);
+    var arg1 = _platform.api2wire_opt_box_autoadd_u64(peerId);
+    var arg2 = _platform.api2wire_String(trackId);
+    var arg3 = _platform.api2wire_u64(callbackPtr);
+    var arg4 = _platform.api2wire_i64(textureId);
     return _platform.executeStream(FlutterRustBridgeTask(
-      callFfi: (port_) =>
-          _platform.inner.wire_create_video_sink(port_, arg0, arg1, arg2, arg3),
+      callFfi: (port_) => _platform.inner
+          .wire_create_video_sink(port_, arg0, arg1, arg2, arg3, arg4),
       parseSuccessData: _wire2api_texture_event,
       parseErrorData: _wire2api_FrbAnyhowException,
       constMeta: kCreateVideoSinkConstMeta,
-      argValues: [sinkId, trackId, callbackPtr, textureId],
+      argValues: [sinkId, peerId, trackId, callbackPtr, textureId],
       hint: hint,
     ));
   }
@@ -2684,7 +2728,7 @@ class MedeaFlutterWebrtcNativeImpl implements MedeaFlutterWebrtcNative {
   FlutterRustBridgeTaskConstMeta get kCreateVideoSinkConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
         debugName: "create_video_sink",
-        argNames: ["sinkId", "trackId", "callbackPtr", "textureId"],
+        argNames: ["sinkId", "peerId", "trackId", "callbackPtr", "textureId"],
       );
 
   Future<void> disposeVideoSink({required int sinkId, dynamic hint}) {
@@ -2948,13 +2992,14 @@ class MedeaFlutterWebrtcNativeImpl implements MedeaFlutterWebrtcNative {
 
   MediaStreamTrack _wire2api_media_stream_track(dynamic raw) {
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return MediaStreamTrack(
       id: _wire2api_String(arr[0]),
-      deviceId: _wire2api_String(arr[1]),
-      kind: _wire2api_media_type(arr[2]),
-      enabled: _wire2api_bool(arr[3]),
+      peerId: _wire2api_opt_box_autoadd_u64(arr[1]),
+      deviceId: _wire2api_String(arr[2]),
+      kind: _wire2api_media_type(arr[3]),
+      enabled: _wire2api_bool(arr[4]),
     );
   }
 
@@ -3467,6 +3512,11 @@ class MedeaFlutterWebrtcNativePlatform
   }
 
   @protected
+  ffi.Pointer<ffi.Uint64> api2wire_box_autoadd_u64(int raw) {
+    return inner.new_box_autoadd_u64_0(api2wire_u64(raw));
+  }
+
+  @protected
   ffi.Pointer<wire_VideoConstraints> api2wire_box_autoadd_video_constraints(
       VideoConstraints raw) {
     final ptr = inner.new_box_autoadd_video_constraints_0();
@@ -3510,6 +3560,11 @@ class MedeaFlutterWebrtcNativePlatform
   @protected
   ffi.Pointer<ffi.Int32> api2wire_opt_box_autoadd_i32(int? raw) {
     return raw == null ? ffi.nullptr : api2wire_box_autoadd_i32(raw);
+  }
+
+  @protected
+  ffi.Pointer<ffi.Uint64> api2wire_opt_box_autoadd_u64(int? raw) {
+    return raw == null ? ffi.nullptr : api2wire_box_autoadd_u64(raw);
   }
 
   @protected
@@ -4324,11 +4379,13 @@ class MedeaFlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
   void wire_dispose_track(
     int port_,
     ffi.Pointer<wire_uint_8_list> track_id,
+    ffi.Pointer<ffi.Uint64> peer_id,
     int kind,
   ) {
     return _wire_dispose_track(
       port_,
       track_id,
+      peer_id,
       kind,
     );
   }
@@ -4336,18 +4393,21 @@ class MedeaFlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
   late final _wire_dispose_trackPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
-              ffi.Int32)>>('wire_dispose_track');
-  late final _wire_dispose_track = _wire_dispose_trackPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>, int)>();
+              ffi.Pointer<ffi.Uint64>, ffi.Int32)>>('wire_dispose_track');
+  late final _wire_dispose_track = _wire_dispose_trackPtr.asFunction<
+      void Function(
+          int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<ffi.Uint64>, int)>();
 
   void wire_track_state(
     int port_,
     ffi.Pointer<wire_uint_8_list> track_id,
+    ffi.Pointer<ffi.Uint64> peer_id,
     int kind,
   ) {
     return _wire_track_state(
       port_,
       track_id,
+      peer_id,
       kind,
     );
   }
@@ -4355,19 +4415,22 @@ class MedeaFlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
   late final _wire_track_statePtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
-              ffi.Int32)>>('wire_track_state');
-  late final _wire_track_state = _wire_track_statePtr
-      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>, int)>();
+              ffi.Pointer<ffi.Uint64>, ffi.Int32)>>('wire_track_state');
+  late final _wire_track_state = _wire_track_statePtr.asFunction<
+      void Function(
+          int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<ffi.Uint64>, int)>();
 
   void wire_set_track_enabled(
     int port_,
     ffi.Pointer<wire_uint_8_list> track_id,
+    ffi.Pointer<ffi.Uint64> peer_id,
     int kind,
     bool enabled,
   ) {
     return _wire_set_track_enabled(
       port_,
       track_id,
+      peer_id,
       kind,
       enabled,
     );
@@ -4375,19 +4438,26 @@ class MedeaFlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
 
   late final _wire_set_track_enabledPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>, ffi.Int32,
+          ffi.Void Function(
+              ffi.Int64,
+              ffi.Pointer<wire_uint_8_list>,
+              ffi.Pointer<ffi.Uint64>,
+              ffi.Int32,
               ffi.Bool)>>('wire_set_track_enabled');
   late final _wire_set_track_enabled = _wire_set_track_enabledPtr.asFunction<
-      void Function(int, ffi.Pointer<wire_uint_8_list>, int, bool)>();
+      void Function(int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<ffi.Uint64>,
+          int, bool)>();
 
   void wire_clone_track(
     int port_,
     ffi.Pointer<wire_uint_8_list> track_id,
+    ffi.Pointer<ffi.Uint64> peer_id,
     int kind,
   ) {
     return _wire_clone_track(
       port_,
       track_id,
+      peer_id,
       kind,
     );
   }
@@ -4395,17 +4465,20 @@ class MedeaFlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
   late final _wire_clone_trackPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
-              ffi.Int32)>>('wire_clone_track');
-  late final _wire_clone_track = _wire_clone_trackPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>, int)>();
+              ffi.Pointer<ffi.Uint64>, ffi.Int32)>>('wire_clone_track');
+  late final _wire_clone_track = _wire_clone_trackPtr.asFunction<
+      void Function(
+          int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<ffi.Uint64>, int)>();
 
   void wire_register_track_observer(
     int port_,
+    ffi.Pointer<ffi.Uint64> peer_id,
     ffi.Pointer<wire_uint_8_list> track_id,
     int kind,
   ) {
     return _wire_register_track_observer(
       port_,
+      peer_id,
       track_id,
       kind,
     );
@@ -4413,10 +4486,15 @@ class MedeaFlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
 
   late final _wire_register_track_observerPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
+          ffi.Void Function(
+              ffi.Int64,
+              ffi.Pointer<ffi.Uint64>,
+              ffi.Pointer<wire_uint_8_list>,
               ffi.Int32)>>('wire_register_track_observer');
-  late final _wire_register_track_observer = _wire_register_track_observerPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>, int)>();
+  late final _wire_register_track_observer =
+      _wire_register_track_observerPtr.asFunction<
+          void Function(int, ffi.Pointer<ffi.Uint64>,
+              ffi.Pointer<wire_uint_8_list>, int)>();
 
   void wire_set_on_device_changed(
     int port_,
@@ -4435,6 +4513,7 @@ class MedeaFlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
   void wire_create_video_sink(
     int port_,
     int sink_id,
+    ffi.Pointer<ffi.Uint64> peer_id,
     ffi.Pointer<wire_uint_8_list> track_id,
     int callback_ptr,
     int texture_id,
@@ -4442,6 +4521,7 @@ class MedeaFlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
     return _wire_create_video_sink(
       port_,
       sink_id,
+      peer_id,
       track_id,
       callback_ptr,
       texture_id,
@@ -4450,10 +4530,16 @@ class MedeaFlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
 
   late final _wire_create_video_sinkPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64, ffi.Int64, ffi.Pointer<wire_uint_8_list>,
-              ffi.Uint64, ffi.Int64)>>('wire_create_video_sink');
+          ffi.Void Function(
+              ffi.Int64,
+              ffi.Int64,
+              ffi.Pointer<ffi.Uint64>,
+              ffi.Pointer<wire_uint_8_list>,
+              ffi.Uint64,
+              ffi.Int64)>>('wire_create_video_sink');
   late final _wire_create_video_sink = _wire_create_video_sinkPtr.asFunction<
-      void Function(int, int, ffi.Pointer<wire_uint_8_list>, int, int)>();
+      void Function(int, int, ffi.Pointer<ffi.Uint64>,
+          ffi.Pointer<wire_uint_8_list>, int, int)>();
 
   void wire_dispose_video_sink(
     int port_,
@@ -4587,6 +4673,20 @@ class MedeaFlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
   late final _new_box_autoadd_rtc_configuration_0 =
       _new_box_autoadd_rtc_configuration_0Ptr
           .asFunction<ffi.Pointer<wire_RtcConfiguration> Function()>();
+
+  ffi.Pointer<ffi.Uint64> new_box_autoadd_u64_0(
+    int value,
+  ) {
+    return _new_box_autoadd_u64_0(
+      value,
+    );
+  }
+
+  late final _new_box_autoadd_u64_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Uint64> Function(ffi.Uint64)>>(
+          'new_box_autoadd_u64_0');
+  late final _new_box_autoadd_u64_0 = _new_box_autoadd_u64_0Ptr
+      .asFunction<ffi.Pointer<ffi.Uint64> Function(int)>();
 
   ffi.Pointer<wire_VideoConstraints> new_box_autoadd_video_constraints_0() {
     return _new_box_autoadd_video_constraints_0();
