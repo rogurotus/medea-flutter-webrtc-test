@@ -25,22 +25,23 @@
 #include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/thread.h"
 #include "rtc_base/thread_annotations.h"
+#include <chrono>
 
 #if defined(WEBRTC_USE_X11)
 #include <X11/Xlib.h>
 #endif
 
-class OpenALPlayoutADM : public webrtc::AudioDeviceModuleImpl {
+class OpenALAudioDeviceModule : public webrtc::AudioDeviceModuleImpl {
  public:
-  OpenALPlayoutADM(AudioLayer audio_layer,
+  OpenALAudioDeviceModule(AudioLayer audio_layer,
                    webrtc::TaskQueueFactory* task_queue_factory);
-  ~OpenALPlayoutADM();
+  ~OpenALAudioDeviceModule();
 
-  static rtc::scoped_refptr<OpenALPlayoutADM> Create(
+  static rtc::scoped_refptr<OpenALAudioDeviceModule> Create(
       AudioLayer audio_layer,
       webrtc::TaskQueueFactory* task_queue_factory);
 
-  static rtc::scoped_refptr<OpenALPlayoutADM> CreateForTest(
+  static rtc::scoped_refptr<OpenALAudioDeviceModule> CreateForTest(
       AudioLayer audio_layer,
       webrtc::TaskQueueFactory* task_queue_factory);
 
@@ -77,6 +78,36 @@ class OpenALPlayoutADM : public webrtc::AudioDeviceModuleImpl {
   int32_t SpeakerMute(bool* enabled) const override;
   int32_t RegisterAudioCallback(webrtc::AudioTransport* audioCallback) override;
 
+  // Caprute control.
+  int16_t RecordingDevices() override;
+  int32_t RecordingDeviceName(uint16_t index,
+                              char name[webrtc::kAdmMaxDeviceNameSize],
+                              char guid[webrtc::kAdmMaxGuidSize]) override;
+	int32_t SetRecordingDevice(uint16_t index) override;
+	int32_t SetRecordingDevice(WindowsDeviceType device) override;
+  int32_t RecordingIsAvailable(bool* available) override;
+  int32_t InitRecording() override;
+  bool RecordingIsInitialized() const override;
+  int32_t StartRecording() override;
+  int32_t StopRecording() override;
+  bool Recording() const override;
+  int32_t InitMicrophone() override;
+  bool MicrophoneIsInitialized() const override;
+
+  int32_t MicrophoneVolumeIsAvailable(bool* available) override;
+  int32_t SetMicrophoneVolume(uint32_t volume) override;
+  int32_t MicrophoneVolume(uint32_t* volume) const override;
+  int32_t MaxMicrophoneVolume(uint32_t* maxVolume) const override;
+  int32_t MinMicrophoneVolume(uint32_t* minVolume) const override;
+
+  int32_t MicrophoneMuteIsAvailable(bool* available) override;
+  int32_t SetMicrophoneMute(bool enable) override;
+  int32_t MicrophoneMute(bool* enabled) const override;
+
+  int32_t StereoRecordingIsAvailable(bool* available) const override;
+  int32_t SetStereoRecording(bool enable) override;
+  int32_t StereoRecording(bool* enabled) const override;
+
  private:
   struct Data;
 
@@ -107,6 +138,21 @@ class OpenALPlayoutADM : public webrtc::AudioDeviceModuleImpl {
 
   void processPlayoutQueued();
 
+  void startCaptureOnThread();
+  void stopCaptureOnThread();
+	int restartRecording();
+	void openRecordingDevice();
+  void closeRecordingDevice();
+  void processRecordingData();
+  bool processRecordedPart(bool firstInCycle);
+  std::chrono::milliseconds countExactQueuedMsForLatency(
+      std::chrono::time_point<std::chrono::steady_clock> now,
+      bool playing);
+  std::chrono::milliseconds queryRecordingLatencyMs();
+  void restartRecordingQueued();
+  bool validateRecordingDeviceId();
+  void processRecordingQueued();
+
   rtc::Thread* _thread = nullptr;
   std::string _playoutDeviceId;
   bool _playoutInitialized = false;
@@ -116,5 +162,15 @@ class OpenALPlayoutADM : public webrtc::AudioDeviceModuleImpl {
   ALCcontext* _playoutContext = nullptr;
   ALCdevice* _playoutDevice = nullptr;
 
-  std::recursive_mutex _mutex;
+  ALCdevice *_recordingDevice = nullptr;
+	std::string _recordingDeviceId;
+	std::chrono::milliseconds _recordingLatency = std::chrono::milliseconds(0);
+  std::chrono::milliseconds _playoutLatency = std::chrono::milliseconds(0);
+	bool _recordingInitialized = false;
+	bool _recordingFailed = false;
+
+	bool _microphoneInitialized = false;
+
+  std::recursive_mutex _playout_mutex;
+  std::recursive_mutex _record_mutex;
 };
