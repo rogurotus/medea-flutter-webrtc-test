@@ -241,6 +241,9 @@ class _NativeVideoRendererFFI extends NativeVideoRenderer {
         renderVideo: renderVideo,
       );
 
+      if (width != 0 && height != 0) {
+        onCanPlay?.call();
+      }
       onResize?.call();
     } else if (event is ffi.TextureEvent_OnFirstFrameRendered) {
       value = value.copyWith(renderVideo: renderVideo);
