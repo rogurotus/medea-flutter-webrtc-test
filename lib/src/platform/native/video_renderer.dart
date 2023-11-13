@@ -144,11 +144,13 @@ class _NativeVideoRendererChannel extends NativeVideoRenderer {
           renderVideo: renderVideo,
         );
 
+        if (width != 0 && height != 0) {
+          onCanPlay?.call();
+        }
         onResize?.call();
         break;
       case 'onFirstFrameRendered':
         value = value.copyWith(renderVideo: renderVideo);
-        onCanPlay?.call();
         break;
     }
   }
