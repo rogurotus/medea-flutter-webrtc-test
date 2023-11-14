@@ -263,12 +263,17 @@ class FlutterRtcVideoRenderer: NSObject, FlutterTexture, RTCVideoRenderer {
       self.frameHeight = buffer.height
       self.frameRotation = rotation
 
-      self.broadcastEventObserver().onTextureChange(
-        id: self.textureId,
-        height: self.frameHeight,
-        width: self.frameWidth,
-        rotation: self.frameRotation
-      )
+      let frameWidth = self.frameWidth;
+      let frameHeight = self.frameHeight;
+
+      DispatchQueue.main.async {
+        self.broadcastEventObserver().onTextureChange(
+          id: self.textureId,
+          height: frameHeight,
+          width: frameWidth,
+          rotation: rotation
+        )
+      }
     }
 
     if self.pixelBuffer == nil {
@@ -300,8 +305,10 @@ class FlutterRtcVideoRenderer: NSObject, FlutterTexture, RTCVideoRenderer {
     )
 
     if !self.isFirstFrameRendered {
-      self.broadcastEventObserver().onFirstFrameRendered(id: self.textureId)
       self.isFirstFrameRendered = true
+      DispatchQueue.main.async {
+        self.broadcastEventObserver().onFirstFrameRendered(id: self.textureId)
+      }
     }
     self.rendererLock.unlock()
 
