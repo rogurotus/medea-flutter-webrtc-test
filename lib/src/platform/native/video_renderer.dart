@@ -146,6 +146,7 @@ class _NativeVideoRendererChannel extends NativeVideoRenderer {
 
         if (width != 0 && height != 0) {
           onCanPlay?.call();
+          onCanPlay = null;
         }
         onResize?.call();
         break;
