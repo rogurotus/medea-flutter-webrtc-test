@@ -263,8 +263,8 @@ class FlutterRtcVideoRenderer: NSObject, FlutterTexture, RTCVideoRenderer {
       self.frameHeight = buffer.height
       self.frameRotation = rotation
 
-      let frameWidth = self.frameWidth;
-      let frameHeight = self.frameHeight;
+      let frameWidth = self.frameWidth
+      let frameHeight = self.frameHeight
 
       DispatchQueue.main.async {
         self.broadcastEventObserver().onTextureChange(
