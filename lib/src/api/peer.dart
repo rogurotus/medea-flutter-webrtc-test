@@ -440,7 +440,7 @@ class _PeerConnectionFFI extends PeerConnection {
       IceTransportType iceType, List<IceServer> iceServers) async {
     var cfg = ffi.RtcConfiguration(
         iceTransportPolicy: ffi.IceTransportsType.values[iceType.index],
-        bundlePolicy: ffi.BundlePolicy.MaxBundle,
+        bundlePolicy: ffi.BundlePolicy.maxBundle,
         iceServers: iceServers
             .map((server) => ffi.RtcIceServer(
                 urls: server.urls,
@@ -461,8 +461,8 @@ class _PeerConnectionFFI extends PeerConnection {
   /// creating a new [PeerConnection].
   final Completer _initialized = Completer();
 
-  /// ID of the native `PeerConnection`.
-  int? _id;
+  /// Native side peer connection.
+  ffi.ArcPeerConnection? _peer;
 
   /// [Stream] for handling [PeerConnection] `event`s.
   Stream<ffi.PeerConnectionEvent>? _stream;
@@ -480,7 +480,7 @@ class _PeerConnectionFFI extends PeerConnection {
   /// side.
   void eventListener(ffi.PeerConnectionEvent event) {
     if (event is ffi.PeerConnectionEvent_PeerCreated) {
-      _id = event.id;
+      _peer = event.peer;
       _initialized.complete();
       return;
     } else if (event is ffi.PeerConnectionEvent_IceCandidate) {
@@ -526,7 +526,7 @@ class _PeerConnectionFFI extends PeerConnection {
     _checkNotClosed();
 
     await api!.addIceCandidate(
-        peerId: _id!,
+        peer: _peer!,
         candidate: candidate.candidate,
         sdpMid: candidate.sdpMid,
         sdpMlineIndex: candidate.sdpMLineIndex);
@@ -537,10 +537,27 @@ class _PeerConnectionFFI extends PeerConnection {
       MediaKind mediaType, RtpTransceiverInit init) async {
     _checkNotClosed();
 
+    var ffiInit = await api!.createTransceiverInit();
+    await api!.setTransceiverInitDirection(
+        init: ffiInit,
+        direction: ffi.RtpTransceiverDirection.values[init.direction.index]);
+
+    for (var encoding in init.sendEncodings) {
+      var ffiEncoding = await api!.createEncodingParameters(
+          rid: encoding.rid,
+          active: encoding.active,
+          maxBitrate: encoding.maxBitrate,
+          maxFramerate: encoding.maxFramerate,
+          scaleResolutionDownBy: encoding.scaleResolutionDownBy,
+          scalabilityMode: encoding.scalabilityMode);
+      await api!
+          .addTransceiverInitSendEncoding(init: ffiInit, enc: ffiEncoding);
+    }
+
     var transceiver = RtpTransceiver.fromFFI(await api!.addTransceiver(
-        peerId: _id!,
+        peer: _peer!,
         mediaType: ffi.MediaType.values[mediaType.index],
-        direction: ffi.RtpTransceiverDirection.values[init.direction.index]));
+        init: ffiInit));
     _transceivers.add(transceiver);
 
     return transceiver;
@@ -553,7 +570,8 @@ class _PeerConnectionFFI extends PeerConnection {
     _onIceCandidate = null;
     _closed = true;
     await super.close();
-    await api!.disposePeerConnection(peerId: _id!);
+    _peer!.move = true;
+    await api!.disposePeerConnection(peer: _peer!);
   }
 
   @override
@@ -561,7 +579,7 @@ class _PeerConnectionFFI extends PeerConnection {
     _checkNotClosed();
 
     var res = await api!.createAnswer(
-        peerId: _id!,
+        peer: _peer!,
         voiceActivityDetection: true,
         iceRestart: false,
         useRtpMux: true);
@@ -574,7 +592,7 @@ class _PeerConnectionFFI extends PeerConnection {
     _checkNotClosed();
 
     var res = await api!.createOffer(
-        peerId: _id!,
+        peer: _peer!,
         voiceActivityDetection: true,
         iceRestart: false,
         useRtpMux: true);
@@ -586,7 +604,7 @@ class _PeerConnectionFFI extends PeerConnection {
   Future<List<RtpTransceiver>> getTransceivers() async {
     _checkNotClosed();
 
-    var transceivers = (await api!.getTransceivers(peerId: _id!))
+    var transceivers = (await api!.getTransceivers(peer: _peer!))
         .map((transceiver) => RtpTransceiver.fromFFI(transceiver))
         .toList();
     _transceivers.addAll(transceivers);
@@ -598,7 +616,7 @@ class _PeerConnectionFFI extends PeerConnection {
   Future<void> restartIce() async {
     _checkNotClosed();
 
-    return await api!.restartIce(peerId: _id!);
+    return await api!.restartIce(peer: _peer!);
   }
 
   @override
@@ -606,7 +624,7 @@ class _PeerConnectionFFI extends PeerConnection {
     _checkNotClosed();
 
     await api!.setLocalDescription(
-        peerId: _id!,
+        peer: _peer!,
         kind: ffi.SdpType.values[description.type.index],
         sdp: description.description);
     await _syncTransceiversMids();
@@ -617,7 +635,7 @@ class _PeerConnectionFFI extends PeerConnection {
     _checkNotClosed();
 
     await api!.setRemoteDescription(
-        peerId: _id!,
+        peer: _peer!,
         kind: ffi.SdpType.values[description.type.index],
         sdp: description.description);
     await _syncTransceiversMids();
@@ -625,7 +643,7 @@ class _PeerConnectionFFI extends PeerConnection {
 
   @override
   Future<List<RtcStats>> getStats() async {
-    var stats = await api!.getPeerStats(peerId: _id!);
+    var stats = await api!.getPeerStats(peer: _peer!);
     List<RtcStats> result = List.empty(growable: true);
 
     for (var s in stats) {

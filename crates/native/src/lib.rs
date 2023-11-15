@@ -4,6 +4,7 @@ mod api;
 #[allow(
     clippy::default_trait_access,
     clippy::let_underscore_untyped,
+    clippy::ptr_as_ptr,
     clippy::semicolon_if_nothing_returned,
     clippy::too_many_lines,
     clippy::wildcard_imports,
@@ -29,11 +30,14 @@ use dashmap::DashMap;
 use libwebrtc_sys as sys;
 use threadpool::ThreadPool;
 
-use crate::video_sink::Id as VideoSinkId;
+use crate::{user_media::TrackOrigin, video_sink::Id as VideoSinkId};
 
 #[doc(inline)]
 pub use crate::{
-    pc::{PeerConnection, PeerConnectionId},
+    pc::{
+        PeerConnection, RtpEncodingParameters, RtpTransceiver,
+        RtpTransceiverInit,
+    },
     user_media::{
         AudioDeviceId, AudioDeviceModule, AudioTrack, AudioTrackId,
         MediaStreamId, VideoDeviceId, VideoDeviceInfo, VideoSource, VideoTrack,
@@ -52,12 +56,11 @@ pub(crate) fn next_id() -> u64 {
 
 /// Global context for an application.
 struct Webrtc {
-    peer_connections: HashMap<PeerConnectionId, PeerConnection>,
     video_device_info: VideoDeviceInfo,
     video_sources: HashMap<VideoDeviceId, Arc<VideoSource>>,
-    video_tracks: Arc<DashMap<VideoTrackId, VideoTrack>>,
-    audio_source: Option<(Arc<sys::AudioSourceInterface>, sys::AudioSource)>,
-    audio_tracks: Arc<DashMap<AudioTrackId, AudioTrack>>,
+    video_tracks: Arc<DashMap<(VideoTrackId, TrackOrigin), VideoTrack>>,
+    audio_source: Option<Arc<sys::AudioSourceInterface>>,
+    audio_tracks: Arc<DashMap<(AudioTrackId, TrackOrigin), AudioTrack>>,
     video_sinks: HashMap<VideoSinkId, VideoSink>,
     ap: sys::AudioProcessing,
 
@@ -117,7 +120,6 @@ impl Webrtc {
             video_tracks: Arc::new(DashMap::new()),
             audio_source: None,
             audio_tracks: Arc::new(DashMap::new()),
-            peer_connections: HashMap::new(),
             video_sinks: HashMap::new(),
             callback_pool: ThreadPool::new(4),
         })

@@ -13,17 +13,15 @@ use libwebrtc_sys as sys;
 use pulse::mainloop::standard::IterateResult;
 
 #[cfg(target_os = "windows")]
-use winapi::{
-    shared::{
-        minwindef::{HINSTANCE, LPARAM, LRESULT, UINT, WPARAM},
-        windef::HWND,
-    },
-    um::{
-        dbt::DBT_DEVNODES_CHANGED,
-        winuser::{
+use windows::{
+    core::PCWSTR,
+    Win32::{
+        Foundation::{HMODULE, HWND, LPARAM, LRESULT, WPARAM},
+        UI::WindowsAndMessaging::{
             CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW,
-            RegisterClassExW, ShowWindow, TranslateMessage, CW_USEDEFAULT, MSG,
-            SW_HIDE, WM_DEVICECHANGE, WM_QUIT, WNDCLASSEXW, WS_ICONIC,
+            RegisterClassExW, ShowWindow, TranslateMessage, CW_USEDEFAULT,
+            DBT_DEVNODES_CHANGED, MSG, SW_HIDE, WINDOW_EX_STYLE,
+            WM_DEVICECHANGE, WM_QUIT, WNDCLASSEXW, WS_ICONIC,
         },
     },
 };
@@ -54,7 +52,7 @@ pub fn enumerate_displays() -> Vec<api::MediaDisplayInfo> {
 /// Struct containing the current number of media devices and some tools to
 /// enumerate them (such as [`AudioDeviceModule`] and [`VideoDeviceInfo`]), and
 /// generate event with [`OnDeviceChangeCallback`], if the last is needed.
-struct DeviceState {
+pub struct DeviceState {
     cb: StreamSink<()>,
     adm: AudioDeviceModule,
     _thread: sys::Thread,
@@ -65,7 +63,7 @@ struct DeviceState {
 
 impl DeviceState {
     /// Creates a new [`DeviceState`].
-    fn new(
+    pub fn new(
         cb: StreamSink<()>,
         tq: &mut sys::TaskQueueFactory,
     ) -> anyhow::Result<Self> {
@@ -311,17 +309,9 @@ impl Webrtc {
     ///
     /// Only one callback can be set at a time, so the previous one will be
     /// dropped, if any.
-    pub fn set_on_device_changed(
-        &mut self,
-        cb: StreamSink<()>,
-    ) -> anyhow::Result<()> {
-        let prev = ON_DEVICE_CHANGE.swap(
-            Box::into_raw(Box::new(DeviceState::new(
-                cb,
-                &mut self.task_queue_factory,
-            )?)),
-            Ordering::SeqCst,
-        );
+    pub fn set_on_device_changed(device_state: DeviceState) {
+        let prev = ON_DEVICE_CHANGE
+            .swap(Box::into_raw(Box::new(device_state)), Ordering::SeqCst);
 
         if prev.is_null() {
             unsafe {
@@ -332,8 +322,6 @@ impl Webrtc {
                 drop(Box::from_raw(prev));
             }
         }
-
-        Ok(())
     }
 }
 
@@ -462,8 +450,8 @@ pub mod linux_device_change {
         impl AudioMonitor {
             /// Creates a new [`AudioMonitor`].
             pub fn new() -> anyhow::Result<Self> {
-                use Facility::{Sink, Source};
-                use Operation::{New, Removed};
+                use Facility::{Server, Sink, Source};
+                use Operation::{Changed, New, Removed};
 
                 let mut main_loop = Mainloop::new()
                     .ok_or_else(|| anyhow!("PulseAudio mainloop is `null`"))?;
@@ -475,18 +463,25 @@ pub mod linux_device_change {
 
                 context.set_subscribe_callback(Some(Box::new(
                     |facility, operation, _| {
-                        if let Some(New | Removed) = operation {
-                            if let Some(Sink | Source) = facility {
+                        if let Some(New | Removed | Changed) = operation {
+                            if let Some(Sink | Source | Server) = facility {
                                 let state =
                                     ON_DEVICE_CHANGE.load(Ordering::SeqCst);
                                 if !state.is_null() {
                                     let device_state = unsafe { &mut *state };
-                                    let new_count =
-                                        device_state.count_audio_devices();
 
-                                    if device_state.audio_count != new_count {
-                                        device_state.set_audio_count(new_count);
+                                    if facility == Some(Server) {
                                         device_state.on_device_change();
+                                    } else {
+                                        let new_count =
+                                            device_state.count_audio_devices();
+
+                                        if device_state.audio_count != new_count
+                                        {
+                                            device_state
+                                                .set_audio_count(new_count);
+                                            device_state.on_device_change();
+                                        }
                                     }
                                 }
                             }
@@ -519,7 +514,9 @@ pub mod linux_device_change {
                     }
                 }
 
-                let mask = InterestMaskSet::SOURCE | InterestMaskSet::SINK;
+                let mask = InterestMaskSet::SOURCE
+                    | InterestMaskSet::SINK
+                    | InterestMaskSet::SERVER;
                 context.subscribe(mask, |_| {});
 
                 Ok(Self { context, main_loop })
@@ -548,6 +545,114 @@ pub unsafe fn init() {
 }
 
 #[cfg(target_os = "windows")]
+#[allow(unused_must_use)]
+mod win_default_device_callback {
+    //! Implementation of the default audio output device changes detector for
+    //! Windows.
+
+    use std::{
+        ptr,
+        sync::atomic::{AtomicPtr, Ordering},
+    };
+
+    use windows::{
+        core::{Result, PCWSTR},
+        Win32::{
+            Media::Audio::{
+                EDataFlow, ERole, IMMDeviceEnumerator, IMMNotificationClient,
+                IMMNotificationClient_Impl, MMDeviceEnumerator,
+            },
+            System::Com::{CoCreateInstance, CLSCTX_ALL},
+            UI::Shell::PropertiesSystem::PROPERTYKEY,
+        },
+    };
+
+    /// Storage for an [`IMMDeviceEnumerator`] used for detecting default audio
+    /// device changes.
+    static AUDIO_ENDPOINT_ENUMERATOR: AtomicPtr<IMMDeviceEnumerator> =
+        AtomicPtr::new(ptr::null_mut());
+
+    /// Storage for an [`EMMNotificationClient`] used for detecting default
+    /// audio device changes.
+    static AUDIO_ENDPOINT_CALLBACK: AtomicPtr<IMMNotificationClient> =
+        AtomicPtr::new(ptr::null_mut());
+
+    /// Implementation of an [`IMMNotificationClient`] used for detecting
+    /// default audio output device changes.
+    #[windows::core::implement(IMMNotificationClient)]
+    struct AudioEndpointCallback;
+
+    #[allow(non_snake_case)]
+    impl IMMNotificationClient_Impl for AudioEndpointCallback {
+        fn OnDeviceStateChanged(&self, _: &PCWSTR, _: u32) -> Result<()> {
+            Ok(())
+        }
+
+        fn OnDeviceAdded(&self, _: &PCWSTR) -> Result<()> {
+            Ok(())
+        }
+
+        fn OnDeviceRemoved(&self, _: &PCWSTR) -> Result<()> {
+            Ok(())
+        }
+
+        fn OnDefaultDeviceChanged(
+            &self,
+            _: EDataFlow,
+            role: ERole,
+            _: &PCWSTR,
+        ) -> Result<()> {
+            if role == ERole(0) {
+                unsafe {
+                    let state = super::ON_DEVICE_CHANGE.load(Ordering::SeqCst);
+
+                    if !state.is_null() {
+                        let device_state = &mut *state;
+                        device_state.on_device_change();
+                    }
+                }
+            }
+
+            Ok(())
+        }
+
+        fn OnPropertyValueChanged(
+            &self,
+            _pwstrdeviceid: &PCWSTR,
+            _key: &PROPERTYKEY,
+        ) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    /// Registers default audio output callback for Windows.
+    ///
+    /// Will call [`DeviceState::on_device_change`] callback whenever a default
+    /// audio output is changed.
+    pub fn register() {
+        unsafe {
+            let audio_endpoint_enumerator: IMMDeviceEnumerator =
+                CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
+                    .unwrap();
+            let audio_endpoint_callback: IMMNotificationClient =
+                AudioEndpointCallback.into();
+            audio_endpoint_enumerator
+                .RegisterEndpointNotificationCallback(&audio_endpoint_callback)
+                .unwrap();
+
+            AUDIO_ENDPOINT_ENUMERATOR.swap(
+                Box::into_raw(Box::new(audio_endpoint_enumerator)),
+                Ordering::SeqCst,
+            );
+            AUDIO_ENDPOINT_CALLBACK.swap(
+                Box::into_raw(Box::new(audio_endpoint_callback)),
+                Ordering::SeqCst,
+            );
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
 /// Creates a detached [`Thread`] creating and registering a system message
 /// window - [`HWND`].
 ///
@@ -556,18 +661,18 @@ pub unsafe fn init() {
     /// Message handler for an [`HWND`].
     unsafe extern "system" fn wndproc(
         hwnd: HWND,
-        msg: UINT,
+        msg: u32,
         wp: WPARAM,
         lp: LPARAM,
     ) -> LRESULT {
-        let mut result: LRESULT = 0;
+        let mut result: LRESULT = LRESULT(0);
 
         // The message that notifies an application of a change to the hardware
         // configuration of a device or the computer.
         if msg == WM_DEVICECHANGE {
             // The device event when a device has been added to or removed from
             // the system.
-            if DBT_DEVNODES_CHANGED == wp {
+            if DBT_DEVNODES_CHANGED as usize == wp.0 {
                 let state = ON_DEVICE_CHANGE.load(Ordering::SeqCst);
 
                 if !state.is_null() {
@@ -591,10 +696,12 @@ pub unsafe fn init() {
         result
     }
 
+    win_default_device_callback::register();
+
     thread::spawn(|| {
         let lpsz_class_name = OsStr::new("EventWatcher")
             .encode_wide()
-            .chain(Some(0).into_iter())
+            .chain(Some(0))
             .collect::<Vec<u16>>();
         let lpsz_class_name_ptr = lpsz_class_name.as_ptr();
 
@@ -602,37 +709,37 @@ pub unsafe fn init() {
         let class = WNDCLASSEXW {
             cbSize: mem::size_of::<WNDCLASSEXW>() as u32,
             lpfnWndProc: Some(wndproc),
-            lpszClassName: lpsz_class_name_ptr,
+            lpszClassName: PCWSTR(lpsz_class_name_ptr),
             ..WNDCLASSEXW::default()
         };
         RegisterClassExW(&class);
 
         let lp_window_name = OsStr::new("Notifier")
             .encode_wide()
-            .chain(Some(0).into_iter())
+            .chain(Some(0))
             .collect::<Vec<u16>>();
         let lp_window_name_ptr = lp_window_name.as_ptr();
 
         let hwnd = CreateWindowExW(
-            0,
+            WINDOW_EX_STYLE(0),
             class.lpszClassName,
-            lp_window_name_ptr,
+            PCWSTR::from_raw(lp_window_name_ptr),
             WS_ICONIC,
             0,
             0,
             CW_USEDEFAULT,
             0,
-            std::ptr::null_mut(),
-            std::ptr::null_mut(),
-            0 as HINSTANCE,
-            std::ptr::null_mut(),
+            None,
+            None,
+            HMODULE(0),
+            None,
         );
 
         ShowWindow(hwnd, SW_HIDE);
 
         let mut msg: MSG = mem::zeroed();
 
-        while GetMessageW(&mut msg, hwnd, 0, 0) > 0 {
+        while GetMessageW(&mut msg, hwnd, 0, 0).into() {
             if msg.message == WM_QUIT {
                 break;
             }

@@ -6,6 +6,39 @@ All user visible changes to this project will be documented in this file. This p
 
 
 
+## [0.8.3] · 2023-??-?? (unreleased)
+[0.8.3]: https://github.com/instrumentisto/medea-flutter-webrtc/tree/0.8.3
+
+[Diff](https://github.com/instrumentisto/medea-flutter-webrtc/compare/0.8.2...0.8.3)
+
+### Added
+
+- `RtpTransceiverInit.sendEncodings` field with `SendEncodingParameters`. ([#125])
+
+### Changed
+
+- Refactor Audio Device Module to use [OpenAL] library for playout. ([#117])
+- Fire `onDeviceChange` callback whenever an output audio device is changed in system settings on desktop platforms. ([#119], [#120])
+- Upgraded [libwebrtc] to [116.0.5845.110] version. ([#123])
+- `VideoRenderer.width` and `VideoRenderer.height` now take rotation into account. ([#124])
+
+### Fixed
+
+- Video renderer stretching a picture after rotation. ([#124])
+- Screen sharing leaking memory on [macOS]. ([#133])
+
+[#117]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/117
+[#119]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/119
+[#120]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/120
+[#123]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/123
+[#124]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/124
+[#125]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/125
+[#133]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/133
+[116.0.5845.110]: https://github.com/instrumentisto/libwebrtc-bin/releases/tag/116.0.5845.110
+
+
+
+
 ## [0.8.2] · 2023-06-09
 [0.8.2]: https://github.com/instrumentisto/medea-flutter-webrtc/tree/0.8.2
 
@@ -137,5 +170,6 @@ See [changelog in upstream repository](https://github.com/flutter-webrtc/flutter
 [libwebrtc]: https://github.com/instrumentisto/libwebrtc-bin
 [Linux]: https://www.linux.org
 [macOS]: https://www.apple.com/macos
-[Windows]: https://www.microsoft.com/windows
+[OpenAL]: https://github.com/kcat/openal-soft
 [Semantic Versioning 2.0.0]: https://semver.org
+[Windows]: https://www.microsoft.com/windows

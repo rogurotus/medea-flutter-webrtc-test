@@ -9,6 +9,7 @@ use std::{
     fs::File,
     io::{BufReader, BufWriter, Read, Write},
     path::{Path, PathBuf},
+    process::Command,
 };
 
 use anyhow::bail;
@@ -22,10 +23,19 @@ use walkdir::{DirEntry, WalkDir};
 /// [`libwebrtc-bin`]: https://github.com/instrumentisto/libwebrtc-bin
 static LIBWEBRTC_URL: &str =
     "https://github.com/instrumentisto/libwebrtc-bin/releases/download\
-                                                    /112.0.5615.165";
+                                                    /116.0.5845.110";
+
+/// URL for downloading `openal-soft` source code.
+static OPENAL_URL: &str =
+    "https://github.com/kcat/openal-soft/archive/refs/tags/1.23.1";
 
 fn main() -> anyhow::Result<()> {
+    let lib_dir = libpath()?;
+    if lib_dir.exists() {
+        fs::create_dir_all(&lib_dir)?;
+    }
     download_libwebrtc()?;
+    compile_openal()?;
 
     let path = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
     let libpath = libpath()?;
@@ -42,7 +52,8 @@ fn main() -> anyhow::Result<()> {
         .include(libpath.join("include"))
         .include(libpath.join("include/third_party/abseil-cpp"))
         .include(libpath.join("include/third_party/libyuv/include"))
-        .flag("-DNOMINMAX");
+        .flag("-DNOMINMAX")
+        .flag("-DWEBRTC_USE_H264");
 
     #[cfg(target_os = "windows")]
     build.flag("-DNDEBUG");
@@ -75,7 +86,8 @@ fn main() -> anyhow::Result<()> {
     }
     #[cfg(target_os = "windows")]
     {
-        build.flag("-DWEBRTC_WIN").flag("/std:c++17");
+        println!("cargo:rustc-link-lib=OpenAL32");
+        build.flag("-DWEBRTC_WIN").flag("/std:c++20");
     }
 
     #[cfg(feature = "fake_media")]
@@ -94,7 +106,7 @@ fn main() -> anyhow::Result<()> {
     println!("cargo:rerun-if-changed=src/bridge.rs");
     println!("cargo:rerun-if-changed=./lib");
     println!("cargo:rerun-if-env-changed=INSTALL_WEBRTC");
-    println!("cargo:rerun-if-env-changed=LIBWEBRTC_URL");
+    println!("cargo:rerun-if-env-changed=INSTALL_OPENAL");
 
     Ok(())
 }
@@ -108,19 +120,19 @@ fn get_target() -> anyhow::Result<String> {
 fn get_expected_libwebrtc_hash() -> anyhow::Result<&'static str> {
     Ok(match get_target()?.as_str() {
         "aarch64-unknown-linux-gnu" => {
-            "571cae61b5eb62e06fb75c4ef6d9c0d39453e2392dc64090dc3c8c0da51ebf39"
+            "1f14e07148664dc9a2eb92538fc59f426494fef1d3c7ad7ae207ba242d746c83"
         }
         "x86_64-unknown-linux-gnu" => {
-            "7f815516c6ce1bc5e4f2bcd68473507b65d421cde3d64386272d0a1306d7f754"
+            "c136d65e50cb87fe1ca60229aa142f475fd1c7efdf74241c5b425a383dbe2a12"
         }
         "aarch64-apple-darwin" => {
-            "9b43bf8b324122b571d0cbb0df74f8ba418560ea16d3fe8b23152702fc890971"
+            "9cba5075537d20660a16b7598f7a7ddeb81c4bf972e53e5dd8ea242ac28a663e"
         }
         "x86_64-apple-darwin" => {
-            "2982c0112635b06f69c85f7496e47f8e935989ffa1a49b03e88c32c26afe10de"
+            "43281abbc8dd85af563c1efaefdae30028f2ed507a358fc8974d78c8abc4ee24"
         }
         "x86_64-pc-windows-msvc" => {
-            "bcc46577a5575bfb2f1f0538d3a864088f464c1b24e628f81118806aee42a60d"
+            "7692e98789656ec4a3b291eb5d5cf56462be70f4f438c171fa76b5c45db2351d"
         }
         arch => return Err(anyhow::anyhow!("Unsupported target: {arch}")),
     })
@@ -131,6 +143,175 @@ fn libpath() -> anyhow::Result<PathBuf> {
     let target = get_target()?;
     let manifest_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
     Ok(manifest_path.join("lib").join(target))
+}
+
+/// Recursively copies `src` directory to the provided `dst` [`Path`].
+fn copy_dir_all(
+    src: impl AsRef<Path>,
+    dst: impl AsRef<Path>,
+) -> anyhow::Result<()> {
+    fs::create_dir_all(&dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        if ty.is_dir() {
+            copy_dir_all(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        } else {
+            fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        }
+    }
+    Ok(())
+}
+
+/// Returns a [`PathBuf`] to the OpenAL dynamic library destination within
+/// Flutter files.
+fn get_path_to_openal() -> anyhow::Result<PathBuf> {
+    let mut workspace_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
+    workspace_path.pop();
+    workspace_path.pop();
+
+    Ok(match get_target()?.as_str() {
+        "aarch64-apple-darwin" | "x86_64-apple-darwin" => {
+            workspace_path.join("macos").join("rust").join("lib")
+        }
+        "x86_64-unknown-linux-gnu" => workspace_path
+            .join("linux")
+            .join("rust")
+            .join("lib")
+            .join(get_target()?.as_str()),
+        "x86_64-pc-windows-msvc" => workspace_path
+            .join("windows")
+            .join("rust")
+            .join("lib")
+            .join(get_target()?.as_str()),
+        _ => return Err(anyhow::anyhow!("Platform isn't supported")),
+    })
+}
+
+/// Downloads and compiles OpenAL dynamic library.
+///
+/// Copies OpenAL headers and compiled library to the required locations.
+#[allow(clippy::too_many_lines)]
+fn compile_openal() -> anyhow::Result<()> {
+    let openal_version = OPENAL_URL.split('/').last().unwrap();
+    let manifest_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
+    let temp_dir = manifest_path.join("temp");
+    let openal_path = get_path_to_openal()?;
+
+    let archive = temp_dir.join(format!("{openal_version}.tar.gz"));
+
+    let is_already_installed = fs::metadata(
+        manifest_path
+            .join("lib")
+            .join(get_target()?.as_str())
+            .join("include")
+            .join("AL"),
+    )
+    .is_ok();
+    let is_install_openal =
+        env::var("INSTALL_OPENAL").as_deref().unwrap_or("0") == "0";
+
+    if is_install_openal && is_already_installed {
+        return Ok(());
+    }
+
+    if temp_dir.exists() {
+        fs::remove_dir_all(&temp_dir)?;
+    }
+    fs::create_dir_all(&temp_dir)?;
+
+    {
+        let mut resp = BufReader::new(reqwest::blocking::get(format!(
+            "{OPENAL_URL}/{openal_version}.tar.gz",
+        ))?);
+        let mut out_file = BufWriter::new(File::create(&archive)?);
+
+        let mut buffer = [0; 512];
+        loop {
+            let count = resp.read(&mut buffer)?;
+            if count == 0 {
+                break;
+            };
+            _ = out_file.write(&buffer[0..count])?;
+        }
+    }
+
+    let mut archive = Archive::new(GzDecoder::new(File::open(archive)?));
+    archive.unpack(&temp_dir)?;
+
+    let openal_src_path =
+        temp_dir.join(format!("openal-soft-{openal_version}"));
+
+    copy_dir_all(
+        openal_src_path.join("include"),
+        manifest_path
+            .join("lib")
+            .join(get_target()?.as_str())
+            .join("include"),
+    )
+    .unwrap();
+
+    let mut cmake_cmd = Command::new("cmake");
+    cmake_cmd.current_dir(&openal_src_path).args([
+        ".",
+        ".",
+        "-DCMAKE_BUILD_TYPE=Release",
+    ]);
+    #[cfg(target_os = "macos")]
+    cmake_cmd.arg("-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64");
+    drop(cmake_cmd.output()?);
+
+    drop(
+        Command::new("cmake")
+            .current_dir(&openal_src_path)
+            .args(["--build", ".", "--config", "Release"])
+            .output()?,
+    );
+
+    fs::create_dir_all(&openal_path)?;
+
+    match get_target()?.as_str() {
+        "aarch64-apple-darwin" | "x86_64-apple-darwin" => {
+            fs::copy(
+                openal_src_path.join("libopenal.dylib"),
+                openal_path.join("libopenal.1.dylib"),
+            )?;
+        }
+        "x86_64-unknown-linux-gnu" => {
+            _ = Command::new("strip")
+                .arg("libopenal.so.1")
+                .current_dir(&openal_src_path)
+                .output()?;
+            fs::copy(
+                openal_src_path.join("libopenal.so.1"),
+                openal_path.join("libopenal.so.1"),
+            )?;
+        }
+        "x86_64-pc-windows-msvc" => {
+            fs::copy(
+                openal_src_path.join("Release").join("OpenAL32.dll"),
+                openal_path.join("OpenAL32.dll"),
+            )?;
+            fs::copy(
+                openal_src_path.join("Release").join("OpenAL32.lib"),
+                openal_path.join("OpenAL32.lib"),
+            )?;
+            let path = manifest_path
+                .join("lib")
+                .join(get_target()?.as_str())
+                .join("release")
+                .join("OpenAL32.lib");
+            fs::copy(
+                openal_src_path.join("Release").join("OpenAL32.lib"),
+                path,
+            )?;
+        }
+        _ => (),
+    }
+
+    fs::remove_dir_all(&temp_dir)?;
+
+    Ok(())
 }
 
 /// Downloads and unpacks compiled `libwebrtc` library.
@@ -204,12 +385,6 @@ fn download_libwebrtc() -> anyhow::Result<()> {
             bail!("SHA-256 checksum doesn't match");
         }
     }
-
-    // Clean up `lib` directory.
-    if lib_dir.exists() {
-        fs::remove_dir_all(&lib_dir)?;
-    }
-    fs::create_dir_all(&lib_dir)?;
 
     // Unpack the downloaded `libwebrtc` archive.
     let mut archive = Archive::new(GzDecoder::new(File::open(archive)?));

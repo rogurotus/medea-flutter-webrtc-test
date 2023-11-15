@@ -14,6 +14,7 @@ class Loopback extends StatefulWidget {
 }
 
 class _LoopbackState extends State<Loopback> {
+  List<MediaDeviceInfo>? _mediaDevicesList;
   List<MediaStreamTrack>? _tracks;
 
   PeerConnection? _pc1;
@@ -67,6 +68,7 @@ class _LoopbackState extends State<Loopback> {
     caps.video.mandatory!.fps = 30;
 
     try {
+      _mediaDevicesList = await enumerateDevices();
       _tracks = await getUserMedia(caps);
       await _localRenderer.setSrcObject(
           _tracks!.firstWhere((track) => track.kind() == MediaKind.video));
@@ -212,6 +214,26 @@ class _LoopbackState extends State<Loopback> {
                         .setEnabled(_cam);
                   },
                 ),
+                PopupMenuButton<String>(
+                  onSelected: (id) {
+                    setOutputAudioId(id);
+                  },
+                  itemBuilder: (BuildContext context) {
+                    if (_mediaDevicesList != null) {
+                      return _mediaDevicesList!
+                          .where((device) =>
+                              device.kind == MediaDeviceKind.audiooutput)
+                          .map((device) {
+                        return PopupMenuItem<String>(
+                          value: device.deviceId,
+                          child: Text(device.label),
+                        );
+                      }).toList();
+                    }
+                    return [];
+                  },
+                  icon: const Icon(Icons.volume_down),
+                )
               ]
             : null,
       ),
@@ -225,8 +247,7 @@ class _LoopbackState extends State<Loopback> {
                 width: MediaQuery.of(context).size.width / 2,
                 height: MediaQuery.of(context).size.height,
                 decoration: const BoxDecoration(color: Colors.black54),
-                child:
-                    VideoView(_localRenderer, mirror: true, autoRotate: false),
+                child: VideoView(_localRenderer, mirror: true),
               ),
               Container(
                 margin: const EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 0.0),
