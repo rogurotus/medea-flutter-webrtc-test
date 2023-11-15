@@ -67,6 +67,9 @@ class _NativeVideoRendererChannel extends NativeVideoRenderer {
   /// Unique ID of the channel for this [NativeVideoRenderer].
   late int _channelId;
 
+  /// Indicates whether [NativeVideoRenderer.onCanPlay] callback was called.
+  bool _canPlayCalled = false;
+
   /// Subscription to the events of this [NativeVideoRenderer].
   StreamSubscription<dynamic>? _eventChan;
 
@@ -109,6 +112,10 @@ class _NativeVideoRendererChannel extends NativeVideoRenderer {
       'trackId': track?.id(),
     });
 
+    if (track != null) {
+      _canPlayCalled = false;
+    }
+
     value = (track == null)
         ? RTCVideoValue.empty
         : value.copyWith(renderVideo: renderVideo);
@@ -144,9 +151,9 @@ class _NativeVideoRendererChannel extends NativeVideoRenderer {
           renderVideo: renderVideo,
         );
 
-        if (width != 0 && height != 0) {
+        if (width != 0 && height != 0 && !_canPlayCalled) {
+          _canPlayCalled = true;
           onCanPlay?.call();
-          onCanPlay = null;
         }
         onResize?.call();
         break;

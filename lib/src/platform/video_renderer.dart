@@ -55,24 +55,36 @@ class RTCVideoValue {
 abstract class VideoRenderer extends ValueNotifier<RTCVideoValue> {
   VideoRenderer() : super(RTCVideoValue.empty);
 
+  /// Is fired when video dimensions have been updated.
   Function? onResize;
 
+  /// Is fired when the user agent can play the media
   Function? onCanPlay;
 
+  /// Video`s width in pixels.
   int get videoWidth;
 
+  /// Video`s height in pixels.
   int get videoHeight;
 
+  /// Enables video mirroring.
   set mirror(bool mirror);
 
+  /// Indicates whether media provider object is assigned.
   bool get renderVideo;
 
+  /// ID of an underlying [Texture].
+  ///
+  /// [Texture]: https://api.flutter.dev/flutter/widgets/Texture-class.html
   int? get textureId;
 
+  /// Initializes all underling machinery required.
   Future<void> initialize();
 
+  /// Returns the element's assigned media provider object, if any.
   MediaStreamTrack? get srcObject;
 
+  /// Assigned media provider object.
   Future<void> setSrcObject(MediaStreamTrack? track);
 
   @override

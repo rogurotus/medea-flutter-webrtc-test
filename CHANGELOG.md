@@ -6,7 +6,7 @@ All user visible changes to this project will be documented in this file. This p
 
 
 
-## [0.8.3] · 2023-??-?? (unreleased)
+## [0.8.3] · 2023-11-15
 [0.8.3]: https://github.com/instrumentisto/medea-flutter-webrtc/tree/0.8.3
 
 [Diff](https://github.com/instrumentisto/medea-flutter-webrtc/compare/0.8.2...0.8.3)
@@ -15,28 +15,29 @@ All user visible changes to this project will be documented in this file. This p
 
 - `RtpTransceiverInit.sendEncodings` field with `SendEncodingParameters`. ([#125])
 - `RtpParameters` class, `RtpSender.getParameters()` and `RtpSender.setParameters()` methods. ([#135])
+- `VideoRenderer.onCanPlay` callback. ([#134])
 
 ### Changed
 
 - Refactor Audio Device Module to use [OpenAL] library for playout. ([#117])
 - Fire `onDeviceChange` callback whenever an output audio device is changed in system settings on desktop platforms. ([#119], [#120])
-- Upgraded [libwebrtc] to [116.0.5845.110] version. ([#123])
+- Upgraded [libwebrtc] to [118.0.5993.88] version. ([#134])
 - `VideoRenderer.width` and `VideoRenderer.height` now take rotation into account. ([#124])
 
 ### Fixed
 
-- Video renderer stretching a picture after rotation. ([#124])
+- Video renderer stretching a picture after rotation. ([#124], [#134])
 - Screen sharing leaking memory on [macOS]. ([#133])
 
 [#117]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/117
 [#119]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/119
 [#120]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/120
-[#123]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/123
 [#124]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/124
 [#125]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/125
 [#133]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/133
+[#134]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/134
 [#135]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/135
-[116.0.5845.110]: https://github.com/instrumentisto/libwebrtc-bin/releases/tag/116.0.5845.110
+[118.0.5993.88]: https://github.com/instrumentisto/libwebrtc-bin/releases/tag/118.0.5993.88
 
 
 
