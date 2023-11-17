@@ -121,37 +121,17 @@ std::unique_ptr<VideoTrackSourceInterface> create_device_video_source(
   return std::make_unique<VideoTrackSourceInterface>(src);
 }
 
-// Creates a new `AudioDeviceModuleProxy`.
-std::unique_ptr<AudioDeviceModule> create_audio_device_module(
-    Thread& worker_thread,
-    AudioLayer audio_layer,
-    TaskQueueFactory& task_queue_factory) {
-  AudioDeviceModule adm =
-      worker_thread.BlockingCall([audio_layer, &task_queue_factory] {
-        return ::OpenALAudioDeviceModule::Create(audio_layer, &task_queue_factory);
-      });
-
-  if (adm == nullptr) {
-    return nullptr;
-  }
-
-  AudioDeviceModule proxied =
-      webrtc::AudioDeviceModuleProxy::Create(&worker_thread, adm);
-
-  return std::make_unique<AudioDeviceModule>(proxied);
-}
-
 // Creates a new `AudioSourceManager` for the given `CustomAudioDeviceModule`.
 std::unique_ptr<AudioSourceManager> create_source_manager(
-    const CustomAudioDeviceModule& adm,
+    const OpenALAudioDeviceModule& adm,
     Thread& worker_thread) {
-  return AudioSourceManagerProxy::Create(&worker_thread, adm);
+  return AudioSourceManagerProxy::Create(&worker_thread, adm.get());
 }
 
 // Creates a new proxied `AudioDeviceModule` from the provided
 // `CustomAudioDeviceModule`.
 std::unique_ptr<AudioDeviceModule> custom_audio_device_module_proxy_upcast(
-    std::unique_ptr<CustomAudioDeviceModule> adm,
+    std::unique_ptr<OpenALAudioDeviceModule> adm,
     Thread& worker_thread) {
   AudioDeviceModule admm = *adm.get();
   AudioDeviceModule proxied =
@@ -176,22 +156,23 @@ void remove_source(AudioSourceManager& manager, const AudioSource& source) {
   manager.RemoveSource(source);
 }
 
-// Creates a new `CustomAudioDeviceModule`.
-std::unique_ptr<CustomAudioDeviceModule> create_custom_audio_device_module(
+// Creates a new `OpenALAudioDeviceModule`.
+std::unique_ptr<OpenALAudioDeviceModule> create_custom_audio_device_module(
     Thread& worker_thread,
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory) {
-  CustomAudioDeviceModule adm = worker_thread.BlockingCall(
-      [audio_layer, &task_queue_factory, &worker_thread] {
-        return ::CustomAudioDeviceModule::Create(
-            audio_layer, &task_queue_factory, &worker_thread);
+
+  OpenALAudioDeviceModule adm = worker_thread.BlockingCall(
+      [audio_layer, &task_queue_factory] {
+        return ::OpenALAudioDeviceModule::Create(
+            audio_layer, &task_queue_factory);
       });
 
   if (adm == nullptr) {
     return nullptr;
   }
 
-  return std::make_unique<CustomAudioDeviceModule>(adm);
+  return std::make_unique<OpenALAudioDeviceModule>(adm);
 }
 
 // Calls `AudioDeviceModule->Init()`.

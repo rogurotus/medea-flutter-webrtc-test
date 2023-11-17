@@ -158,10 +158,12 @@ OpenALAudioDeviceModule::~OpenALAudioDeviceModule() {}
 rtc::scoped_refptr<OpenALAudioDeviceModule> OpenALAudioDeviceModule::Create(
     AudioLayer audio_layer,
     webrtc::TaskQueueFactory* task_queue_factory) {
-  return OpenALAudioDeviceModule::CreateForTest(audio_layer, task_queue_factory);
+  return OpenALAudioDeviceModule::CreateForTest(audio_layer,
+                                                task_queue_factory);
 }
 
-rtc::scoped_refptr<OpenALAudioDeviceModule> OpenALAudioDeviceModule::CreateForTest(
+rtc::scoped_refptr<OpenALAudioDeviceModule>
+OpenALAudioDeviceModule::CreateForTest(
     AudioLayer audio_layer,
     webrtc::TaskQueueFactory* task_queue_factory) {
   // The "AudioDeviceModule::kWindowsCoreAudio2" audio layer has its own
@@ -171,8 +173,8 @@ rtc::scoped_refptr<OpenALAudioDeviceModule> OpenALAudioDeviceModule::CreateForTe
   }
 
   // Create the generic reference counted (platform independent) implementation.
-  auto audio_device =
-      rtc::make_ref_counted<OpenALAudioDeviceModule>(audio_layer, task_queue_factory);
+  auto audio_device = rtc::make_ref_counted<OpenALAudioDeviceModule>(
+      audio_layer, task_queue_factory);
 
   // Ensure that the current platform is supported.
   if (audio_device->CheckPlatform() == -1) {
@@ -190,11 +192,14 @@ rtc::scoped_refptr<OpenALAudioDeviceModule> OpenALAudioDeviceModule::CreateForTe
     return nullptr;
   }
 
+  audio_device->RecordProcess();
+
   return audio_device;
 }
 
-OpenALAudioDeviceModule::OpenALAudioDeviceModule(AudioLayer audio_layer,
-                                   webrtc::TaskQueueFactory* task_queue_factory)
+OpenALAudioDeviceModule::OpenALAudioDeviceModule(
+    AudioLayer audio_layer,
+    webrtc::TaskQueueFactory* task_queue_factory)
     : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory) {
   GetAudioDeviceBuffer()->SetPlayoutSampleRate(kPlayoutFrequency);
   GetAudioDeviceBuffer()->SetPlayoutChannels(_playoutChannels);
@@ -389,7 +394,8 @@ bool OpenALAudioDeviceModule::SpeakerIsInitialized() const {
   return _speakerInitialized;
 }
 
-int32_t OpenALAudioDeviceModule::StereoPlayoutIsAvailable(bool* available) const {
+int32_t OpenALAudioDeviceModule::StereoPlayoutIsAvailable(
+    bool* available) const {
   if (available) {
     *available = true;
   }
@@ -820,7 +826,8 @@ int32_t OpenALAudioDeviceModule::SetRecordingDevice(uint16_t index) {
   return result ? result : restartRecording();
 }
 
-int32_t OpenALAudioDeviceModule::SetRecordingDevice(WindowsDeviceType /*device*/) {
+int32_t OpenALAudioDeviceModule::SetRecordingDevice(
+    WindowsDeviceType /*device*/) {
   _recordingDeviceId = GetDefaultDeviceId(ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
   return _recordingDeviceId.empty() ? -1 : restartRecording();
 }
@@ -872,7 +879,7 @@ int32_t OpenALAudioDeviceModule::StartRecording() {
   return 0;
 }
 
-int32_t OpenALAudioDeviceModule::StopRecording() {
+int32_t OpenALAudioDeviceModule::StopMicrophoneRecording() {
   if (_data) {
     stopCaptureOnThread();
     GetAudioDeviceBuffer()->StopRecording();
@@ -915,11 +922,13 @@ int32_t OpenALAudioDeviceModule::MicrophoneVolume(uint32_t* volume) const {
   return -1;
 }
 
-int32_t OpenALAudioDeviceModule::MaxMicrophoneVolume(uint32_t* maxVolume) const {
+int32_t OpenALAudioDeviceModule::MaxMicrophoneVolume(
+    uint32_t* maxVolume) const {
   return -1;
 }
 
-int32_t OpenALAudioDeviceModule::MinMicrophoneVolume(uint32_t* minVolume) const {
+int32_t OpenALAudioDeviceModule::MinMicrophoneVolume(
+    uint32_t* minVolume) const {
   return -1;
 }
 
@@ -941,7 +950,8 @@ int32_t OpenALAudioDeviceModule::MicrophoneMute(bool* enabled) const {
   return 0;
 }
 
-int32_t OpenALAudioDeviceModule::StereoRecordingIsAvailable(bool* available) const {
+int32_t OpenALAudioDeviceModule::StereoRecordingIsAvailable(
+    bool* available) const {
   if (available) {
     *available = false;
   }
@@ -992,11 +1002,12 @@ bool OpenALAudioDeviceModule::processRecordedPart(bool firstInCycle) {
     return false;
   }
 
-  GetAudioDeviceBuffer()->SetRecordedBuffer(_data->recordedSamples->data(),
-                                            kRecordingPart);
-  GetAudioDeviceBuffer()->SetVQEData(_playoutLatency.count(),
-                                     _recordingLatency.count());
-  GetAudioDeviceBuffer()->DeliverRecordedData();
+  if (microphone_source != nullptr) {
+    microphone_source->UpdateFrame(
+        (const int16_t*)_data->recordedSamples->data(),
+        kRecordingPart * kRecordingChannels, kRecordingFrequency,
+        kRecordingChannels);
+  }
   return true;
 }
 
@@ -1107,4 +1118,89 @@ int OpenALAudioDeviceModule::restartRecording() {
   openRecordingDevice();
   startCaptureOnThread();
   return 0;
+}
+
+int32_t OpenALAudioDeviceModule::Terminate() {
+  quit = true;
+  return 0;
+}
+
+rtc::scoped_refptr<AudioSource> OpenALAudioDeviceModule::CreateSystemSource() {
+  // TODO implement system sound capture.
+  return nullptr;
+}
+
+rtc::scoped_refptr<AudioSource>
+OpenALAudioDeviceModule::CreateMicrophoneSource() {
+  rtc::scoped_refptr<AudioSource> result = microphone_source;
+  if (microphone_source == nullptr) {
+    microphone_source = rtc::scoped_refptr<AudioSource>(new AudioSource());
+    result = microphone_source;
+  }
+  return result;
+}
+
+void OpenALAudioDeviceModule::AddSource(
+    rtc::scoped_refptr<AudioSource> source) {
+  {
+    std::unique_lock<std::mutex> lock(source_mutex);
+    sources.push_back(source);
+  }
+  cv.notify_all();
+  mixer->AddSource(source.get());
+}
+
+void OpenALAudioDeviceModule::RemoveSource(
+    rtc::scoped_refptr<AudioSource> source) {
+  {
+    std::unique_lock<std::mutex> lock(source_mutex);
+    for (int i = 0; i < sources.size(); ++i) {
+      if (sources[i] == source) {
+        sources.erase(sources.begin() + i);
+        { mixer->RemoveSource(source.get()); }
+        break;
+      }
+    }
+
+    if (source == microphone_source) {
+      StopMicrophoneRecording();
+      microphone_source = nullptr;
+    }
+  }
+}
+
+void OpenALAudioDeviceModule::RecordProcess() {
+  const auto attributes =
+      rtc::ThreadAttributes().SetPriority(rtc::ThreadPriority::kRealtime);
+  ptrThreadRec = rtc::PlatformThread::SpawnJoinable(
+      [this] {
+        webrtc::AudioFrame frame;
+        auto cb = GetAudioDeviceBuffer();
+        int last_sample_rate = frame.sample_rate_hz();
+        int last_num_channels = frame.num_channels();
+
+        while (!quit) {
+          {
+            std::unique_lock<std::mutex> lock(source_mutex);
+            cv.wait(lock, [&]() { return sources.size() > 0; });
+          }
+
+          mixer->Mix(kRecordingChannels, &frame);
+
+          if (last_sample_rate != frame.sample_rate_hz()) {
+            cb->SetRecordingSampleRate(frame.sample_rate_hz());
+            last_sample_rate = frame.sample_rate_hz();
+          }
+          if (last_num_channels != frame.num_channels()) {
+            cb->SetRecordingChannels(frame.num_channels());
+            last_num_channels = frame.num_channels();
+          }
+
+          cb->SetRecordedBuffer(frame.data(), frame.sample_rate_hz() / 100);
+          GetAudioDeviceBuffer()->SetVQEData(_playoutLatency.count(),
+                                             _recordingLatency.count());
+          cb->DeliverRecordedData();
+        }
+      },
+      "audio_device_module_rec_thread", attributes);
 }

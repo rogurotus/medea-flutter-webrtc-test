@@ -93,6 +93,8 @@ impl Webrtc {
         track_id: String,
         kind: api::MediaType,
     ) {
+        println!("STOP0 {track_origin:?} {track_id:?} {kind:?}");
+
         #[allow(clippy::mutable_key_type)] // false positive
         let senders = match kind {
             api::MediaType::Audio => {
@@ -102,9 +104,13 @@ impl Webrtc {
                 {
                     if let MediaTrackSource::Local(src) = track.source {
                         if Arc::strong_count(&src) == 2 {
+                            println!("STOP1");
                             if let Some((_, s)) = self.audio_source.take() {
+                                println!("STOP1 2");
                                 self.audio_device_module.remove_source(&s);
+                                println!("STOP1 3");
                             }
+                            println!("STOP2");
                             // TODO: We should make `AudioDeviceModule` to stop
                             //       recording.
                         };
@@ -324,8 +330,10 @@ impl Webrtc {
         }
 
         let src = if let Some((src, _)) = self.audio_source.as_ref() {
+            println!("EARLY RETURN");
             Arc::clone(src)
         } else {
+            println!("EARLY BUMP TWO");
             let src =
                 Arc::new(self.peer_connection_factory.create_audio_source()?);
             let source = self.audio_device_module.create_source();

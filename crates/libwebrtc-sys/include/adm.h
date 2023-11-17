@@ -9,6 +9,7 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 
+#include <chrono>
 #include "api/audio/audio_frame.h"
 #include "api/audio/audio_mixer.h"
 #include "api/media_stream_interface.h"
@@ -25,16 +26,32 @@
 #include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/thread.h"
 #include "rtc_base/thread_annotations.h"
-#include <chrono>
 
 #if defined(WEBRTC_USE_X11)
 #include <X11/Xlib.h>
 #endif
 
-class OpenALAudioDeviceModule : public webrtc::AudioDeviceModuleImpl {
+#include "audio_source/custom_audio.h"
+
+class RefCountedAudioSourceManager : public rtc::RefCountInterface {};
+
+class AudioSourceManager {
+ public:
+  // Creates a `AudioSource` from a microphone.
+  virtual rtc::scoped_refptr<AudioSource> CreateMicrophoneSource();
+  // Creates a `AudioSource` from a system audio.
+  virtual rtc::scoped_refptr<AudioSource> CreateSystemSource();
+  // Adds `AudioSource` to `AudioSourceManager`.
+  virtual void AddSource(rtc::scoped_refptr<AudioSource> source);
+  // Removes `AudioSource` to `AudioSourceManager`.
+  virtual void RemoveSource(rtc::scoped_refptr<AudioSource> source);
+};
+
+class OpenALAudioDeviceModule : public webrtc::AudioDeviceModuleImpl,
+                                public AudioSourceManager {
  public:
   OpenALAudioDeviceModule(AudioLayer audio_layer,
-                   webrtc::TaskQueueFactory* task_queue_factory);
+                          webrtc::TaskQueueFactory* task_queue_factory);
   ~OpenALAudioDeviceModule();
 
   static rtc::scoped_refptr<OpenALAudioDeviceModule> Create(
@@ -47,6 +64,7 @@ class OpenALAudioDeviceModule : public webrtc::AudioDeviceModuleImpl {
 
   // Main initialization and termination.
   int32_t Init() override;
+  int32_t Terminate() override;
 
   // Playout control.
   int16_t PlayoutDevices() override;
@@ -83,13 +101,13 @@ class OpenALAudioDeviceModule : public webrtc::AudioDeviceModuleImpl {
   int32_t RecordingDeviceName(uint16_t index,
                               char name[webrtc::kAdmMaxDeviceNameSize],
                               char guid[webrtc::kAdmMaxGuidSize]) override;
-	int32_t SetRecordingDevice(uint16_t index) override;
-	int32_t SetRecordingDevice(WindowsDeviceType device) override;
+  int32_t SetRecordingDevice(uint16_t index) override;
+  int32_t SetRecordingDevice(WindowsDeviceType device) override;
   int32_t RecordingIsAvailable(bool* available) override;
   int32_t InitRecording() override;
   bool RecordingIsInitialized() const override;
   int32_t StartRecording() override;
-  int32_t StopRecording() override;
+  int32_t StopMicrophoneRecording();
   bool Recording() const override;
   int32_t InitMicrophone() override;
   bool MicrophoneIsInitialized() const override;
@@ -107,6 +125,14 @@ class OpenALAudioDeviceModule : public webrtc::AudioDeviceModuleImpl {
   int32_t StereoRecordingIsAvailable(bool* available) const override;
   int32_t SetStereoRecording(bool enable) override;
   int32_t StereoRecording(bool* enabled) const override;
+
+  // AudioSourceManager interface.
+  rtc::scoped_refptr<AudioSource> CreateMicrophoneSource();
+  rtc::scoped_refptr<AudioSource> CreateSystemSource();
+  void AddSource(rtc::scoped_refptr<AudioSource> source);
+  void RemoveSource(rtc::scoped_refptr<AudioSource> source);
+  // Mixes source and sends on.
+  void RecordProcess();
 
  private:
   struct Data;
@@ -140,8 +166,8 @@ class OpenALAudioDeviceModule : public webrtc::AudioDeviceModuleImpl {
 
   void startCaptureOnThread();
   void stopCaptureOnThread();
-	int restartRecording();
-	void openRecordingDevice();
+  int restartRecording();
+  void openRecordingDevice();
   void closeRecordingDevice();
   void processRecordingData();
   bool processRecordedPart(bool firstInCycle);
@@ -162,15 +188,28 @@ class OpenALAudioDeviceModule : public webrtc::AudioDeviceModuleImpl {
   ALCcontext* _playoutContext = nullptr;
   ALCdevice* _playoutDevice = nullptr;
 
-  ALCdevice *_recordingDevice = nullptr;
-	std::string _recordingDeviceId;
-	std::chrono::milliseconds _recordingLatency = std::chrono::milliseconds(0);
+  ALCdevice* _recordingDevice = nullptr;
+  std::string _recordingDeviceId;
+  std::chrono::milliseconds _recordingLatency = std::chrono::milliseconds(0);
   std::chrono::milliseconds _playoutLatency = std::chrono::milliseconds(0);
-	bool _recordingInitialized = false;
-	bool _recordingFailed = false;
+  bool _recordingInitialized = false;
+  bool _recordingFailed = false;
 
-	bool _microphoneInitialized = false;
+  bool _microphoneInitialized = false;
 
   std::recursive_mutex _playout_mutex;
   std::recursive_mutex _record_mutex;
+
+  // Mixes `AudioSource` to send.
+  rtc::scoped_refptr<webrtc::AudioMixerImpl> mixer =
+      webrtc::AudioMixerImpl::Create();
+
+  // `AudioSource` for mixing.
+  std::vector<rtc::scoped_refptr<AudioSource>> sources;
+  std::mutex source_mutex;
+
+  rtc::PlatformThread ptrThreadRec;
+  std::condition_variable cv;
+
+  rtc::scoped_refptr<AudioSource> microphone_source;
 };

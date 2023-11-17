@@ -33,8 +33,6 @@
 #include "modules/audio_device/include/test_audio_device.h"
 
 #include "audio_source/audio_source_manager_proxy.h"
-#include "adm/adm.h"
-
 #include "pc/test/fake_video_track_source.h"
 
 namespace bridge {
@@ -108,28 +106,22 @@ using RtpReceiverInterface = rtc::scoped_refptr<webrtc::RtpReceiverInterface>;
 using MediaStreamTrackInterface =
     rtc::scoped_refptr<webrtc::MediaStreamTrackInterface>;
 
-using CustomAudioDeviceModule = rtc::scoped_refptr<::CustomAudioDeviceModule>;
+using OpenALAudioDeviceModule = rtc::scoped_refptr<::OpenALAudioDeviceModule>;
 using AudioSource = rtc::scoped_refptr<::AudioSource>;
 using AudioSourceManager = ::AudioSourceManager;
 
 
-// Creates a new proxied `AudioDeviceModule` for the given `AudioLayer`.
-std::unique_ptr<AudioDeviceModule> create_audio_device_module(
+// Creates a new `OpenALAudioDeviceModule` for the given `AudioLayer`.
+std::unique_ptr<OpenALAudioDeviceModule> create_custom_audio_device_module(
     Thread& worker_thread,
     AudioLayer audio_layer,
     TaskQueueFactory& task_queue_factory);
 
-// Creates a new `CustomAudioDeviceModule` for the given `AudioLayer`.
-std::unique_ptr<CustomAudioDeviceModule> create_custom_audio_device_module(
-    Thread& worker_thread,
-    AudioLayer audio_layer,
-    TaskQueueFactory& task_queue_factory);
+// Creates a new proxied `AudioDeviceModule` from the provided `OpenALAudioDeviceModule`.
+std::unique_ptr<AudioDeviceModule> custom_audio_device_module_proxy_upcast(std::unique_ptr<OpenALAudioDeviceModule> adm, Thread& worker_thread);
 
-// Creates a new proxied `AudioDeviceModule` from the provided `CustomAudioDeviceModule`.
-std::unique_ptr<AudioDeviceModule> custom_audio_device_module_proxy_upcast(std::unique_ptr<CustomAudioDeviceModule> adm, Thread& worker_thread);
-
-// Creates a new `AudioSourceManager` for the given `CustomAudioDeviceModule`.
-std::unique_ptr<AudioSourceManager> create_source_manager(const CustomAudioDeviceModule& adm, Thread& worker_thread);
+// Creates a new `AudioSourceManager` for the given `OpenALAudioDeviceModule`.
+std::unique_ptr<AudioSourceManager> create_source_manager(const OpenALAudioDeviceModule& adm, Thread& worker_thread);
 
 // Creates a new `AudioSource` from microphone.
 std::unique_ptr<AudioSource> create_source_microphone(AudioSourceManager& manager);

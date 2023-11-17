@@ -1,52 +1,53 @@
 #pragma once
 
-#include "adm/adm.h"
+#include "adm.h"
 #include "pc/proxy.h"
 
 class AudioSourceManagerProxy : AudioSourceManager {
   AudioSourceManagerProxy(rtc::Thread* primary_thread,
-                          rtc::scoped_refptr<CustomAudioDeviceModule> c)
-      : adm(c), primary_thread_(primary_thread) {}
+                          AudioSourceManager* source_manager)
+      : source_manager(source_manager), primary_thread_(primary_thread) {}
 
  public:
   static std::unique_ptr<AudioSourceManager> Create(
       rtc::Thread* primary_thread,
-      rtc::scoped_refptr<CustomAudioDeviceModule> c) {
+      AudioSourceManager* source_manager) {
     return std::unique_ptr<AudioSourceManager>(
-        new AudioSourceManagerProxy(primary_thread, std::move(c)));
+        new AudioSourceManagerProxy(primary_thread, source_manager));
   }
 
-  rtc::scoped_refptr<AudioSource> CreateMicrophoneSource() override {
+  rtc::scoped_refptr<AudioSource> CreateMicrophoneSource() {
     TRACE_BOILERPLATE(CreateMicrophoneSource);
     webrtc::MethodCall<AudioSourceManager, rtc::scoped_refptr<AudioSource>>
-        call(adm.get(), &AudioSourceManager::CreateMicrophoneSource);
+        call(source_manager, &AudioSourceManager::CreateMicrophoneSource);
     return call.Marshal(primary_thread_);
   };
 
-  rtc::scoped_refptr<AudioSource> CreateSystemSource() override {
+  rtc::scoped_refptr<AudioSource> CreateSystemSource() {
     TRACE_BOILERPLATE(CreateSystemSource);
     webrtc::MethodCall<AudioSourceManager, rtc::scoped_refptr<AudioSource>>
-        call(adm.get(), &AudioSourceManager::CreateSystemSource);
+        call(source_manager, &AudioSourceManager::CreateSystemSource);
     return call.Marshal(primary_thread_);
   }
 
-  void AddSource(rtc::scoped_refptr<AudioSource> source) override {
+  void AddSource(rtc::scoped_refptr<AudioSource> source) {
     TRACE_BOILERPLATE(AddSource);
     webrtc::MethodCall<AudioSourceManager, void,
                        rtc::scoped_refptr<AudioSource>>
-        call(adm.get(), &AudioSourceManager::AddSource, std::move(source));
+        call(source_manager, &AudioSourceManager::AddSource, std::move(source));
     return call.Marshal(primary_thread_);
   }
 
-  void RemoveSource(rtc::scoped_refptr<AudioSource> source) override {
+  void RemoveSource(rtc::scoped_refptr<AudioSource> source) {
     TRACE_BOILERPLATE(RemoveSource);
     webrtc::MethodCall<AudioSourceManager, void,
                        rtc::scoped_refptr<AudioSource>>
-        call(adm.get(), &AudioSourceManager::RemoveSource, std::move(source));
-    return call.Marshal(primary_thread_);
+        call(source_manager, &AudioSourceManager::RemoveSource, std::move(source));
+    call.Marshal(primary_thread_);
+    return;
   }
 
  private:
-  rtc::scoped_refptr<CustomAudioDeviceModule> adm;
+  AudioSourceManager* source_manager;
   rtc::Thread* primary_thread_;
 };

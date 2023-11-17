@@ -1216,22 +1216,22 @@ pub(crate) mod webrtc {
 
     unsafe extern "C++" {
         pub type AudioDeviceModule;
-        pub type CustomAudioDeviceModule;
+        pub type OpenALAudioDeviceModule;
         pub type AudioLayer;
         pub type AudioSourceManager;
         pub type AudioSource;
 
         /// Creates a new [`AudioSourceManager`]
-        /// for the given [`CustomAudioDeviceModule`].
+        /// for the given [`OpenALAudioDeviceModule`].
         pub fn create_source_manager(
-            adm: &CustomAudioDeviceModule,
+            adm: &OpenALAudioDeviceModule,
             worker_thread: Pin<&mut Thread>,
         ) -> UniquePtr<AudioSourceManager>;
 
         /// Creates a new proxied [`AudioDeviceModule`]
-        /// from the provided [`CustomAudioDeviceModule`].
+        /// from the provided [`OpenALAudioDeviceModule`].
         pub fn custom_audio_device_module_proxy_upcast(
-            adm: UniquePtr<CustomAudioDeviceModule>,
+            adm: UniquePtr<OpenALAudioDeviceModule>,
             worker_thread: Pin<&mut Thread>,
         ) -> UniquePtr<AudioDeviceModule>;
 
@@ -1252,13 +1252,13 @@ pub(crate) mod webrtc {
             source: &AudioSource,
         );
 
-        /// Creates a new [`CustomAudioDeviceModule`]
+        /// Creates a new [`OpenALAudioDeviceModule`]
         /// for the given [`AudioLayer`].
         pub fn create_custom_audio_device_module(
             worker_thread: Pin<&mut Thread>,
             audio_layer: AudioLayer,
             task_queue_factory: Pin<&mut TaskQueueFactory>,
-        ) -> UniquePtr<CustomAudioDeviceModule>;
+        ) -> UniquePtr<OpenALAudioDeviceModule>;
 
         /// Creates a new fake [`AudioDeviceModule`], that will not try to
         /// access real media devices, but will generate pulsed noise.

@@ -59,7 +59,7 @@ struct Webrtc {
     video_device_info: VideoDeviceInfo,
     video_sources: HashMap<VideoDeviceId, Arc<VideoSource>>,
     video_tracks: Arc<DashMap<(VideoTrackId, TrackOrigin), VideoTrack>>,
-    audio_source: Option<Arc<sys::AudioSourceInterface>>,
+    audio_source: Option<(Arc<sys::AudioSourceInterface>, sys::AudioSource)>,
     audio_tracks: Arc<DashMap<(AudioTrackId, TrackOrigin), AudioTrack>>,
     video_sinks: HashMap<VideoSinkId, VideoSink>,
     ap: sys::AudioProcessing,
