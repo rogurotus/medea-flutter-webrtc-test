@@ -143,103 +143,6 @@ fn wire_create_answer_impl(
         },
     )
 }
-fn wire_create_transceiver_init_impl(port_: MessagePort) {
-    FLUTTER_RUST_BRIDGE_HANDLER
-        .wrap::<_, _, _, RustOpaque<Arc<RtpTransceiverInit>>, _>(
-            WrapInfo {
-                debug_name: "create_transceiver_init",
-                port: Some(port_),
-                mode: FfiCallMode::Normal,
-            },
-            move || {
-                move |task_callback| {
-                    Result::<_, ()>::Ok(create_transceiver_init())
-                }
-            },
-        )
-}
-fn wire_set_transceiver_init_direction_impl(
-    port_: MessagePort,
-    init: impl Wire2Api<RustOpaque<Arc<RtpTransceiverInit>>> + UnwindSafe,
-    direction: impl Wire2Api<RtpTransceiverDirection> + UnwindSafe,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap::<_, _, _, (), _>(
-        WrapInfo {
-            debug_name: "set_transceiver_init_direction",
-            port: Some(port_),
-            mode: FfiCallMode::Normal,
-        },
-        move || {
-            let api_init = init.wire2api();
-            let api_direction = direction.wire2api();
-            move |task_callback| {
-                Result::<_, ()>::Ok(set_transceiver_init_direction(
-                    api_init,
-                    api_direction,
-                ))
-            }
-        },
-    )
-}
-fn wire_add_transceiver_init_send_encoding_impl(
-    port_: MessagePort,
-    init: impl Wire2Api<RustOpaque<Arc<RtpTransceiverInit>>> + UnwindSafe,
-    enc: impl Wire2Api<RustOpaque<Arc<RtpEncodingParameters>>> + UnwindSafe,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap::<_, _, _, (), _>(
-        WrapInfo {
-            debug_name: "add_transceiver_init_send_encoding",
-            port: Some(port_),
-            mode: FfiCallMode::Normal,
-        },
-        move || {
-            let api_init = init.wire2api();
-            let api_enc = enc.wire2api();
-            move |task_callback| {
-                Result::<_, ()>::Ok(add_transceiver_init_send_encoding(
-                    api_init, api_enc,
-                ))
-            }
-        },
-    )
-}
-fn wire_create_encoding_parameters_impl(
-    port_: MessagePort,
-    rid: impl Wire2Api<String> + UnwindSafe,
-    active: impl Wire2Api<bool> + UnwindSafe,
-    max_bitrate: impl Wire2Api<Option<i32>> + UnwindSafe,
-    max_framerate: impl Wire2Api<Option<f64>> + UnwindSafe,
-    scale_resolution_down_by: impl Wire2Api<Option<f64>> + UnwindSafe,
-    scalability_mode: impl Wire2Api<Option<String>> + UnwindSafe,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER
-        .wrap::<_, _, _, RustOpaque<Arc<RtpEncodingParameters>>, _>(
-            WrapInfo {
-                debug_name: "create_encoding_parameters",
-                port: Some(port_),
-                mode: FfiCallMode::Normal,
-            },
-            move || {
-                let api_rid = rid.wire2api();
-                let api_active = active.wire2api();
-                let api_max_bitrate = max_bitrate.wire2api();
-                let api_max_framerate = max_framerate.wire2api();
-                let api_scale_resolution_down_by =
-                    scale_resolution_down_by.wire2api();
-                let api_scalability_mode = scalability_mode.wire2api();
-                move |task_callback| {
-                    Result::<_, ()>::Ok(create_encoding_parameters(
-                        api_rid,
-                        api_active,
-                        api_max_bitrate,
-                        api_max_framerate,
-                        api_scale_resolution_down_by,
-                        api_scalability_mode,
-                    ))
-                }
-            },
-        )
-}
 fn wire_set_local_description_impl(
     port_: MessagePort,
     peer: impl Wire2Api<RustOpaque<Arc<PeerConnection>>> + UnwindSafe,
@@ -382,9 +285,7 @@ fn wire_get_transceiver_mid_impl(
         },
         move || {
             let api_transceiver = transceiver.wire2api();
-            move |task_callback| {
-                Result::<_, ()>::Ok(get_transceiver_mid(api_transceiver))
-            }
+            move |task_callback| Result::<_, ()>::Ok(get_transceiver_mid(api_transceiver))
         },
     )
 }
@@ -400,9 +301,7 @@ fn wire_get_transceiver_direction_impl(
         },
         move || {
             let api_transceiver = transceiver.wire2api();
-            move |task_callback| {
-                Result::<_, ()>::Ok(get_transceiver_direction(api_transceiver))
-            }
+            move |task_callback| Result::<_, ()>::Ok(get_transceiver_direction(api_transceiver))
         },
     )
 }
@@ -544,9 +443,7 @@ fn wire_dispose_peer_connection_impl(
         },
         move || {
             let api_peer = peer.wire2api();
-            move |task_callback| {
-                Result::<_, ()>::Ok(dispose_peer_connection(api_peer))
-            }
+            move |task_callback| Result::<_, ()>::Ok(dispose_peer_connection(api_peer))
         },
     )
 }
@@ -592,10 +489,7 @@ fn wire_microphone_volume_is_available_impl(port_: MessagePort) {
         move || move |task_callback| microphone_volume_is_available(),
     )
 }
-fn wire_set_microphone_volume_impl(
-    port_: MessagePort,
-    level: impl Wire2Api<u8> + UnwindSafe,
-) {
+fn wire_set_microphone_volume_impl(port_: MessagePort, level: impl Wire2Api<u8> + UnwindSafe) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap::<_, _, _, (), _>(
         WrapInfo {
             debug_name: "set_microphone_volume",
@@ -635,11 +529,7 @@ fn wire_dispose_track_impl(
             let api_peer_id = peer_id.wire2api();
             let api_kind = kind.wire2api();
             move |task_callback| {
-                Result::<_, ()>::Ok(dispose_track(
-                    api_track_id,
-                    api_peer_id,
-                    api_kind,
-                ))
+                Result::<_, ()>::Ok(dispose_track(api_track_id, api_peer_id, api_kind))
             }
         },
     )
@@ -776,10 +666,7 @@ fn wire_create_video_sink_impl(
         },
     )
 }
-fn wire_dispose_video_sink_impl(
-    port_: MessagePort,
-    sink_id: impl Wire2Api<i64> + UnwindSafe,
-) {
+fn wire_dispose_video_sink_impl(port_: MessagePort, sink_id: impl Wire2Api<i64> + UnwindSafe) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap::<_, _, _, (), _>(
         WrapInfo {
             debug_name: "dispose_video_sink",
@@ -788,9 +675,7 @@ fn wire_dispose_video_sink_impl(
         },
         move || {
             let api_sink_id = sink_id.wire2api();
-            move |task_callback| {
-                Result::<_, ()>::Ok(dispose_video_sink(api_sink_id))
-            }
+            move |task_callback| Result::<_, ()>::Ok(dispose_video_sink(api_sink_id))
         },
     )
 }
