@@ -13,8 +13,10 @@
 
 use crate::api::*;
 use core::panic::UnwindSafe;
-use flutter_rust_bridge::{rust2dart::IntoIntoDart, *};
-use std::{ffi::c_void, sync::Arc};
+use flutter_rust_bridge::rust2dart::IntoIntoDart;
+use flutter_rust_bridge::*;
+use std::ffi::c_void;
+use std::sync::Arc;
 
 // Section: imports
 
@@ -98,8 +100,7 @@ fn wire_create_offer_impl(
         },
         move || {
             let api_peer = peer.wire2api();
-            let api_voice_activity_detection =
-                voice_activity_detection.wire2api();
+            let api_voice_activity_detection = voice_activity_detection.wire2api();
             let api_ice_restart = ice_restart.wire2api();
             let api_use_rtp_mux = use_rtp_mux.wire2api();
             move |task_callback| {
@@ -128,8 +129,7 @@ fn wire_create_answer_impl(
         },
         move || {
             let api_peer = peer.wire2api();
-            let api_voice_activity_detection =
-                voice_activity_detection.wire2api();
+            let api_voice_activity_detection = voice_activity_detection.wire2api();
             let api_ice_restart = ice_restart.wire2api();
             let api_use_rtp_mux = use_rtp_mux.wire2api();
             move |task_callback| {
@@ -256,9 +256,7 @@ fn wire_set_local_description_impl(
             let api_peer = peer.wire2api();
             let api_kind = kind.wire2api();
             let api_sdp = sdp.wire2api();
-            move |task_callback| {
-                set_local_description(api_peer, api_kind, api_sdp)
-            }
+            move |task_callback| set_local_description(api_peer, api_kind, api_sdp)
         },
     )
 }
@@ -278,9 +276,7 @@ fn wire_set_remote_description_impl(
             let api_peer = peer.wire2api();
             let api_kind = kind.wire2api();
             let api_sdp = sdp.wire2api();
-            move |task_callback| {
-                set_remote_description(api_peer, api_kind, api_sdp)
-            }
+            move |task_callback| set_remote_description(api_peer, api_kind, api_sdp)
         },
     )
 }
@@ -288,7 +284,7 @@ fn wire_add_transceiver_impl(
     port_: MessagePort,
     peer: impl Wire2Api<RustOpaque<Arc<PeerConnection>>> + UnwindSafe,
     media_type: impl Wire2Api<MediaType> + UnwindSafe,
-    init: impl Wire2Api<RustOpaque<Arc<RtpTransceiverInit>>> + UnwindSafe,
+    init: impl Wire2Api<RtpTransceiverInit> + UnwindSafe,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap::<_, _, _, RtcRtpTransceiver, _>(
         WrapInfo {
@@ -300,9 +296,7 @@ fn wire_add_transceiver_impl(
             let api_peer = peer.wire2api();
             let api_media_type = media_type.wire2api();
             let api_init = init.wire2api();
-            move |task_callback| {
-                add_transceiver(api_peer, api_media_type, api_init)
-            }
+            move |task_callback| add_transceiver(api_peer, api_media_type, api_init)
         },
     )
 }
@@ -336,9 +330,7 @@ fn wire_set_transceiver_direction_impl(
         move || {
             let api_transceiver = transceiver.wire2api();
             let api_direction = direction.wire2api();
-            move |task_callback| {
-                set_transceiver_direction(api_transceiver, api_direction)
-            }
+            move |task_callback| set_transceiver_direction(api_transceiver, api_direction)
         },
     )
 }
@@ -462,9 +454,41 @@ fn wire_sender_replace_track_impl(
             let api_peer = peer.wire2api();
             let api_transceiver = transceiver.wire2api();
             let api_track_id = track_id.wire2api();
-            move |task_callback| {
-                sender_replace_track(api_peer, api_transceiver, api_track_id)
-            }
+            move |task_callback| sender_replace_track(api_peer, api_transceiver, api_track_id)
+        },
+    )
+}
+fn wire_sender_get_parameters_impl(
+    port_: MessagePort,
+    transceiver: impl Wire2Api<RustOpaque<Arc<RtpTransceiver>>> + UnwindSafe,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap::<_, _, _, RtcRtpSendParameters, _>(
+        WrapInfo {
+            debug_name: "sender_get_parameters",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_transceiver = transceiver.wire2api();
+            move |task_callback| Result::<_, ()>::Ok(sender_get_parameters(api_transceiver))
+        },
+    )
+}
+fn wire_sender_set_parameters_impl(
+    port_: MessagePort,
+    transceiver: impl Wire2Api<RustOpaque<Arc<RtpTransceiver>>> + UnwindSafe,
+    params: impl Wire2Api<RtcRtpSendParameters> + UnwindSafe,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap::<_, _, _, (), _>(
+        WrapInfo {
+            debug_name: "sender_set_parameters",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_transceiver = transceiver.wire2api();
+            let api_params = params.wire2api();
+            move |task_callback| sender_set_parameters(api_transceiver, api_params)
         },
     )
 }
@@ -487,12 +511,7 @@ fn wire_add_ice_candidate_impl(
             let api_sdp_mid = sdp_mid.wire2api();
             let api_sdp_mline_index = sdp_mline_index.wire2api();
             move |task_callback| {
-                add_ice_candidate(
-                    api_peer,
-                    api_candidate,
-                    api_sdp_mid,
-                    api_sdp_mline_index,
-                )
+                add_ice_candidate(api_peer, api_candidate, api_sdp_mid, api_sdp_mline_index)
             }
         },
     )
@@ -641,9 +660,7 @@ fn wire_track_state_impl(
             let api_track_id = track_id.wire2api();
             let api_peer_id = peer_id.wire2api();
             let api_kind = kind.wire2api();
-            move |task_callback| {
-                track_state(api_track_id, api_peer_id, api_kind)
-            }
+            move |task_callback| track_state(api_track_id, api_peer_id, api_kind)
         },
     )
 }
@@ -665,14 +682,7 @@ fn wire_set_track_enabled_impl(
             let api_peer_id = peer_id.wire2api();
             let api_kind = kind.wire2api();
             let api_enabled = enabled.wire2api();
-            move |task_callback| {
-                set_track_enabled(
-                    api_track_id,
-                    api_peer_id,
-                    api_kind,
-                    api_enabled,
-                )
-            }
+            move |task_callback| set_track_enabled(api_track_id, api_peer_id, api_kind, api_enabled)
         },
     )
 }
@@ -692,9 +702,7 @@ fn wire_clone_track_impl(
             let api_track_id = track_id.wire2api();
             let api_peer_id = peer_id.wire2api();
             let api_kind = kind.wire2api();
-            move |task_callback| {
-                clone_track(api_track_id, api_peer_id, api_kind)
-            }
+            move |task_callback| clone_track(api_track_id, api_peer_id, api_kind)
         },
     )
 }
@@ -732,11 +740,7 @@ fn wire_set_on_device_changed_impl(port_: MessagePort) {
             port: Some(port_),
             mode: FfiCallMode::Stream,
         },
-        move || {
-            move |task_callback| {
-                set_on_device_changed(task_callback.stream_sink::<_, ()>())
-            }
-        },
+        move || move |task_callback| set_on_device_changed(task_callback.stream_sink::<_, ()>()),
     )
 }
 fn wire_create_video_sink_impl(
@@ -851,9 +855,7 @@ impl Wire2Api<IceTransportsType> for i32 {
             1 => IceTransportsType::Relay,
             2 => IceTransportsType::NoHost,
             3 => IceTransportsType::None,
-            _ => {
-                unreachable!("Invalid variant for IceTransportsType: {}", self)
-            }
+            _ => unreachable!("Invalid variant for IceTransportsType: {}", self),
         }
     }
 }
@@ -876,13 +878,11 @@ impl Wire2Api<RtpTransceiverDirection> for i32 {
             2 => RtpTransceiverDirection::RecvOnly,
             3 => RtpTransceiverDirection::Inactive,
             4 => RtpTransceiverDirection::Stopped,
-            _ => unreachable!(
-                "Invalid variant for RtpTransceiverDirection: {}",
-                self
-            ),
+            _ => unreachable!("Invalid variant for RtpTransceiverDirection: {}", self),
         }
     }
 }
+
 impl Wire2Api<SdpType> for i32 {
     fn wire2api(self) -> SdpType {
         match self {
@@ -933,12 +933,8 @@ impl rust2dart::IntoIntoDart<CandidateType> for CandidateType {
 impl support::IntoDart for GetMediaError {
     fn into_dart(self) -> support::DartAbi {
         match self {
-            Self::Audio(field0) => {
-                vec![0.into_dart(), field0.into_into_dart().into_dart()]
-            }
-            Self::Video(field0) => {
-                vec![1.into_dart(), field0.into_into_dart().into_dart()]
-            }
+            Self::Audio(field0) => vec![0.into_dart(), field0.into_into_dart().into_dart()],
+            Self::Video(field0) => vec![1.into_dart(), field0.into_into_dart().into_dart()],
         }
         .into_dart()
     }
@@ -953,12 +949,8 @@ impl rust2dart::IntoIntoDart<GetMediaError> for GetMediaError {
 impl support::IntoDart for GetMediaResult {
     fn into_dart(self) -> support::DartAbi {
         match self {
-            Self::Ok(field0) => {
-                vec![0.into_dart(), field0.into_into_dart().into_dart()]
-            }
-            Self::Err(field0) => {
-                vec![1.into_dart(), field0.into_into_dart().into_dart()]
-            }
+            Self::Ok(field0) => vec![0.into_dart(), field0.into_into_dart().into_dart()],
+            Self::Err(field0) => vec![1.into_dart(), field0.into_into_dart().into_dart()],
         }
         .into_dart()
     }
@@ -1173,9 +1165,7 @@ impl support::IntoDart for PeerConnectionEvent {
             Self::ConnectionStateChange(field0) => {
                 vec![7.into_dart(), field0.into_into_dart().into_dart()]
             }
-            Self::Track(field0) => {
-                vec![8.into_dart(), field0.into_into_dart().into_dart()]
-            }
+            Self::Track(field0) => vec![8.into_dart(), field0.into_into_dart().into_dart()],
         }
         .into_dart()
     }
@@ -1226,12 +1216,8 @@ impl rust2dart::IntoIntoDart<Protocol> for Protocol {
 impl support::IntoDart for RtcIceCandidateStats {
     fn into_dart(self) -> support::DartAbi {
         match self {
-            Self::Local(field0) => {
-                vec![0.into_dart(), field0.into_into_dart().into_dart()]
-            }
-            Self::Remote(field0) => {
-                vec![1.into_dart(), field0.into_into_dart().into_dart()]
-            }
+            Self::Local(field0) => vec![0.into_dart(), field0.into_into_dart().into_dart()],
+            Self::Remote(field0) => vec![1.into_dart(), field0.into_into_dart().into_dart()],
         }
         .into_dart()
     }
@@ -1295,9 +1281,7 @@ impl support::IntoDart for RtcInboundRtpStreamMediaType {
     }
 }
 impl support::IntoDartExceptPrimitive for RtcInboundRtpStreamMediaType {}
-impl rust2dart::IntoIntoDart<RtcInboundRtpStreamMediaType>
-    for RtcInboundRtpStreamMediaType
-{
+impl rust2dart::IntoIntoDart<RtcInboundRtpStreamMediaType> for RtcInboundRtpStreamMediaType {
     fn into_into_dart(self) -> Self {
         self
     }
@@ -1337,9 +1321,7 @@ impl support::IntoDart for RtcMediaSourceStatsMediaType {
     }
 }
 impl support::IntoDartExceptPrimitive for RtcMediaSourceStatsMediaType {}
-impl rust2dart::IntoIntoDart<RtcMediaSourceStatsMediaType>
-    for RtcMediaSourceStatsMediaType
-{
+impl rust2dart::IntoIntoDart<RtcMediaSourceStatsMediaType> for RtcMediaSourceStatsMediaType {
     fn into_into_dart(self) -> Self {
         self
     }
@@ -1374,6 +1356,42 @@ impl support::IntoDartExceptPrimitive for RtcOutboundRtpStreamStatsMediaType {}
 impl rust2dart::IntoIntoDart<RtcOutboundRtpStreamStatsMediaType>
     for RtcOutboundRtpStreamStatsMediaType
 {
+    fn into_into_dart(self) -> Self {
+        self
+    }
+}
+
+impl support::IntoDart for RtcRtpEncodingParameters {
+    fn into_dart(self) -> support::DartAbi {
+        vec![
+            self.rid.into_into_dart().into_dart(),
+            self.active.into_into_dart().into_dart(),
+            self.max_bitrate.into_dart(),
+            self.max_framerate.into_dart(),
+            self.scale_resolution_down_by.into_dart(),
+            self.scalability_mode.into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for RtcRtpEncodingParameters {}
+impl rust2dart::IntoIntoDart<RtcRtpEncodingParameters> for RtcRtpEncodingParameters {
+    fn into_into_dart(self) -> Self {
+        self
+    }
+}
+
+impl support::IntoDart for RtcRtpSendParameters {
+    fn into_dart(self) -> support::DartAbi {
+        vec![
+            self.encodings.into_into_dart().into_dart(),
+            self.inner.into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for RtcRtpSendParameters {}
+impl rust2dart::IntoIntoDart<RtcRtpSendParameters> for RtcRtpSendParameters {
     fn into_into_dart(self) -> Self {
         self
     }
@@ -1443,9 +1461,7 @@ impl support::IntoDart for RtcStatsIceCandidatePairState {
     }
 }
 impl support::IntoDartExceptPrimitive for RtcStatsIceCandidatePairState {}
-impl rust2dart::IntoIntoDart<RtcStatsIceCandidatePairState>
-    for RtcStatsIceCandidatePairState
-{
+impl rust2dart::IntoIntoDart<RtcStatsIceCandidatePairState> for RtcStatsIceCandidatePairState {
     fn into_into_dart(self) -> Self {
         self
     }
@@ -1598,9 +1614,7 @@ impl support::IntoDart for RtpTransceiverDirection {
     }
 }
 impl support::IntoDartExceptPrimitive for RtpTransceiverDirection {}
-impl rust2dart::IntoIntoDart<RtpTransceiverDirection>
-    for RtpTransceiverDirection
-{
+impl rust2dart::IntoIntoDart<RtpTransceiverDirection> for RtpTransceiverDirection {
     fn into_into_dart(self) -> Self {
         self
     }
@@ -1707,8 +1721,7 @@ impl rust2dart::IntoIntoDart<TrackState> for TrackState {
 // Section: executor
 
 support::lazy_static! {
-    pub static ref FLUTTER_RUST_BRIDGE_HANDLER: support::DefaultHandler =
-        Default::default();
+    pub static ref FLUTTER_RUST_BRIDGE_HANDLER: support::DefaultHandler = Default::default();
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -1779,50 +1792,6 @@ mod io {
     }
 
     #[no_mangle]
-    pub extern "C" fn wire_create_transceiver_init(port_: i64) {
-        wire_create_transceiver_init_impl(port_)
-    }
-
-    #[no_mangle]
-    pub extern "C" fn wire_set_transceiver_init_direction(
-        port_: i64,
-        init: wire_ArcRtpTransceiverInit,
-        direction: i32,
-    ) {
-        wire_set_transceiver_init_direction_impl(port_, init, direction)
-    }
-
-    #[no_mangle]
-    pub extern "C" fn wire_add_transceiver_init_send_encoding(
-        port_: i64,
-        init: wire_ArcRtpTransceiverInit,
-        enc: wire_ArcRtpEncodingParameters,
-    ) {
-        wire_add_transceiver_init_send_encoding_impl(port_, init, enc)
-    }
-
-    #[no_mangle]
-    pub extern "C" fn wire_create_encoding_parameters(
-        port_: i64,
-        rid: *mut wire_uint_8_list,
-        active: bool,
-        max_bitrate: *mut i32,
-        max_framerate: *mut f64,
-        scale_resolution_down_by: *mut f64,
-        scalability_mode: *mut wire_uint_8_list,
-    ) {
-        wire_create_encoding_parameters_impl(
-            port_,
-            rid,
-            active,
-            max_bitrate,
-            max_framerate,
-            scale_resolution_down_by,
-            scalability_mode,
-        )
-    }
-
-    #[no_mangle]
     pub extern "C" fn wire_set_local_description(
         port_: i64,
         peer: wire_ArcPeerConnection,
@@ -1847,16 +1816,13 @@ mod io {
         port_: i64,
         peer: wire_ArcPeerConnection,
         media_type: i32,
-        init: wire_ArcRtpTransceiverInit,
+        init: *mut wire_RtpTransceiverInit,
     ) {
         wire_add_transceiver_impl(port_, peer, media_type, init)
     }
 
     #[no_mangle]
-    pub extern "C" fn wire_get_transceivers(
-        port_: i64,
-        peer: wire_ArcPeerConnection,
-    ) {
+    pub extern "C" fn wire_get_transceivers(port_: i64, peer: wire_ArcPeerConnection) {
         wire_get_transceivers_impl(port_, peer)
     }
 
@@ -1888,10 +1854,7 @@ mod io {
     }
 
     #[no_mangle]
-    pub extern "C" fn wire_get_transceiver_mid(
-        port_: i64,
-        transceiver: wire_ArcRtpTransceiver,
-    ) {
+    pub extern "C" fn wire_get_transceiver_mid(port_: i64, transceiver: wire_ArcRtpTransceiver) {
         wire_get_transceiver_mid_impl(port_, transceiver)
     }
 
@@ -1904,18 +1867,12 @@ mod io {
     }
 
     #[no_mangle]
-    pub extern "C" fn wire_get_peer_stats(
-        port_: i64,
-        peer: wire_ArcPeerConnection,
-    ) {
+    pub extern "C" fn wire_get_peer_stats(port_: i64, peer: wire_ArcPeerConnection) {
         wire_get_peer_stats_impl(port_, peer)
     }
 
     #[no_mangle]
-    pub extern "C" fn wire_stop_transceiver(
-        port_: i64,
-        transceiver: wire_ArcRtpTransceiver,
-    ) {
+    pub extern "C" fn wire_stop_transceiver(port_: i64, transceiver: wire_ArcRtpTransceiver) {
         wire_stop_transceiver_impl(port_, transceiver)
     }
 
@@ -1930,6 +1887,20 @@ mod io {
     }
 
     #[no_mangle]
+    pub extern "C" fn wire_sender_get_parameters(port_: i64, transceiver: wire_ArcRtpTransceiver) {
+        wire_sender_get_parameters_impl(port_, transceiver)
+    }
+
+    #[no_mangle]
+    pub extern "C" fn wire_sender_set_parameters(
+        port_: i64,
+        transceiver: wire_ArcRtpTransceiver,
+        params: *mut wire_RtcRtpSendParameters,
+    ) {
+        wire_sender_set_parameters_impl(port_, transceiver, params)
+    }
+
+    #[no_mangle]
     pub extern "C" fn wire_add_ice_candidate(
         port_: i64,
         peer: wire_ArcPeerConnection,
@@ -1937,44 +1908,26 @@ mod io {
         sdp_mid: *mut wire_uint_8_list,
         sdp_mline_index: i32,
     ) {
-        wire_add_ice_candidate_impl(
-            port_,
-            peer,
-            candidate,
-            sdp_mid,
-            sdp_mline_index,
-        )
+        wire_add_ice_candidate_impl(port_, peer, candidate, sdp_mid, sdp_mline_index)
     }
 
     #[no_mangle]
-    pub extern "C" fn wire_restart_ice(
-        port_: i64,
-        peer: wire_ArcPeerConnection,
-    ) {
+    pub extern "C" fn wire_restart_ice(port_: i64, peer: wire_ArcPeerConnection) {
         wire_restart_ice_impl(port_, peer)
     }
 
     #[no_mangle]
-    pub extern "C" fn wire_dispose_peer_connection(
-        port_: i64,
-        peer: wire_ArcPeerConnection,
-    ) {
+    pub extern "C" fn wire_dispose_peer_connection(port_: i64, peer: wire_ArcPeerConnection) {
         wire_dispose_peer_connection_impl(port_, peer)
     }
 
     #[no_mangle]
-    pub extern "C" fn wire_get_media(
-        port_: i64,
-        constraints: *mut wire_MediaStreamConstraints,
-    ) {
+    pub extern "C" fn wire_get_media(port_: i64, constraints: *mut wire_MediaStreamConstraints) {
         wire_get_media_impl(port_, constraints)
     }
 
     #[no_mangle]
-    pub extern "C" fn wire_set_audio_playout_device(
-        port_: i64,
-        device_id: *mut wire_uint_8_list,
-    ) {
+    pub extern "C" fn wire_set_audio_playout_device(port_: i64, device_id: *mut wire_uint_8_list) {
         wire_set_audio_playout_device_impl(port_, device_id)
     }
 
@@ -2058,14 +2011,7 @@ mod io {
         callback_ptr: u64,
         texture_id: i64,
     ) {
-        wire_create_video_sink_impl(
-            port_,
-            sink_id,
-            peer_id,
-            track_id,
-            callback_ptr,
-            texture_id,
-        )
+        wire_create_video_sink_impl(port_, sink_id, peer_id, track_id, callback_ptr, texture_id)
     }
 
     #[no_mangle]
@@ -2081,9 +2027,13 @@ mod io {
     }
 
     #[no_mangle]
-    pub extern "C" fn new_ArcRtpEncodingParameters(
-    ) -> wire_ArcRtpEncodingParameters {
+    pub extern "C" fn new_ArcRtpEncodingParameters() -> wire_ArcRtpEncodingParameters {
         wire_ArcRtpEncodingParameters::new_with_null_ptr()
+    }
+
+    #[no_mangle]
+    pub extern "C" fn new_ArcRtpParameters() -> wire_ArcRtpParameters {
+        wire_ArcRtpParameters::new_with_null_ptr()
     }
 
     #[no_mangle]
@@ -2092,26 +2042,16 @@ mod io {
     }
 
     #[no_mangle]
-    pub extern "C" fn new_ArcRtpTransceiverInit() -> wire_ArcRtpTransceiverInit
-    {
-        wire_ArcRtpTransceiverInit::new_with_null_ptr()
-    }
-
-    #[no_mangle]
     pub extern "C" fn new_StringList_0(len: i32) -> *mut wire_StringList {
         let wrap = wire_StringList {
-            ptr: support::new_leak_vec_ptr(
-                <*mut wire_uint_8_list>::new_with_null_ptr(),
-                len,
-            ),
+            ptr: support::new_leak_vec_ptr(<*mut wire_uint_8_list>::new_with_null_ptr(), len),
             len,
         };
         support::new_leak_box_ptr(wrap)
     }
 
     #[no_mangle]
-    pub extern "C" fn new_box_autoadd_audio_constraints_0(
-    ) -> *mut wire_AudioConstraints {
+    pub extern "C" fn new_box_autoadd_audio_constraints_0() -> *mut wire_AudioConstraints {
         support::new_leak_box_ptr(wire_AudioConstraints::new_with_null_ptr())
     }
 
@@ -2128,15 +2068,23 @@ mod io {
     #[no_mangle]
     pub extern "C" fn new_box_autoadd_media_stream_constraints_0(
     ) -> *mut wire_MediaStreamConstraints {
-        support::new_leak_box_ptr(
-            wire_MediaStreamConstraints::new_with_null_ptr(),
-        )
+        support::new_leak_box_ptr(wire_MediaStreamConstraints::new_with_null_ptr())
     }
 
     #[no_mangle]
-    pub extern "C" fn new_box_autoadd_rtc_configuration_0(
-    ) -> *mut wire_RtcConfiguration {
+    pub extern "C" fn new_box_autoadd_rtc_configuration_0() -> *mut wire_RtcConfiguration {
         support::new_leak_box_ptr(wire_RtcConfiguration::new_with_null_ptr())
+    }
+
+    #[no_mangle]
+    pub extern "C" fn new_box_autoadd_rtc_rtp_send_parameters_0() -> *mut wire_RtcRtpSendParameters
+    {
+        support::new_leak_box_ptr(wire_RtcRtpSendParameters::new_with_null_ptr())
+    }
+
+    #[no_mangle]
+    pub extern "C" fn new_box_autoadd_rtp_transceiver_init_0() -> *mut wire_RtpTransceiverInit {
+        support::new_leak_box_ptr(wire_RtpTransceiverInit::new_with_null_ptr())
     }
 
     #[no_mangle]
@@ -2145,18 +2093,34 @@ mod io {
     }
 
     #[no_mangle]
-    pub extern "C" fn new_box_autoadd_video_constraints_0(
-    ) -> *mut wire_VideoConstraints {
+    pub extern "C" fn new_box_autoadd_video_constraints_0() -> *mut wire_VideoConstraints {
         support::new_leak_box_ptr(wire_VideoConstraints::new_with_null_ptr())
     }
 
     #[no_mangle]
-    pub extern "C" fn new_list_rtc_ice_server_0(
+    pub extern "C" fn new_list___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters_0(
         len: i32,
-    ) -> *mut wire_list_rtc_ice_server {
+    ) -> *mut wire_list___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters {
+        let wrap = wire_list___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters { ptr: support::new_leak_vec_ptr(<wire___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters>::new_with_null_ptr(), len), len };
+        support::new_leak_box_ptr(wrap)
+    }
+
+    #[no_mangle]
+    pub extern "C" fn new_list_rtc_ice_server_0(len: i32) -> *mut wire_list_rtc_ice_server {
         let wrap = wire_list_rtc_ice_server {
+            ptr: support::new_leak_vec_ptr(<wire_RtcIceServer>::new_with_null_ptr(), len),
+            len,
+        };
+        support::new_leak_box_ptr(wrap)
+    }
+
+    #[no_mangle]
+    pub extern "C" fn new_list_rtc_rtp_encoding_parameters_0(
+        len: i32,
+    ) -> *mut wire_list_rtc_rtp_encoding_parameters {
+        let wrap = wire_list_rtc_rtp_encoding_parameters {
             ptr: support::new_leak_vec_ptr(
-                <wire_RtcIceServer>::new_with_null_ptr(),
+                <wire_RtcRtpEncodingParameters>::new_with_null_ptr(),
                 len,
             ),
             len,
@@ -2183,9 +2147,7 @@ mod io {
     }
 
     #[no_mangle]
-    pub extern "C" fn share_opaque_ArcPeerConnection(
-        ptr: *const c_void,
-    ) -> *const c_void {
+    pub extern "C" fn share_opaque_ArcPeerConnection(ptr: *const c_void) -> *const c_void {
         unsafe {
             Arc::<Arc<PeerConnection>>::increment_strong_count(ptr as _);
             ptr
@@ -2200,11 +2162,24 @@ mod io {
     }
 
     #[no_mangle]
-    pub extern "C" fn share_opaque_ArcRtpEncodingParameters(
-        ptr: *const c_void,
-    ) -> *const c_void {
+    pub extern "C" fn share_opaque_ArcRtpEncodingParameters(ptr: *const c_void) -> *const c_void {
         unsafe {
             Arc::<Arc<RtpEncodingParameters>>::increment_strong_count(ptr as _);
+            ptr
+        }
+    }
+
+    #[no_mangle]
+    pub extern "C" fn drop_opaque_ArcRtpParameters(ptr: *const c_void) {
+        unsafe {
+            Arc::<Arc<RtpParameters>>::decrement_strong_count(ptr as _);
+        }
+    }
+
+    #[no_mangle]
+    pub extern "C" fn share_opaque_ArcRtpParameters(ptr: *const c_void) -> *const c_void {
+        unsafe {
+            Arc::<Arc<RtpParameters>>::increment_strong_count(ptr as _);
             ptr
         }
     }
@@ -2217,28 +2192,9 @@ mod io {
     }
 
     #[no_mangle]
-    pub extern "C" fn share_opaque_ArcRtpTransceiver(
-        ptr: *const c_void,
-    ) -> *const c_void {
+    pub extern "C" fn share_opaque_ArcRtpTransceiver(ptr: *const c_void) -> *const c_void {
         unsafe {
             Arc::<Arc<RtpTransceiver>>::increment_strong_count(ptr as _);
-            ptr
-        }
-    }
-
-    #[no_mangle]
-    pub extern "C" fn drop_opaque_ArcRtpTransceiverInit(ptr: *const c_void) {
-        unsafe {
-            Arc::<Arc<RtpTransceiverInit>>::decrement_strong_count(ptr as _);
-        }
-    }
-
-    #[no_mangle]
-    pub extern "C" fn share_opaque_ArcRtpTransceiverInit(
-        ptr: *const c_void,
-    ) -> *const c_void {
-        unsafe {
-            Arc::<Arc<RtpTransceiverInit>>::increment_strong_count(ptr as _);
             ptr
         }
     }
@@ -2250,22 +2206,18 @@ mod io {
             unsafe { support::opaque_from_dart(self.ptr as _) }
         }
     }
-    impl Wire2Api<RustOpaque<Arc<RtpEncodingParameters>>>
-        for wire_ArcRtpEncodingParameters
-    {
+    impl Wire2Api<RustOpaque<Arc<RtpEncodingParameters>>> for wire_ArcRtpEncodingParameters {
         fn wire2api(self) -> RustOpaque<Arc<RtpEncodingParameters>> {
+            unsafe { support::opaque_from_dart(self.ptr as _) }
+        }
+    }
+    impl Wire2Api<RustOpaque<Arc<RtpParameters>>> for wire_ArcRtpParameters {
+        fn wire2api(self) -> RustOpaque<Arc<RtpParameters>> {
             unsafe { support::opaque_from_dart(self.ptr as _) }
         }
     }
     impl Wire2Api<RustOpaque<Arc<RtpTransceiver>>> for wire_ArcRtpTransceiver {
         fn wire2api(self) -> RustOpaque<Arc<RtpTransceiver>> {
-            unsafe { support::opaque_from_dart(self.ptr as _) }
-        }
-    }
-    impl Wire2Api<RustOpaque<Arc<RtpTransceiverInit>>>
-        for wire_ArcRtpTransceiverInit
-    {
-        fn wire2api(self) -> RustOpaque<Arc<RtpTransceiverInit>> {
             unsafe { support::opaque_from_dart(self.ptr as _) }
         }
     }
@@ -2282,6 +2234,21 @@ mod io {
                 support::vec_from_leak_ptr(wrap.ptr, wrap.len)
             };
             vec.into_iter().map(Wire2Api::wire2api).collect()
+        }
+    }
+    impl
+        Wire2Api<(
+            RtcRtpEncodingParameters,
+            RustOpaque<Arc<RtpEncodingParameters>>,
+        )> for wire___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters
+    {
+        fn wire2api(
+            self,
+        ) -> (
+            RtcRtpEncodingParameters,
+            RustOpaque<Arc<RtpEncodingParameters>>,
+        ) {
+            (self.field0.wire2api(), self.field1.wire2api())
         }
     }
     impl Wire2Api<AudioConstraints> for wire_AudioConstraints {
@@ -2320,6 +2287,18 @@ mod io {
             Wire2Api::<RtcConfiguration>::wire2api(*wrap).into()
         }
     }
+    impl Wire2Api<RtcRtpSendParameters> for *mut wire_RtcRtpSendParameters {
+        fn wire2api(self) -> RtcRtpSendParameters {
+            let wrap = unsafe { support::box_from_leak_ptr(self) };
+            Wire2Api::<RtcRtpSendParameters>::wire2api(*wrap).into()
+        }
+    }
+    impl Wire2Api<RtpTransceiverInit> for *mut wire_RtpTransceiverInit {
+        fn wire2api(self) -> RtpTransceiverInit {
+            let wrap = unsafe { support::box_from_leak_ptr(self) };
+            Wire2Api::<RtpTransceiverInit>::wire2api(*wrap).into()
+        }
+    }
     impl Wire2Api<u64> for *mut u64 {
         fn wire2api(self) -> u64 {
             unsafe { *support::box_from_leak_ptr(self) }
@@ -2332,8 +2311,38 @@ mod io {
         }
     }
 
+    impl
+        Wire2Api<
+            Vec<(
+                RtcRtpEncodingParameters,
+                RustOpaque<Arc<RtpEncodingParameters>>,
+            )>,
+        > for *mut wire_list___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters
+    {
+        fn wire2api(
+            self,
+        ) -> Vec<(
+            RtcRtpEncodingParameters,
+            RustOpaque<Arc<RtpEncodingParameters>>,
+        )> {
+            let vec = unsafe {
+                let wrap = support::box_from_leak_ptr(self);
+                support::vec_from_leak_ptr(wrap.ptr, wrap.len)
+            };
+            vec.into_iter().map(Wire2Api::wire2api).collect()
+        }
+    }
     impl Wire2Api<Vec<RtcIceServer>> for *mut wire_list_rtc_ice_server {
         fn wire2api(self) -> Vec<RtcIceServer> {
+            let vec = unsafe {
+                let wrap = support::box_from_leak_ptr(self);
+                support::vec_from_leak_ptr(wrap.ptr, wrap.len)
+            };
+            vec.into_iter().map(Wire2Api::wire2api).collect()
+        }
+    }
+    impl Wire2Api<Vec<RtcRtpEncodingParameters>> for *mut wire_list_rtc_rtp_encoding_parameters {
+        fn wire2api(self) -> Vec<RtcRtpEncodingParameters> {
             let vec = unsafe {
                 let wrap = support::box_from_leak_ptr(self);
                 support::vec_from_leak_ptr(wrap.ptr, wrap.len)
@@ -2365,6 +2374,35 @@ mod io {
                 urls: self.urls.wire2api(),
                 username: self.username.wire2api(),
                 credential: self.credential.wire2api(),
+            }
+        }
+    }
+    impl Wire2Api<RtcRtpEncodingParameters> for wire_RtcRtpEncodingParameters {
+        fn wire2api(self) -> RtcRtpEncodingParameters {
+            RtcRtpEncodingParameters {
+                rid: self.rid.wire2api(),
+                active: self.active.wire2api(),
+                max_bitrate: self.max_bitrate.wire2api(),
+                max_framerate: self.max_framerate.wire2api(),
+                scale_resolution_down_by: self.scale_resolution_down_by.wire2api(),
+                scalability_mode: self.scalability_mode.wire2api(),
+            }
+        }
+    }
+    impl Wire2Api<RtcRtpSendParameters> for wire_RtcRtpSendParameters {
+        fn wire2api(self) -> RtcRtpSendParameters {
+            RtcRtpSendParameters {
+                encodings: self.encodings.wire2api(),
+                inner: self.inner.wire2api(),
+            }
+        }
+    }
+
+    impl Wire2Api<RtpTransceiverInit> for wire_RtpTransceiverInit {
+        fn wire2api(self) -> RtpTransceiverInit {
+            RtpTransceiverInit {
+                direction: self.direction.wire2api(),
+                send_encodings: self.send_encodings.wire2api(),
             }
         }
     }
@@ -2404,13 +2442,13 @@ mod io {
 
     #[repr(C)]
     #[derive(Clone)]
-    pub struct wire_ArcRtpTransceiver {
+    pub struct wire_ArcRtpParameters {
         ptr: *const core::ffi::c_void,
     }
 
     #[repr(C)]
     #[derive(Clone)]
-    pub struct wire_ArcRtpTransceiverInit {
+    pub struct wire_ArcRtpTransceiver {
         ptr: *const core::ffi::c_void,
     }
 
@@ -2423,14 +2461,35 @@ mod io {
 
     #[repr(C)]
     #[derive(Clone)]
+    pub struct wire___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters {
+        field0: wire_RtcRtpEncodingParameters,
+        field1: wire_ArcRtpEncodingParameters,
+    }
+
+    #[repr(C)]
+    #[derive(Clone)]
     pub struct wire_AudioConstraints {
         device_id: *mut wire_uint_8_list,
     }
 
     #[repr(C)]
     #[derive(Clone)]
+    pub struct wire_list___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters {
+        ptr: *mut wire___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters,
+        len: i32,
+    }
+
+    #[repr(C)]
+    #[derive(Clone)]
     pub struct wire_list_rtc_ice_server {
         ptr: *mut wire_RtcIceServer,
+        len: i32,
+    }
+
+    #[repr(C)]
+    #[derive(Clone)]
+    pub struct wire_list_rtc_rtp_encoding_parameters {
+        ptr: *mut wire_RtcRtpEncodingParameters,
         len: i32,
     }
 
@@ -2455,6 +2514,31 @@ mod io {
         urls: *mut wire_StringList,
         username: *mut wire_uint_8_list,
         credential: *mut wire_uint_8_list,
+    }
+
+    #[repr(C)]
+    #[derive(Clone)]
+    pub struct wire_RtcRtpEncodingParameters {
+        rid: *mut wire_uint_8_list,
+        active: bool,
+        max_bitrate: *mut i32,
+        max_framerate: *mut f64,
+        scale_resolution_down_by: *mut f64,
+        scalability_mode: *mut wire_uint_8_list,
+    }
+
+    #[repr(C)]
+    #[derive(Clone)]
+    pub struct wire_RtcRtpSendParameters {
+        encodings: *mut wire_list___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters,
+        inner: wire_ArcRtpParameters,
+    }
+
+    #[repr(C)]
+    #[derive(Clone)]
+    pub struct wire_RtpTransceiverInit {
+        direction: i32,
+        send_encodings: *mut wire_list_rtc_rtp_encoding_parameters,
     }
 
     #[repr(C)]
@@ -2500,6 +2584,13 @@ mod io {
             }
         }
     }
+    impl NewWithNullPtr for wire_ArcRtpParameters {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                ptr: core::ptr::null(),
+            }
+        }
+    }
     impl NewWithNullPtr for wire_ArcRtpTransceiver {
         fn new_with_null_ptr() -> Self {
             Self {
@@ -2507,11 +2598,19 @@ mod io {
             }
         }
     }
-    impl NewWithNullPtr for wire_ArcRtpTransceiverInit {
+
+    impl NewWithNullPtr for wire___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters {
         fn new_with_null_ptr() -> Self {
             Self {
-                ptr: core::ptr::null(),
+                field0: Default::default(),
+                field1: wire_ArcRtpEncodingParameters::new_with_null_ptr(),
             }
+        }
+    }
+
+    impl Default for wire___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
         }
     }
 
@@ -2576,6 +2675,55 @@ mod io {
         }
     }
 
+    impl NewWithNullPtr for wire_RtcRtpEncodingParameters {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                rid: core::ptr::null_mut(),
+                active: Default::default(),
+                max_bitrate: core::ptr::null_mut(),
+                max_framerate: core::ptr::null_mut(),
+                scale_resolution_down_by: core::ptr::null_mut(),
+                scalability_mode: core::ptr::null_mut(),
+            }
+        }
+    }
+
+    impl Default for wire_RtcRtpEncodingParameters {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
+        }
+    }
+
+    impl NewWithNullPtr for wire_RtcRtpSendParameters {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                encodings: core::ptr::null_mut(),
+                inner: wire_ArcRtpParameters::new_with_null_ptr(),
+            }
+        }
+    }
+
+    impl Default for wire_RtcRtpSendParameters {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
+        }
+    }
+
+    impl NewWithNullPtr for wire_RtpTransceiverInit {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                direction: Default::default(),
+                send_encodings: core::ptr::null_mut(),
+            }
+        }
+    }
+
+    impl Default for wire_RtpTransceiverInit {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
+        }
+    }
+
     impl NewWithNullPtr for wire_VideoConstraints {
         fn new_with_null_ptr() -> Self {
             Self {
@@ -2604,4 +2752,4 @@ mod io {
     }
 }
 #[cfg(not(target_family = "wasm"))]
-pub use io::*;
+pub use self::io::*;

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BRIDGE_ADM_H_
+#define BRIDGE_ADM_H_
 
 #define WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE 1
 
@@ -213,3 +214,5 @@ class OpenALAudioDeviceModule : public webrtc::AudioDeviceModuleImpl,
 
   rtc::scoped_refptr<AudioSource> microphone_source;
 };
+
+#endif // BRIDGE_ADM_H_
