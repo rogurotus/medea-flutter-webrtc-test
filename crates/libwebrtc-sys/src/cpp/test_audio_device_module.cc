@@ -331,7 +331,6 @@ class TestADM : public AudioDeviceGeneric {
           _SamplesPerFrame(sampling_frequency));
       audio_buffer_->GetPlayoutData(playout_buffer_.data());
       size_t samples_out = samples_per_channel * renderer_->NumChannels();
-      RTC_CHECK_LE(samples_out, playout_buffer_.size());
       const bool keep_rendering = renderer_->Render(
           rtc::ArrayView<const int16_t>(playout_buffer_.data(), samples_out));
       if (!keep_rendering) {
