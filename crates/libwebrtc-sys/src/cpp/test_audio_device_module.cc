@@ -12,7 +12,6 @@
 #include "absl/strings/string_view.h"
 #include "api/array_view.h"
 #include "api/make_ref_counted.h"
-#include "common_audio/wav_file.h"
 #include "modules/audio_device/audio_device_impl.h"
 #include "modules/audio_device/include/audio_device_default.h"
 #include "rtc_base/buffer.h"
