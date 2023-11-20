@@ -89,8 +89,8 @@ ALCGETINTEGER64VSOFT alcGetInteger64vSOFT /* = nullptr*/;
 struct OpenALAudioDeviceModule::Data {
   Data() {
     _playoutThread = rtc::Thread::Create();
-    _recordingThread = rtc::Thread::Create();
     rtc::Thread::Current()->AllowInvokesToThread(_playoutThread.get());
+    _recordingThread = rtc::Thread::Create();
     rtc::Thread::Current()->AllowInvokesToThread(_recordingThread.get());
   }
 
@@ -111,6 +111,7 @@ struct OpenALAudioDeviceModule::Data {
   bool playing = false;
   int emptyRecordingData = 0;
   bool recording = false;
+  bool stop_recording = false;
 };
 
 // Main initialization and termination.
@@ -201,6 +202,8 @@ OpenALAudioDeviceModule::OpenALAudioDeviceModule(
     AudioLayer audio_layer,
     webrtc::TaskQueueFactory* task_queue_factory)
     : webrtc::AudioDeviceModuleImpl(audio_layer, task_queue_factory) {
+  rtc::Thread::Current()->AllowInvokesToThread(stop_thread.get());
+  stop_thread->Start();
   GetAudioDeviceBuffer()->SetPlayoutSampleRate(kPlayoutFrequency);
   GetAudioDeviceBuffer()->SetPlayoutChannels(_playoutChannels);
 }
@@ -370,7 +373,7 @@ int32_t OpenALAudioDeviceModule::StopPlayout() {
   if (_data) {
     stopPlayingOnThread();
     GetAudioDeviceBuffer()->StopPlayout();
-    _data->_playoutThread->Stop();
+    stop_thread->BlockingCall([&] { _data->_playoutThread->Stop(); });
     if (!_data->recording) {
       _data = nullptr;
     }
@@ -734,7 +737,6 @@ void OpenALAudioDeviceModule::stopPlayingOnThread() {
     std::fill(_data->buffers.begin(), _data->buffers.end(), ALuint(0));
   }
   _data->_playoutThread->PostTask([this] { alcSetThreadContext(nullptr); });
-  _data->_playoutThread->Stop();
 }
 
 void OpenALAudioDeviceModule::closeRecordingDevice() {
@@ -763,7 +765,6 @@ void OpenALAudioDeviceModule::stopCaptureOnThread() {
       }
     });
   }
-  _data->_recordingThread->Stop();
 }
 
 void OpenALAudioDeviceModule::processRecordingQueued() {
@@ -772,14 +773,19 @@ void OpenALAudioDeviceModule::processRecordingQueued() {
         std::lock_guard<std::recursive_mutex> lk(_record_mutex);
         if (_data->recording && !_recordingFailed) {
           processRecordingData();
-          processRecordingQueued();
+          if (!_data->stop_recording) {
+            processRecordingQueued();
+          }
         }
       },
       webrtc::TimeDelta::Millis(kProcessInterval));
 }
 
 void OpenALAudioDeviceModule::startCaptureOnThread() {
-  _data->_recordingThread->Start();
+  if (recording_thread_is_stop) {
+    recording_thread_is_stop = false;
+    _data->_recordingThread->Start();
+  }
   _data->_recordingThread->PostTask([=]() {
     std::lock_guard<std::recursive_mutex> lk(_record_mutex);
     _data->recording = true;
@@ -883,14 +889,20 @@ int32_t OpenALAudioDeviceModule::StopMicrophoneRecording() {
   if (_data) {
     stopCaptureOnThread();
     GetAudioDeviceBuffer()->StopRecording();
-    if (!_data->playing) {
-      _data->_recordingThread->Stop();
-      _data = nullptr;
-    }
   }
   closeRecordingDevice();
   _recordingInitialized = false;
 
+  stop_thread->BlockingCall([&] {
+    _data->_recordingThread->Stop();
+    recording_thread_is_stop = true;
+
+    if (_data) {
+      if (!_data->playing) {
+        _data = nullptr;
+      }
+    }
+  });
   return 0;
 }
 
@@ -1002,6 +1014,7 @@ bool OpenALAudioDeviceModule::processRecordedPart(bool firstInCycle) {
     return false;
   }
 
+  std::unique_lock<std::mutex> lock(microphone_source_mutex);
   if (microphone_source != nullptr) {
     microphone_source->UpdateFrame(
         (const int16_t*)_data->recordedSamples->data(),
@@ -1153,18 +1166,35 @@ void OpenALAudioDeviceModule::AddSource(
 void OpenALAudioDeviceModule::RemoveSource(
     rtc::scoped_refptr<AudioSource> source) {
   {
-    std::unique_lock<std::mutex> lock(source_mutex);
     for (int i = 0; i < sources.size(); ++i) {
       if (sources[i] == source) {
+        {
+          mixer->RemoveSource(source.get());
+
+          if (source == microphone_source) {
+            _data->_recordingThread->PostTask([=]() {
+              std::lock_guard<std::recursive_mutex> lk(_record_mutex);
+              _data->stop_recording = false;
+            });
+
+            if (microphone_source_mutex.try_lock()) {
+              microphone_source = nullptr;
+              microphone_source_mutex.unlock();
+            } else {
+              webrtc::AudioFrame frame;
+              source->GetAudioFrameWithInfo(kRecordingFrequency, &frame);
+
+              microphone_source_mutex.lock();
+              microphone_source = nullptr;
+              microphone_source_mutex.unlock();
+            }
+            StopMicrophoneRecording();
+          }
+        }
+        std::unique_lock<std::mutex> lock(source_mutex);
         sources.erase(sources.begin() + i);
-        { mixer->RemoveSource(source.get()); }
         break;
       }
-    }
-
-    if (source == microphone_source) {
-      StopMicrophoneRecording();
-      microphone_source = nullptr;
     }
   }
 }
@@ -1176,8 +1206,6 @@ void OpenALAudioDeviceModule::RecordProcess() {
       [this] {
         webrtc::AudioFrame frame;
         auto cb = GetAudioDeviceBuffer();
-        int last_sample_rate = frame.sample_rate_hz();
-        int last_num_channels = frame.num_channels();
 
         while (!quit) {
           {
@@ -1186,14 +1214,11 @@ void OpenALAudioDeviceModule::RecordProcess() {
           }
 
           mixer->Mix(kRecordingChannels, &frame);
-
-          if (last_sample_rate != frame.sample_rate_hz()) {
+          if (cb->RecordingSampleRate() != frame.sample_rate_hz()) {
             cb->SetRecordingSampleRate(frame.sample_rate_hz());
-            last_sample_rate = frame.sample_rate_hz();
           }
-          if (last_num_channels != frame.num_channels()) {
+          if (cb->RecordingChannels() != frame.num_channels()) {
             cb->SetRecordingChannels(frame.num_channels());
-            last_num_channels = frame.num_channels();
           }
 
           cb->SetRecordedBuffer(frame.data(), frame.sample_rate_hz() / 100);

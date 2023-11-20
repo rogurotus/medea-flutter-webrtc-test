@@ -39,13 +39,17 @@ class RefCountedAudioSourceManager : public rtc::RefCountInterface {};
 class AudioSourceManager {
  public:
   // Creates a `AudioSource` from a microphone.
-  virtual rtc::scoped_refptr<AudioSource> CreateMicrophoneSource();
+  virtual rtc::scoped_refptr<AudioSource> CreateMicrophoneSource() {
+    return nullptr;
+  }
   // Creates a `AudioSource` from a system audio.
-  virtual rtc::scoped_refptr<AudioSource> CreateSystemSource();
+  virtual rtc::scoped_refptr<AudioSource> CreateSystemSource() {
+    return nullptr;
+  }
   // Adds `AudioSource` to `AudioSourceManager`.
-  virtual void AddSource(rtc::scoped_refptr<AudioSource> source);
+  virtual void AddSource(rtc::scoped_refptr<AudioSource> source) {}
   // Removes `AudioSource` to `AudioSourceManager`.
-  virtual void RemoveSource(rtc::scoped_refptr<AudioSource> source);
+  virtual void RemoveSource(rtc::scoped_refptr<AudioSource> source) {}
 };
 
 class OpenALAudioDeviceModule : public webrtc::AudioDeviceModuleImpl,
@@ -200,6 +204,7 @@ class OpenALAudioDeviceModule : public webrtc::AudioDeviceModuleImpl,
 
   std::recursive_mutex _playout_mutex;
   std::recursive_mutex _record_mutex;
+  std::atomic_bool _recording;
 
   // Mixes `AudioSource` to send.
   rtc::scoped_refptr<webrtc::AudioMixerImpl> mixer =
@@ -211,8 +216,11 @@ class OpenALAudioDeviceModule : public webrtc::AudioDeviceModuleImpl,
 
   rtc::PlatformThread ptrThreadRec;
   std::condition_variable cv;
+  std::unique_ptr<rtc::Thread> stop_thread = rtc::Thread::Create();
+  bool recording_thread_is_stop = true;
 
+  std::mutex microphone_source_mutex;
   rtc::scoped_refptr<AudioSource> microphone_source;
 };
 
-#endif // BRIDGE_ADM_H_
+#endif  // BRIDGE_ADM_H_
