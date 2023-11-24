@@ -17,8 +17,9 @@ pub use crate::webrtc::{
     video_frame_to_abgr, video_frame_to_argb, AudioLayer, BundlePolicy,
     Candidate, CandidatePairChangeEvent, CandidateType, IceConnectionState,
     IceGatheringState, IceTransportsType, MediaType, PeerConnectionState,
-    RTCStatsIceCandidatePairState, RtpTransceiverDirection, SdpType,
-    SignalingState, TrackState, VideoFrame, VideoRotation,
+    RTCStatsIceCandidatePairState, RtcpFeedbackMessageType, RtcpFeedbackType,
+    RtpTransceiverDirection, ScalabilityMode, SdpType, SignalingState,
+    TrackState, VideoFrame, VideoRotation,
 };
 
 /// Handler of events firing from a [`MediaStreamTrackInterface`].
@@ -872,6 +873,123 @@ impl RtpTransceiverInterface {
     }
 }
 
+/// `NACK` or `CCM` feedback.
+pub struct RtcpFeedback(UniquePtr<webrtc::RtcpFeedback>);
+
+impl RtcpFeedback {
+    /// Returns the `message_type` of these [`RtcpFeedback`].
+    pub fn message_type(&self) -> Option<webrtc::RtcpFeedbackMessageType> {
+        webrtc::rtcp_feedback_message_type(&self.0)
+            .take()
+            .map(|v| webrtc::RtcpFeedbackMessageType::try_from(v).unwrap())
+    }
+
+    /// Returns the `kind` of these [`RtcpFeedback`].
+    pub fn kind(&self) -> webrtc::RtcpFeedbackType {
+        webrtc::rtcp_feedback_type(&self.0)
+    }
+}
+
+/// Used in [`RtpCapabilities`] header extensions query
+/// and setup methods: represents the capabilities/preferences of an
+/// implementation for a header extension.
+pub struct RtpHeaderExtensionCapability(
+    UniquePtr<webrtc::RtpHeaderExtensionCapability>,
+);
+
+impl RtpHeaderExtensionCapability {
+    // URI of this extension, as defined in RFC8285.
+    pub fn uri(&self) -> String {
+        webrtc::header_extensions_uri(&self.0).to_string()
+    }
+
+    // Preferred value of ID that goes in the packet.
+    pub fn preferred_id(&self) -> Option<i32> {
+        webrtc::header_extensions_preferred_id(&self.0).take()
+    }
+
+    // If true, it's preferred that the value in the header is encrypted.
+    pub fn preferred_encrypted(&self) -> bool {
+        webrtc::header_extensions_preferred_encrypted(&self.0)
+    }
+
+    // The direction of the extension.
+    pub fn direction(&self) -> RtpTransceiverDirection {
+        webrtc::header_extensions_direction(&self.0)
+    }
+}
+
+/// [`RtpCodecCapability`] is to [`RtpCodecParameters`] as [`RtpCapabilities`]
+/// is to [`RtpParameters`].
+/// This represents the static capabilities of an endpoint's
+/// implementation of a codec.
+pub struct RtpCodecCapability(UniquePtr<webrtc::RtpCodecCapability>);
+
+impl RtpCodecCapability {
+    /// Default payload type for this codec. Mainly needed for codecs that have
+    /// statically assigned payload types.
+    pub fn preferred_payload_type(&self) -> Option<i32> {
+        webrtc::preferred_payload_type(&self.0).take()
+    }
+
+    /// List of scalability modes supported by the video codec.
+    pub fn scalability_modes(&self) -> Vec<webrtc::ScalabilityMode> {
+        webrtc::scalability_modes(&self.0)
+    }
+
+    /// Build MIME "type/subtype" string from `name` and `kind`.
+    pub fn mime_type(&self) -> String {
+        webrtc::rtc_codec_mime_type(&self.0).to_string()
+    }
+
+    /// Used to identify the codec. Equivalent to MIME subtype.
+    pub fn name(&self) -> String {
+        webrtc::rtc_codec_name(&self.0).to_string()
+    }
+
+    /// The media type of this codec. Equivalent to MIME top-level type.
+    pub fn kind(&self) -> MediaType {
+        webrtc::rtc_codec_kind(&self.0)
+    }
+
+    /// If unset, the implementation default is used.
+    pub fn clock_rate(&self) -> Option<i32> {
+        webrtc::rtc_codec_clock_rate(&self.0).take()
+    }
+
+    /// The number of audio channels used. Unset for video codecs. If unset for
+    /// audio, the implementation default is used.
+    pub fn num_channels(&self) -> Option<i32> {
+        webrtc::rtc_codec_num_channels(&self.0).take()
+    }
+
+    /// Codec-specific parameters that must be signaled to the remote party.
+    ///
+    /// Corresponds to "a=fmtp" parameters in SDP.
+    ///
+    /// Contrary to ORTC, these parameters
+    /// are named using all lowercase strings.
+    /// This helps make the mapping to SDP simpler,
+    /// mimeTypeif an application is using SDP.
+    /// Boolean values are represented by the string "1".
+    pub fn parameters(&self) -> HashMap<String, String> {
+        let mut result = HashMap::new();
+        let mut params = webrtc::rtc_codec_parameters(&self.0);
+        while let Some(pair) = params.pin_mut().pop() {
+            result.insert(pair.first, pair.second);
+        }
+        result
+    }
+
+    /// Feedback mechanisms to be used for this codec.
+    pub fn rtcp_feedback(&self) -> Vec<RtcpFeedback> {
+        webrtc::rtc_codec_rtcp_feedback(&self.0)
+            .into_iter()
+            .map(|v| RtcpFeedback(v.ptr))
+            .collect()
+    }
+}
+
 unsafe impl Send for webrtc::RtpTransceiverInterface {}
 unsafe impl Sync for webrtc::RtpTransceiverInterface {}
 
@@ -1541,6 +1659,29 @@ impl Thread {
 unsafe impl Send for webrtc::Thread {}
 unsafe impl Sync for webrtc::Thread {}
 
+/// [`RtpCapabilities`] is used to represent
+/// the static capabilities of an endpoint.
+/// An application can use these capabilities to construct an RtpParameters.
+pub struct RtpCapabilities(UniquePtr<webrtc::RtpCapabilities>);
+
+impl RtpCapabilities {
+    /// Supported codecs.
+    pub fn codecs(&self) -> Vec<RtpCodecCapability> {
+        webrtc::rtp_capabilities_codecs(&self.0)
+            .into_iter()
+            .map(|v| RtpCodecCapability(v.ptr))
+            .collect()
+    }
+
+    /// Supported RTP header extensions.
+    pub fn header_extensions(&self) -> Vec<RtpHeaderExtensionCapability> {
+        webrtc::rtp_capabilities_header_extensions(&self.0)
+            .into_iter()
+            .map(|v| RtpHeaderExtensionCapability(v.ptr))
+            .collect()
+    }
+}
+
 /// [`PeerConnectionFactoryInterface`] is the main entry point to the
 /// `PeerConnection API` for clients it is responsible for creating
 /// [`AudioSourceInterface`], tracks ([`VideoTrackInterface`],
@@ -1677,6 +1818,14 @@ impl PeerConnectionFactoryInterface {
             );
         }
         Ok(MediaStreamInterface(ptr))
+    }
+
+    /// Returns the capabilities of an RTP sender of type `kind`.
+    pub fn get_rtp_sender_capabilities(
+        &self,
+        kind: MediaType,
+    ) -> RtpCapabilities {
+        RtpCapabilities(webrtc::get_rtp_sender_capabilities(&self.0, kind))
     }
 }
 

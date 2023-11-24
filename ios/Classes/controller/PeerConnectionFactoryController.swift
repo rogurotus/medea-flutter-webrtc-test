@@ -53,7 +53,17 @@ class PeerConnectionFactoryController {
       let peer = PeerConnectionController(
         messenger: self.messenger, peer: self.peerFactory.create(conf: conf)
       )
-      result(peer.asFlutterResult())
+      case "getRtpSenderCapabilities":
+        let kind = argsMap!["kind"] as? Int
+
+        let capabilities = self.peerFactory.state.getPeerConnectionFactory().getRtpSenderCapabilities(MediaType(rawValue: kind!)!)
+        RtpCapabilities(codecs: capabilities.codecs.map {(codec) -> CodecCapability in
+         CodecCapability(preferredPayloadType: codec.preferredPayloadType, name: codec.name, kind: codec.kind, clockRate: codec.clockRate, numChannels: codec.numChannels, parameters: codec.parameters ,mimeType: codec.mimeType)},
+         headerExtensions: capabilities.headerExtensions.map {(header) -> HeaderExtensionCapability in
+         HeaderExtensionCapability(uri: header.uri, preferredId: header.preferredId , header.preferredEncrypted)
+    }).asFlutterResult()
+
+        result(capabilities.asFlutterResult())
     case "dispose":
       self.channel.setMethodCallHandler(nil)
       result(nil)

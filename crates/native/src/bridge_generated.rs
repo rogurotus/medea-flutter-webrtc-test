@@ -373,6 +373,22 @@ fn wire_sender_get_parameters_impl(
         },
     )
 }
+fn wire_get_rtp_sender_capabilities_impl(
+    port_: MessagePort,
+    kind: impl Wire2Api<MediaType> + UnwindSafe,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap::<_, _, _, RtpCapabilities, _>(
+        WrapInfo {
+            debug_name: "get_rtp_sender_capabilities",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_kind = kind.wire2api();
+            move |task_callback| Result::<_, ()>::Ok(get_rtp_sender_capabilities(api_kind))
+        },
+    )
+}
 fn wire_sender_set_parameters_impl(
     port_: MessagePort,
     transceiver: impl Wire2Api<RustOpaque<Arc<RtpTransceiver>>> + UnwindSafe,
@@ -1486,6 +1502,115 @@ impl rust2dart::IntoIntoDart<RtcTrackEvent> for RtcTrackEvent {
     }
 }
 
+impl support::IntoDart for RtcpFeedback {
+    fn into_dart(self) -> support::DartAbi {
+        vec![
+            self.message_type.into_dart(),
+            self.kind.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for RtcpFeedback {}
+impl rust2dart::IntoIntoDart<RtcpFeedback> for RtcpFeedback {
+    fn into_into_dart(self) -> Self {
+        self
+    }
+}
+
+impl support::IntoDart for RtcpFeedbackMessageType {
+    fn into_dart(self) -> support::DartAbi {
+        match self {
+            Self::GenericNACK => 0,
+            Self::PLI => 1,
+            Self::FIR => 2,
+        }
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for RtcpFeedbackMessageType {}
+impl rust2dart::IntoIntoDart<RtcpFeedbackMessageType> for RtcpFeedbackMessageType {
+    fn into_into_dart(self) -> Self {
+        self
+    }
+}
+
+impl support::IntoDart for RtcpFeedbackType {
+    fn into_dart(self) -> support::DartAbi {
+        match self {
+            Self::CCM => 0,
+            Self::LNTF => 1,
+            Self::NACK => 2,
+            Self::REMB => 3,
+            Self::TransportCC => 4,
+        }
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for RtcpFeedbackType {}
+impl rust2dart::IntoIntoDart<RtcpFeedbackType> for RtcpFeedbackType {
+    fn into_into_dart(self) -> Self {
+        self
+    }
+}
+
+impl support::IntoDart for RtpCapabilities {
+    fn into_dart(self) -> support::DartAbi {
+        vec![
+            self.codecs.into_into_dart().into_dart(),
+            self.header_extensions.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for RtpCapabilities {}
+impl rust2dart::IntoIntoDart<RtpCapabilities> for RtpCapabilities {
+    fn into_into_dart(self) -> Self {
+        self
+    }
+}
+
+impl support::IntoDart for RtpCodecCapability {
+    fn into_dart(self) -> support::DartAbi {
+        vec![
+            self.preferred_payload_type.into_dart(),
+            self.scalability_modes.into_into_dart().into_dart(),
+            self.mime_type.into_into_dart().into_dart(),
+            self.name.into_into_dart().into_dart(),
+            self.kind.into_into_dart().into_dart(),
+            self.clock_rate.into_dart(),
+            self.num_channels.into_dart(),
+            self.parameters.into_into_dart().into_dart(),
+            self.feedback.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for RtpCodecCapability {}
+impl rust2dart::IntoIntoDart<RtpCodecCapability> for RtpCodecCapability {
+    fn into_into_dart(self) -> Self {
+        self
+    }
+}
+
+impl support::IntoDart for RtpHeaderExtensionCapability {
+    fn into_dart(self) -> support::DartAbi {
+        vec![
+            self.uri.into_into_dart().into_dart(),
+            self.preferred_id.into_dart(),
+            self.preferred_encrypted.into_into_dart().into_dart(),
+            self.direction.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for RtpHeaderExtensionCapability {}
+impl rust2dart::IntoIntoDart<RtpHeaderExtensionCapability> for RtpHeaderExtensionCapability {
+    fn into_into_dart(self) -> Self {
+        self
+    }
+}
+
 impl support::IntoDart for RtpTransceiverDirection {
     fn into_dart(self) -> support::DartAbi {
         match self {
@@ -1500,6 +1625,54 @@ impl support::IntoDart for RtpTransceiverDirection {
 }
 impl support::IntoDartExceptPrimitive for RtpTransceiverDirection {}
 impl rust2dart::IntoIntoDart<RtpTransceiverDirection> for RtpTransceiverDirection {
+    fn into_into_dart(self) -> Self {
+        self
+    }
+}
+
+impl support::IntoDart for ScalabilityMode {
+    fn into_dart(self) -> support::DartAbi {
+        match self {
+            Self::L1T1 => 0,
+            Self::L1T2 => 1,
+            Self::L1T3 => 2,
+            Self::L2T1 => 3,
+            Self::L2T1h => 4,
+            Self::L2t1Key => 5,
+            Self::L2T2 => 6,
+            Self::L2T2h => 7,
+            Self::L2T2Key => 8,
+            Self::L2T2KeyShift => 9,
+            Self::L2T3 => 10,
+            Self::L2T3h => 11,
+            Self::L2T3Key => 12,
+            Self::L3T1 => 13,
+            Self::L3T1h => 14,
+            Self::L3T1Key => 15,
+            Self::L3T2 => 16,
+            Self::L3T2h => 17,
+            Self::L3T2Key => 18,
+            Self::L3T3 => 19,
+            Self::L3T3h => 20,
+            Self::L3T3Key => 21,
+            Self::S2T1 => 22,
+            Self::S2T1h => 23,
+            Self::S2T2 => 24,
+            Self::S2T2h => 25,
+            Self::S2T3 => 26,
+            Self::S2T3h => 27,
+            Self::S3T1 => 28,
+            Self::S3T1h => 29,
+            Self::S3T2 => 30,
+            Self::S3T2h => 31,
+            Self::S3T3 => 32,
+            Self::S3T3h => 33,
+        }
+        .into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for ScalabilityMode {}
+impl rust2dart::IntoIntoDart<ScalabilityMode> for ScalabilityMode {
     fn into_into_dart(self) -> Self {
         self
     }
@@ -1774,6 +1947,11 @@ mod io {
     #[no_mangle]
     pub extern "C" fn wire_sender_get_parameters(port_: i64, transceiver: wire_ArcRtpTransceiver) {
         wire_sender_get_parameters_impl(port_, transceiver)
+    }
+
+    #[no_mangle]
+    pub extern "C" fn wire_get_rtp_sender_capabilities(port_: i64, kind: i32) {
+        wire_get_rtp_sender_capabilities_impl(port_, kind)
     }
 
     #[no_mangle]
