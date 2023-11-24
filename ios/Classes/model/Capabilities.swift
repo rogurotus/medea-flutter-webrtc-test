@@ -48,7 +48,7 @@ class CodecCapability {
     /// Contrary to ORTC, these parameters are named using all lowercase strings.
     /// This helps make the mapping to SDP simpler, if an application is using SDP.
     /// Boolean values are represented by the string "1".
-    var parameters: Map<String, String>
+    var parameters: [String: String]
     /// Build MIME "type/subtype" string from `name` and `kind`.
     var mimeType: String
 
@@ -79,11 +79,11 @@ class CodecCapability {
 /// An application can use these capabilities to construct an RtpParameters.
 class RtpCapabilities {
     /// Supported codecs.
-    var codecs: List<CodecCapability>
+    var codecs: [CodecCapability]
     /// Supported RTP header extensions.
-    var headerExtensions: List<HeaderExtensionCapability>
+    var headerExtensions: [HeaderExtensionCapability]
 
-  init(codecs: List<CodecCapability>, headerExtensions: List<HeaderExtensionCapability>,) {
+  init(codecs: [CodecCapability], headerExtensions: [HeaderExtensionCapability]) {
     self.codecs = codecs
     self.headerExtensions = headerExtensions
   }
