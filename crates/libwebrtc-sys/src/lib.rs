@@ -878,9 +878,9 @@ pub struct RtcpFeedback(UniquePtr<webrtc::RtcpFeedback>);
 
 impl RtcpFeedback {
     /// Returns the `message_type` of these [`RtcpFeedback`].
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// If [`RtcpFeedbackMessageType`] has invalid type.
     #[must_use]
     pub fn message_type(&self) -> Option<webrtc::RtcpFeedbackMessageType> {
