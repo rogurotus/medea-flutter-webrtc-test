@@ -4,11 +4,11 @@ import WebRTC
 /// represents the capabilities/preferences of an implementation for a header extension.
 class HeaderExtensionCapability {
     /// URI of this extension, as defined in RFC8285.
-    var uri: String,
+    var uri: String
     /// Preferred value of ID that goes in the packet.
-    var preferredId: Int,
+    var preferredId: Int
     /// If true, it's preferred that the value in the header is encrypted.
-    var preferredEncrypted: Bool,
+    var preferredEncrypted: Bool
 
   init(uri: String, preferredId: Int, preferredEncrypted: Bool) {
     self.uri = uri
@@ -31,16 +31,16 @@ class HeaderExtensionCapability {
 class CodecCapability {
     /// Default payload type for this codec. Mainly needed for codecs that have
     /// statically assigned payload types.
-    var preferredPayloadType: Int,
+    var preferredPayloadType: Int
     /// Used to identify the codec. Equivalent to MIME subtype.
-    var name: String,
+    var name: String
     /// The media type of this codec. Equivalent to MIME top-level type.
-    var kind: MediaType,
+    var kind: MediaType
     /// If unset, the implementation default is used.
-    var clockRate: Int,
+    var clockRate: Int
     /// The number of audio channels used. Unset for video codecs. If unset for
     /// audio, the implementation default is used.
-    var numChannels: Int?,
+    var numChannels: Int?
     /// Codec-specific parameters that must be signaled to the remote party.
     ///
     /// Corresponds to "a=fmtp" parameters in SDP.
@@ -48,9 +48,9 @@ class CodecCapability {
     /// Contrary to ORTC, these parameters are named using all lowercase strings.
     /// This helps make the mapping to SDP simpler, if an application is using SDP.
     /// Boolean values are represented by the string "1".
-    var parameters: Map<String, String>,
+    var parameters: Map<String, String>
     /// Build MIME "type/subtype" string from `name` and `kind`.
-    var mimeType: String,
+    var mimeType: String
 
   init(preferredPayloadType: Int, name: String, kind: MediaType, clockRate: Int, numChannels: Int?, parameters: Map<String, String>,mimeType: String ) {
     self.preferredPayloadType = preferredPayloadType
@@ -79,9 +79,9 @@ class CodecCapability {
 /// An application can use these capabilities to construct an RtpParameters.
 class RtpCapabilities {
     /// Supported codecs.
-    var codecs: List<CodecCapability>,
+    var codecs: List<CodecCapability>
     /// Supported RTP header extensions.
-    var headerExtensions: List<HeaderExtensionCapability>,
+    var headerExtensions: List<HeaderExtensionCapability>
 
   init(codecs: List<CodecCapability>, headerExtensions: List<HeaderExtensionCapability>,) {
     self.codecs = codecs

@@ -107,6 +107,7 @@ void main() {
     expect(
         parameters.encodings[0].scaleResolutionDownBy, h.scaleResolutionDownBy);
 
+    print('AAAAAAA ${parameters.encodings[0].scalabilityMode}');
     expect(parameters.encodings[1].rid, m.rid);
     expect(parameters.encodings[1].active, m.active);
     expect(parameters.encodings[1].maxFramerate, m.maxFramerate);
@@ -127,6 +128,7 @@ void main() {
     parameters.encodings[0].maxFramerate = 25;
     parameters.encodings[0].maxBitrate = 800 * 1024;
     parameters.encodings[0].scaleResolutionDownBy = 2;
+    parameters.encodings[0].scalabilityMode = 'L1T1';
 
     parameters.encodings[1].maxFramerate = 15;
     parameters.encodings[1].maxBitrate = 400 * 1024;
@@ -138,6 +140,7 @@ void main() {
 
     await videoTrans1.sender.setParameters(parameters);
     var parameters2 = await videoTrans1.sender.getParameters();
+    print('BBB ${parameters2.encodings[0].scalabilityMode}');
 
     // assert new values
     expect(parameters2.encodings[0].active, true);
@@ -160,30 +163,30 @@ void main() {
     print('codecs ${a.codecs.length}');
     for (var a in a.codecs) {
       print(' ${a.clockRate}');
-      print(' ${a.kind}');
+      // print(' ${a.kind}');
       print(' ${a.mimeType}');
-      print(' ${a.name}');
-      print(' ${a.numChannels}');
+      // print(' ${a.name}');
+      // print(' ${a.numChannels}');
       print(' ${a.parameters}');
-      print(' ${a.preferredPayloadType}\n');
-      print(' scalabilityModes ${a.scalabilityModes.length}');
-      for (var b in a.scalabilityModes) {
-        print('  ${b}');
-      }
+      // print(' ${a.preferredPayloadType}\n');
+      // print(' scalabilityModes ${a.scalabilityModes.length}');
+      // for (var b in a.scalabilityModes) {
+      // print('  ${b}');
+      // }
 
-      print(' feedback ${a.feedback.length}');
-      for (var b in a.feedback) {
-        print('  ${b.kind}');
-        print('  ${b.messageType}\n');
-      }
+      // print(' feedback ${a.feedback.length}');
+      // for (var b in a.feedback) {
+      // print('  ${b.kind}');
+      // print('  ${b.messageType}\n');
+      // }
     }
 
     print('\nheaderExtensions ${a.headerExtensions.length}');
     for (var a in a.headerExtensions) {
       print(' ${a.direction}');
       print(' ${a.uri}');
-      print(' ${a.preferredEncrypted}');
-      print(' ${a.preferredId}\n');
+      // print(' ${a.preferredEncrypted}');
+      // print(' ${a.preferredId}\n');
     }
 
     await pc.close();
