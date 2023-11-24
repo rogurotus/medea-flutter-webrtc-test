@@ -731,6 +731,7 @@ pub enum ScalabilityMode {
 #[derive(Debug, Eq, Hash, PartialEq)]
 #[repr(i32)]
 // Used in RtcpFeedback struct.
+#[allow(clippy::upper_case_acronyms)]
 pub enum RtcpFeedbackType {
     CCM,
     LNTF, // "goog-lntf"
@@ -742,6 +743,7 @@ pub enum RtcpFeedbackType {
 // Used in RtcpFeedback struct when type is NACK or CCM.
 #[derive(Debug, Eq, Hash, PartialEq)]
 #[repr(i32)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum RtcpFeedbackMessageType {
     /// Equivalent to {type: "nack", parameter: undefined} in ORTC.
     GenericNACK,
@@ -793,7 +795,7 @@ impl From<sys::ScalabilityMode> for ScalabilityMode {
     }
 }
 
-/// Used in RtpCapabilities header extensions query and setup methods:
+/// Used in [`RtpCapabilities`] header extensions query and setup methods:
 /// represents the capabilities/preferences
 /// of an implementation for a header extension.
 #[derive(Debug)]

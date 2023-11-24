@@ -16,7 +16,8 @@ data class HeaderExtensionCapability(
     /**
      * Converts the provided [org.webrtc.RtpCapabilities.HeaderExtensionCapability] into [RtcStats].
      *
-     * @return [HeaderExtensionCapability] created based on the provided [org.webrtc.RtpCapabilities.HeaderExtensionCapability]].
+     * @return [HeaderExtensionCapability] created based on the provided
+     * [org.webrtc.RtpCapabilities.HeaderExtensionCapability].
      */
     fun fromWebRtc(
         header: org.webrtc.RtpCapabilities.HeaderExtensionCapability
@@ -25,7 +26,10 @@ data class HeaderExtensionCapability(
     }
   }
 
-  /** Converts these [HeaderExtensionCapability] into a [Map] which can be returned to the Flutter side. */
+  /**
+   * Converts these [HeaderExtensionCapability] into a [Map] which can be returned to the Flutter
+   * side.
+   */
   fun asFlutterResult(): Map<String, Any> {
     return mapOf(
         "uri" to uri, "preferredId" to preferredId, "preferredEncrypted" to preferredEncrypted)
@@ -56,7 +60,8 @@ data class CodecCapability(
     /**
      * Converts the provided [org.webrtc.RtpCapabilities.CodecCapability] into [CodecCapability].
      *
-     * @return [CodecCapability] created based on the provided [org.webrtc.RtpCapabilities.CodecCapability].
+     * @return [CodecCapability] created based on the provided
+     * [org.webrtc.RtpCapabilities.CodecCapability].
      */
     fun fromWebRtc(codec: org.webrtc.RtpCapabilities.CodecCapability): CodecCapability {
       var parameters = codec.parameters

@@ -1192,7 +1192,7 @@ impl sys::PeerConnectionEventsHandler for PeerConnectionObserver {
                     sys::MediaType::MEDIA_TYPE_VIDEO => {
                         let track_id = VideoTrackId::from(track_id);
                         if video_tracks.contains_key(&(
-                            track_id.clone(),
+                            track_id,
                             track_origin.clone(),
                         )) {
                             return;
