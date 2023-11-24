@@ -73,10 +73,6 @@ class TestADM : public AudioDeviceGeneric {
       const int sample_rate = renderer_->SamplingFrequency();
       playout_buffer_.resize(
           _SamplesPerFrame(sample_rate) * renderer_->NumChannels(), 0);
-      RTC_CHECK(good_sample_rate(sample_rate));
-    }
-    if (capturer_) {
-      RTC_CHECK(good_sample_rate(capturer_->SamplingFrequency()));
     }
   }
 
@@ -186,7 +182,6 @@ class TestADM : public AudioDeviceGeneric {
   // Audio transport control
   int32_t StartPlayout() override {
     MutexLock lock(&lock_);
-    RTC_CHECK(renderer_);
     rendering_ = true;
     return 0;
   }
@@ -329,7 +324,6 @@ class TestADM : public AudioDeviceGeneric {
           _SamplesPerFrame(sampling_frequency));
       audio_buffer_->GetPlayoutData(playout_buffer_.data());
       size_t samples_out = samples_per_channel * renderer_->NumChannels();
-      RTC_CHECK_LE(samples_out, playout_buffer_.size());
       const bool keep_rendering = renderer_->Render(
           rtc::ArrayView<const int16_t>(playout_buffer_.data(), samples_out));
       if (!keep_rendering) {
@@ -389,10 +383,8 @@ class TestADMImpl
       const int sample_rate = renderer_->SamplingFrequency();
       playout_buffer_.resize(
           _SamplesPerFrame(sample_rate) * renderer_->NumChannels(), 0);
-      RTC_CHECK(good_sample_rate(sample_rate));
     }
     if (capturer_) {
-      RTC_CHECK(good_sample_rate(capturer_->SamplingFrequency()));
     }
   }
 
@@ -421,7 +413,6 @@ class TestADMImpl
 
   int32_t StartPlayout() override {
     MutexLock lock(&lock_);
-    RTC_CHECK(renderer_);
     rendering_ = true;
     return 0;
   }
@@ -434,7 +425,6 @@ class TestADMImpl
 
   int32_t StartRecording() override {
     MutexLock lock(&lock_);
-    RTC_CHECK(capturer_);
     capturing_ = true;
     return 0;
   }
