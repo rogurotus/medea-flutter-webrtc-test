@@ -5,7 +5,10 @@
 #include "rust/cxx.h"
 
 namespace bridge {
-
+    
+struct OptionF64;
+struct OptionI32;
+struct OptionString;
 
 // Returns the `RtpEncodingParameters.rid` field value.
 rust::String rtp_encoding_parameters_rid(
