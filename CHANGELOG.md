@@ -6,7 +6,7 @@ All user visible changes to this project will be documented in this file. This p
 
 
 
-## [0.8.3] · 2023-11-15
+## [0.8.3] · 2023-11-27
 [0.8.3]: https://github.com/instrumentisto/medea-flutter-webrtc/tree/0.8.3
 
 [Diff](https://github.com/instrumentisto/medea-flutter-webrtc/compare/0.8.2...0.8.3)
@@ -19,7 +19,7 @@ All user visible changes to this project will be documented in this file. This p
 
 ### Changed
 
-- Refactor Audio Device Module to use [OpenAL] library for playout. ([#117])
+- Refactor Audio Device Module to use [OpenAL] library for playout and recording. ([#117], [#136])
 - Fire `onDeviceChange` callback whenever an output audio device is changed in system settings on desktop platforms. ([#119], [#120])
 - Upgraded [libwebrtc] to [118.0.5993.88] version. ([#134])
 - `VideoRenderer.width` and `VideoRenderer.height` now take rotation into account. ([#124])
@@ -37,6 +37,7 @@ All user visible changes to this project will be documented in this file. This p
 [#133]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/133
 [#134]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/134
 [#135]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/135
+[#136]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/136
 [118.0.5993.88]: https://github.com/instrumentisto/libwebrtc-bin/releases/tag/118.0.5993.88
 
 
