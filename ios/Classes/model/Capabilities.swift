@@ -52,7 +52,7 @@ class CodecCapability {
     /// Build MIME "type/subtype" string from `name` and `kind`.
     var mimeType: String
 
-  init(preferredPayloadType: Int, name: String, kind: MediaType, clockRate: Int, numChannels: Int?, parameters: Map<String, String>,mimeType: String ) {
+  init(preferredPayloadType: Int, name: String, kind: MediaType, clockRate: Int, numChannels: Int?, parameters: [String: String],mimeType: String ) {
     self.preferredPayloadType = preferredPayloadType
     self.name = name
     self.kind = kind
