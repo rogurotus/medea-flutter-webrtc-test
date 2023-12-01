@@ -72,6 +72,7 @@ fn main() -> anyhow::Result<()> {
     }
     #[cfg(target_os = "macos")]
     {
+        println!("cargo:rustc-env=MACOSX_DEPLOYMENT_TARGET=10.11");
         build
             .include(libpath.join("include/sdk/objc/base"))
             .include(libpath.join("include/sdk/objc"));
