@@ -14,6 +14,7 @@ All user visible changes to this project will be documented in this file. This p
 ### Added
 
 - `RtpTransceiverInit.sendEncodings` field with `SendEncodingParameters`. ([#125])
+- `MediaStreamTrack.height()` and `MediaStreamTrack.width()` methods. ([#129])
 - `RtpParameters` class, `RtpSender.getParameters()` and `RtpSender.setParameters()` methods. ([#135])
 - `VideoRenderer.onCanPlay` callback. ([#134])
 
@@ -34,6 +35,7 @@ All user visible changes to this project will be documented in this file. This p
 [#120]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/120
 [#124]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/124
 [#125]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/125
+[#129]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/129
 [#133]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/133
 [#134]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/134
 [#135]: https://github.com/instrumentisto/medea-flutter-webrtc/pull/135
