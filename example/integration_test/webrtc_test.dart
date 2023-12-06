@@ -95,7 +95,7 @@ void main() {
     videoInit1.sendEncodings.add(l);
 
     var videoTrans1 = await pc.addTransceiver(MediaKind.video, videoInit1);
-
+    await videoTrans1.setDirection(TransceiverDirection.sendOnly);
     var parameters = await videoTrans1.sender.getParameters();
 
     // assert initial values
@@ -128,7 +128,7 @@ void main() {
     parameters.encodings[0].maxFramerate = 25;
     parameters.encodings[0].maxBitrate = 800 * 1024;
     parameters.encodings[0].scaleResolutionDownBy = 2;
-    parameters.encodings[0].scalabilityMode = 'L1T1';
+    parameters.encodings[0].scalabilityMode = "S3T3";
 
     parameters.encodings[1].maxFramerate = 15;
     parameters.encodings[1].maxBitrate = 400 * 1024;
@@ -138,6 +138,37 @@ void main() {
     parameters.encodings[2].maxBitrate = 200 * 1024;
     parameters.encodings[2].scaleResolutionDownBy = 8;
 
+    // return "L2T1h";
+    // return "L2T1_KEY";
+    // return "L2T2";
+    // return "L2T2h";
+    // return "L2T2_KEY";
+    // return "L2T2_KEY_SHIFT";
+    // return "L2T3";
+    // return "L2T3h";
+    // return "L2T3_KEY";
+    // return "L3T1";
+    // return "L3T1h";
+    // return "L3T1_KEY";
+    // return "L3T2";
+    // return "L3T2h";
+    // return "L3T2_KEY";
+    // return "L3T3h";
+    // return "L3T3_KEY";
+    // return "S2T1";
+    // return "S2T1h";
+    // return "S2T2";
+    // return "S2T2h";
+    // return "S2T3";
+    // return "S2T3h";
+    // return "S3T1";
+    // return "S3T1h";
+    // return "S3T2";
+    // return "S3T2h";
+    // return "S3T3";
+    // return "S3T3h";
+
+    print('BBB222');
     await videoTrans1.sender.setParameters(parameters);
     var parameters2 = await videoTrans1.sender.getParameters();
     print('BBB ${parameters2.encodings[0].scalabilityMode}');

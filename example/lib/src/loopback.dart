@@ -93,6 +93,33 @@ class _LoopbackState extends State<Loopback> {
       var vtrans = await _pc1?.addTransceiver(
           MediaKind.video, RtpTransceiverInit(TransceiverDirection.sendOnly));
 
+      try {
+        var parameters = await vtrans!.sender.getParameters();
+        parameters.encodings[0].maxFramerate = 25;
+        parameters.encodings[0].maxBitrate = 800 * 1024;
+        parameters.encodings[0].scaleResolutionDownBy = 2;
+        parameters.encodings[0].scalabilityMode = "L1T1";
+        await vtrans!.sender.setParameters(parameters);
+      } catch (e) {}
+
+      try {
+        var parameters = await vtrans!.sender.getParameters();
+        parameters.encodings[0].maxFramerate = 25;
+        parameters.encodings[0].maxBitrate = 800 * 1024;
+        parameters.encodings[0].scaleResolutionDownBy = 2;
+        parameters.encodings[0].scalabilityMode = "L1T1";
+        await vtrans!.sender.setParameters(parameters);
+      } catch (e) {}
+
+      try {
+        var parameters = await vtrans!.sender.getParameters();
+        parameters.encodings[0].maxFramerate = 25;
+        parameters.encodings[0].maxBitrate = 800 * 1024;
+        parameters.encodings[0].scaleResolutionDownBy = 2;
+        parameters.encodings[0].scalabilityMode = "L1T1";
+        await vtrans!.sender.setParameters(parameters);
+      } catch (e) {}
+
       var atrans = await _pc1?.addTransceiver(
           MediaKind.audio, RtpTransceiverInit(TransceiverDirection.sendOnly));
 
