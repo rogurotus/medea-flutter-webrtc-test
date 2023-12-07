@@ -234,7 +234,7 @@ jobs:
 
       - name: Install `${{ matrix.platform }}` platform dependencies
         run: |
-          curl -H "Accept: application/vnd.github+json" -H "Authorization: token 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" -L -o build.zip "https://api.github.com/repos/rogurotus/libwebrtc-bin-test/actions/artifacts/1096341950/zip" && ls -a && unzip build.zip && ls -a && cd build && ls && mv WebRTC.xcframework ./ios/WebRTC.xcframework
+          curl -H "Accept: application/vnd.github+json" -H "Authorization: token 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" -L -o build.zip "https://api.github.com/repos/rogurotus/libwebrtc-bin-test/actions/artifacts/1096341950/zip" && ls -a && 7z x build.zip && ls -a && cd build && ls && mv WebRTC.xcframework ./ios/WebRTC.xcframework
         if: ${{ matrix.platform == 'ios' }}
 
       - name: Install `${{ matrix.platform }}` platform dependencies
