@@ -11,7 +11,7 @@ class PeerConnectionFactoryProxy {
   private var peerObservers: [Int: PeerObserver] = [:]
 
   /// Underlying native factory object of this factory.
-  private var factory: RTCPeerConnectionFactory
+  public var factory: RTCPeerConnectionFactory
 
   /// Initializes a new `PeerConnectionFactoryProxy` based on the provided
   /// `State`.

@@ -87,7 +87,7 @@ class RtpSenderController {
         if let scaleResolutionDownBy = e["scaleResolutionDownBy"] as? Double {
           enc!.scaleResolutionDownBy = NSNumber(value: scaleResolutionDownBy)
         }
-        if let scalabilityMode = e["scalabilityMode"] as? NSString {
+        if let scalabilityMode = e["scalabilityMode"] as? String {
           enc!.scalabilityMode = scalabilityMode
         }
       }

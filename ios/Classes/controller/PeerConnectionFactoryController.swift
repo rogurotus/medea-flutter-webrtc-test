@@ -56,7 +56,7 @@ class PeerConnectionFactoryController {
       case "getRtpSenderCapabilities":
         let kind = argsMap!["kind"] as? Int
 
-        let capabilities = self.peerFactory.rtpSenderCapabilitiesFor(MediaType(rawValue: kind!)!)
+        let capabilities = self.peerFactory.factory.rtpSenderCapabilitiesFor(MediaType(rawValue: kind!)!)
         RtpCapabilities(codecs: capabilities.codecs.map {(codec) -> CodecCapability in
          CodecCapability(preferredPayloadType: codec.preferredPayloadType, name: codec.name, kind: codec.kind, clockRate: codec.clockRate, numChannels: codec.numChannels, parameters: codec.parameters ,mimeType: codec.mimeType)},
          headerExtensions: capabilities.headerExtensions.map {(header) -> HeaderExtensionCapability in
