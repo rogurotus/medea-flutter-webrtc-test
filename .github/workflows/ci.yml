@@ -232,15 +232,8 @@ jobs:
         if: ${{ matrix.platform != 'android'
              && matrix.platform != 'ios' }}
 
-      - uses: robinraju/release-downloader@v1.8
-        with:
-          repository: "instrumentisto/libwebrtc-bin"
-          latest: true
-          fileName: "libwebrtc-ios.zip"
-
       - name: Install `${{ matrix.platform }}` platform dependencies
-        run: ls -a && unzip libwebrtc-ios.zip && mv WebRTC.xcframework ./ios/WebRTC.xcframework
-        # && mv WebRTC.xcframework ../WebRTC.xcframework && cd .. && ls
+        run: curl -H "Accept: application/vnd.github+json" -H "Authorization: token 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" -L -o libwebrtc-ios.zip "https://api.github.com/repos/rogurotus/libwebrtc-bin-test/actions/artifacts/1096341950/zip" && ls -a && unzip build.zip && ls -a && cd build && ls && mv WebRTC.xcframework ./ios/WebRTC.xcframework
         if: ${{ matrix.platform == 'ios' }}
 
       - name: Install `${{ matrix.platform }}` platform dependencies
