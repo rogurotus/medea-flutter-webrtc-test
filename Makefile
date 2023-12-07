@@ -383,6 +383,8 @@ endif
 		android/src/main/kotlin/
 
 
+temp:
+cd ios/ && curl https://github.com/instrumentisto/libwebrtc-bin/releases/download/119.0.6045.159/libwebrtc-ios.zip --output libwebrtc-ios.zip && unzip libwebrtc-ios.zip && cd ./libwebrtc-ios && mv WebRTC.xcframework ../WebRTC.xcframework && cd .. && ls
 
 
 ##################

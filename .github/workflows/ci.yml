@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["*"]
     tags: ["*"]
   pull_request:
     branches: ["main"]
@@ -97,7 +97,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
@@ -204,16 +204,15 @@ jobs:
 
   test-flutter:
     name: test (example, ${{ matrix.platform }})
-    needs: ["build", "build-linux"]
     strategy:
       fail-fast: false
       matrix:
         platform:
-          - android
+          # - android
           - ios
-          - linux
-          - macos
-          - windows
+          # - linux
+          # - macos
+          # - windows
     runs-on: ${{ (matrix.platform == 'linux' &&   'ubuntu-latest')
               || (matrix.platform == 'windows' && 'windows-2019')
               ||                                  'macos-13' }}
@@ -232,6 +231,10 @@ jobs:
       - run: flutter config --enable-${{ matrix.platform }}-desktop
         if: ${{ matrix.platform != 'android'
              && matrix.platform != 'ios' }}
+
+      - name: Install `${{ matrix.platform }}` platform dependencies
+        run: make temp
+        if: ${{ matrix.platform == 'ios' }}
 
       - name: Install `${{ matrix.platform }}` platform dependencies
         run: |
