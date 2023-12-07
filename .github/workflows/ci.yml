@@ -239,7 +239,7 @@ jobs:
           fileName: "libwebrtc-ios.zip"
 
       - name: Install `${{ matrix.platform }}` platform dependencies
-        run: ls -a && unzip libwebrtc-ios.zip && ls && cd libwebrtc-ios && mv WebRTC.xcframework ../ios/WebRTC.xcframework
+        run: ls -a && unzip libwebrtc-ios.zip && mv WebRTC.xcframework ./ios/WebRTC.xcframework
         # && mv WebRTC.xcframework ../WebRTC.xcframework && cd .. && ls
         if: ${{ matrix.platform == 'ios' }}
 
