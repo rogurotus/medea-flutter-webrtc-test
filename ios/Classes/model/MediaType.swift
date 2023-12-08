@@ -17,9 +17,9 @@ enum MediaType: Int {
     case .video:
       return MediaType.video
     case .data:
-      throw "Unsupported MediaType"
+      return MediaType.video
     case .unsupported:
-      throw "Unsupported MediaType"
+      return MediaType.video
     }
   }
 
