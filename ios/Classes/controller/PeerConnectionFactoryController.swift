@@ -61,7 +61,7 @@ class PeerConnectionFactoryController {
           var preferredPayloadType:Int = (codec.preferredPayloadType != nil) ? Int(codec.preferredPayloadType!) : 0;
           var kind = MediaType.fromWebRtc(kind: codec.kind);
           var clockRate = (codec.clockRate != nil) ? Int(codec.clockRate!) : 0;
-          var numChannels:Int? = (codec.preferredPnumChannelsayloadType != nil) ? Int(codec.numChannels!) : nil;
+          var numChannels:Int? = (codec.numChannels != nil) ? Int(codec.numChannels!) : nil;
             return CodecCapability(
               preferredPayloadType: preferredPayloadType, 
               name: codec.name, 
