@@ -58,12 +58,11 @@ class PeerConnectionFactoryController {
 
         let capabilities = self.peerFactory.factory.rtpSenderCapabilities(for: RTCRtpMediaType.video)
         RtpCapabilities(codecs: capabilities.codecs.map {(codec) -> CodecCapability in
-          var preferredPayloadType:Int = (codec.preferredPayloadType != nil) ? Int(codec.preferredPayloadType!) : 0
-          var kind = MediaType(rawValue: Int(codec.kind))
+          var preferredPayloadType:Int = (codec.preferredPayloadType != nil) ? Int(codec.preferredPayloadType!) : 0;
+          var kind = MediaType(rawValue: Int(codec.kind));
           var clockRate:Int = Int(codec.clockRate);
-          var numChannels:Int? (codec.preferredPnumChannelsayloadType != nil) ? Int(codec.numChannels!) : nil
-          MediaType(rawValue: mediaType!)!,
-            CodecCapability(
+          var numChannels:Int? (codec.preferredPnumChannelsayloadType != nil) ? Int(codec.numChannels!) : nil;
+            return CodecCapability(
               preferredPayloadType: preferredPayloadType, 
               name: codec.name, 
               kind: kind, 
@@ -73,7 +72,7 @@ class PeerConnectionFactoryController {
               mimeType: codec.mimeType)
             },
          headerExtensions: capabilities.headerExtensions.map {(header) -> HeaderExtensionCapability in
-         HeaderExtensionCapability(uri: header.uri, preferredId: header.id , preferredEncrypted: header.encrypted)
+         return HeaderExtensionCapability(uri: header.uri, preferredId: header.id , preferredEncrypted: header.encrypted)
     }).asFlutterResult()
 
         result(capabilities.asFlutterResult())
