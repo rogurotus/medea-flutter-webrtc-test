@@ -16,6 +16,10 @@ enum MediaType: Int {
       return MediaType.audio
     case .video:
       return MediaType.video
+    case .data:
+      throw "Unsupported MediaType"
+    case .unsupported:
+      throw "Unsupported MediaType"
     }
   }
 
