@@ -79,24 +79,35 @@ void main() {
   // });
 
   testWidgets('Get/set sender parameters', (WidgetTester tester) async {
+    print('DEBUG 1');
+
     var pc = await PeerConnection.create(IceTransportType.all, []);
+    print('DEBUG 2');
 
     var videoInit1 = RtpTransceiverInit(TransceiverDirection.sendOnly);
+    print('DEBUG 3');
 
     var h = SendEncodingParameters.create("h", true,
         maxBitrate: 1200 * 1024, maxFramerate: 30);
+    print('DEBUG 4');
     var m = SendEncodingParameters.create("m", true,
         maxBitrate: 600 * 1024, maxFramerate: 20, scaleResolutionDownBy: 2);
+    print('DEBUG 5');
     var l = SendEncodingParameters.create("l", true,
         maxBitrate: 300 * 1024, maxFramerate: 10, scaleResolutionDownBy: 4);
+    print('DEBUG 6');
 
     videoInit1.sendEncodings.add(h);
     videoInit1.sendEncodings.add(m);
     videoInit1.sendEncodings.add(l);
+    print('DEBUG 7');
 
     var videoTrans1 = await pc.addTransceiver(MediaKind.video, videoInit1);
+    print('DEBUG 8');
     await videoTrans1.setDirection(TransceiverDirection.sendOnly);
+    print('DEBUG 9');
     var parameters = await videoTrans1.sender.getParameters();
+    print('DEBUG 10');
 
     // assert initial values
     expect(parameters.encodings[0].rid, h.rid);
