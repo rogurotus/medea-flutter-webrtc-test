@@ -12,9 +12,9 @@ enum MediaType: Int {
     -> MediaType
   {
     switch kind {
-    case .Audio:
+    case .audio:
       return MediaType.audio
-    case .Video:
+    case .video:
       return MediaType.video
     }
   }
