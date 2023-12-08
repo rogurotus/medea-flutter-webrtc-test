@@ -22,10 +22,14 @@ class PeerConnectionFactoryProxy {
   /// Creates a new `PeerConnectionProxy` based on the provided
   /// `PeerConnectionConfiguration`.
   func create(conf: PeerConnectionConfiguration) -> PeerConnectionProxy {
+    print("SBUG 1")
     let id = self.nextId()
+    print("SBUG 2")
 
     let config = conf.intoWebRtc()
+    print("SBUG 3")
     let peerObserver = PeerObserver()
+    print("SBUG 4")
     let peer = self.factory.peerConnection(
       with: config,
       constraints: RTCMediaConstraints(
@@ -34,10 +38,14 @@ class PeerConnectionFactoryProxy {
       ),
       delegate: peerObserver
     )
+    print("SBUG 5")
     let peerProxy = PeerConnectionProxy(id: id, peer: peer!)
+    print("SBUG 6")
     peerObserver.setPeer(peer: peerProxy)
+    print("SBUG 7")
 
     self.peerObservers[id] = peerObserver
+    print("SBUG 8")
 
     return peerProxy
   }
