@@ -8,7 +8,7 @@ enum MediaType: Int {
   /// Video media.
   case video
 
-  static func fromWebRtc(direction: RTCRtpMediaType)
+  static func fromWebRtc(kind: RTCRtpMediaType)
     -> MediaType
   {
     switch direction {
