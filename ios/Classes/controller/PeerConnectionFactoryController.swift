@@ -56,10 +56,10 @@ class PeerConnectionFactoryController {
       case "getRtpSenderCapabilities":
         let kind = argsMap!["kind"] as? Int
 
-        let capabilities = self.peerFactory.factory.rtpSenderCapabilities(for: RTCRtpMediaType.video)
-        RtpCapabilities(codecs: capabilities.codecs.map {(codec) -> CodecCapability in
+        let capabilities = self.peerFactory.factory.rtpSenderCapabilities(for: RTCRtpMediaType.video);
+        var res = RtpCapabilities(codecs: capabilities.codecs.map {(codec) -> CodecCapability in
           var preferredPayloadType:Int = (codec.preferredPayloadType != nil) ? Int(codec.preferredPayloadType!) : 0;
-          var kind = MediaType(rawValue: Int(codec.kind));
+          var kind = MediaType(rawValue: codec.kind.tag);
           var clockRate:Int = Int(codec.clockRate);
           var numChannels:Int? (codec.preferredPnumChannelsayloadType != nil) ? Int(codec.numChannels!) : nil;
             return CodecCapability(
@@ -71,11 +71,11 @@ class PeerConnectionFactoryController {
               parameters: codec.parameters, 
               mimeType: codec.mimeType)
             },
-         headerExtensions: capabilities.headerExtensions.map {(header) -> HeaderExtensionCapability in
+         headerExtensions: capabilities.header_extensions.map {(header) -> HeaderExtensionCapability in
          return HeaderExtensionCapability(uri: header.uri, preferredId: header.id , preferredEncrypted: header.encrypted)
     }).asFlutterResult()
 
-        result(capabilities.asFlutterResult())
+        result(res)
     case "dispose":
       self.channel.setMethodCallHandler(nil)
       result(nil)
