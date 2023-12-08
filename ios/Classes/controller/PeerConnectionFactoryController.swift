@@ -59,8 +59,8 @@ class PeerConnectionFactoryController {
         let capabilities = self.peerFactory.factory.rtpSenderCapabilities(for: RTCRtpMediaType.video)
         RtpCapabilities(codecs: capabilities.codecs.map {(codec) -> CodecCapability in
           var preferredPayloadType:Int = (codec.preferredPayloadType != nil) ? Int(codec.preferredPayloadType!) : 0
-          var kind = MediaType.fromInt(Int(codec.kind))
-          var clockRate:Int = Int(codec.clockRate)
+          var kind = MediaType(rawValue: Int(codec.kind))
+          var clockRate:Int = Int(codec.clockRate);
           var numChannels:Int? (codec.preferredPnumChannelsayloadType != nil) ? Int(codec.numChannels!) : nil
           MediaType(rawValue: mediaType!)!,
             CodecCapability(
