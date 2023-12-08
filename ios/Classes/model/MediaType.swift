@@ -12,9 +12,9 @@ enum MediaType: Int {
     -> MediaType
   {
     switch direction {
-    case .RTCRtpMediaTypeAudio:
+    case .Audio:
       return MediaType.audio
-    case .RTCRtpMediaTypeVideo:
+    case .Video:
       return MediaType.video
     }
   }
