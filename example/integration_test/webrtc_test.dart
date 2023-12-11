@@ -86,9 +86,15 @@ void main() {
     var h = SendEncodingParameters.create("h", true,
         maxBitrate: 1200 * 1024, maxFramerate: 30);
     var m = SendEncodingParameters.create("m", true,
-        maxBitrate: 600 * 1024, maxFramerate: 20, scaleResolutionDownBy: 2);
+        maxBitrate: 600 * 1024,
+        maxFramerate: 20,
+        scaleResolutionDownBy: 2,
+        scalabilityMode: "L2T2");
     var l = SendEncodingParameters.create("l", true,
-        maxBitrate: 300 * 1024, maxFramerate: 10, scaleResolutionDownBy: 4);
+        maxBitrate: 300 * 1024,
+        maxFramerate: 10,
+        scaleResolutionDownBy: 4,
+        scalabilityMode: "L1T2");
 
     videoInit1.sendEncodings.add(h);
     videoInit1.sendEncodings.add(m);
@@ -132,40 +138,11 @@ void main() {
     parameters.encodings[1].maxFramerate = 15;
     parameters.encodings[1].maxBitrate = 400 * 1024;
     parameters.encodings[1].scaleResolutionDownBy = 4;
+    parameters.encodings[1].scalabilityMode = "L2T1";
 
     parameters.encodings[2].maxFramerate = 5;
     parameters.encodings[2].maxBitrate = 200 * 1024;
     parameters.encodings[2].scaleResolutionDownBy = 8;
-
-    // return "L2T1h";
-    // return "L2T1_KEY";
-    // return "L2T2";
-    // return "L2T2h";
-    // return "L2T2_KEY";
-    // return "L2T2_KEY_SHIFT";
-    // return "L2T3";
-    // return "L2T3h";
-    // return "L2T3_KEY";
-    // return "L3T1";
-    // return "L3T1h";
-    // return "L3T1_KEY";
-    // return "L3T2";
-    // return "L3T2h";
-    // return "L3T2_KEY";
-    // return "L3T3h";
-    // return "L3T3_KEY";
-    // return "S2T1";
-    // return "S2T1h";
-    // return "S2T2";
-    // return "S2T2h";
-    // return "S2T3";
-    // return "S2T3h";
-    // return "S3T1";
-    // return "S3T1h";
-    // return "S3T2";
-    // return "S3T2h";
-    // return "S3T3";
-    // return "S3T3h";
 
     await videoTrans1.sender.setParameters(parameters);
     var parameters2 = await videoTrans1.sender.getParameters();
@@ -181,44 +158,13 @@ void main() {
     expect(parameters2.encodings[1].maxFramerate, 15);
     expect(parameters2.encodings[1].maxBitrate, 400 * 1024);
     expect(parameters2.encodings[1].scaleResolutionDownBy, 4);
-    expect(parameters2.encodings[1].scalabilityMode, null);
+    expect(parameters2.encodings[1].scalabilityMode, "L2T1");
 
     expect(parameters2.encodings[2].active, true);
     expect(parameters2.encodings[2].maxFramerate, 5);
     expect(parameters2.encodings[2].maxBitrate, 200 * 1024);
     expect(parameters2.encodings[2].scaleResolutionDownBy, 8);
-    expect(parameters2.encodings[2].scalabilityMode, null);
-
-    var a = await videoTrans1.sender.getCapabilities(MediaKind.video);
-
-    // print('codecs ${a.codecs.length}');
-    // for (var a in a.codecs) {
-    //   print(' ${a.clockRate}');
-    //   // print(' ${a.kind}');
-    //   print(' ${a.mimeType}');
-    //   // print(' ${a.name}');
-    //   // print(' ${a.numChannels}');
-    //   print(' ${a.parameters}');
-    //   // print(' ${a.preferredPayloadType}\n');
-    //   // print(' scalabilityModes ${a.scalabilityModes.length}');
-    //   // for (var b in a.scalabilityModes) {
-    //   // print('  ${b}');
-    //   // }
-    //
-    //   // print(' feedback ${a.feedback.length}');
-    //   // for (var b in a.feedback) {
-    //   // print('  ${b.kind}');
-    //   // print('  ${b.messageType}\n');
-    //   // }
-    // }
-    //
-    // print('\nheaderExtensions ${a.headerExtensions.length}');
-    // for (var a in a.headerExtensions) {
-    //   print(' ${a.direction}');
-    //   print(' ${a.uri}');
-    //   // print(' ${a.preferredEncrypted}');
-    //   // print(' ${a.preferredId}\n');
-    // }
+    expect(parameters2.encodings[2].scalabilityMode, "L1T2");
 
     await pc.close();
     await videoTrans1.dispose();
