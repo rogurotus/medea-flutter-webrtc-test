@@ -175,47 +175,50 @@ void main() {
     expect(parameters2.encodings[0].maxFramerate, 25);
     expect(parameters2.encodings[0].maxBitrate, 800 * 1024);
     expect(parameters2.encodings[0].scaleResolutionDownBy, 2);
+    expect(parameters2.encodings[0].scalabilityMode, "S3T3");
 
     expect(parameters2.encodings[1].active, true);
     expect(parameters2.encodings[1].maxFramerate, 15);
     expect(parameters2.encodings[1].maxBitrate, 400 * 1024);
     expect(parameters2.encodings[1].scaleResolutionDownBy, 4);
+    expect(parameters2.encodings[1].scalabilityMode, null);
 
     expect(parameters2.encodings[2].active, true);
     expect(parameters2.encodings[2].maxFramerate, 5);
     expect(parameters2.encodings[2].maxBitrate, 200 * 1024);
     expect(parameters2.encodings[2].scaleResolutionDownBy, 8);
+    expect(parameters2.encodings[2].scalabilityMode, null);
 
     var a = await videoTrans1.sender.getCapabilities(MediaKind.video);
 
-    print('codecs ${a.codecs.length}');
-    for (var a in a.codecs) {
-      print(' ${a.clockRate}');
-      // print(' ${a.kind}');
-      print(' ${a.mimeType}');
-      // print(' ${a.name}');
-      // print(' ${a.numChannels}');
-      print(' ${a.parameters}');
-      // print(' ${a.preferredPayloadType}\n');
-      // print(' scalabilityModes ${a.scalabilityModes.length}');
-      // for (var b in a.scalabilityModes) {
-      // print('  ${b}');
-      // }
-
-      // print(' feedback ${a.feedback.length}');
-      // for (var b in a.feedback) {
-      // print('  ${b.kind}');
-      // print('  ${b.messageType}\n');
-      // }
-    }
-
-    print('\nheaderExtensions ${a.headerExtensions.length}');
-    for (var a in a.headerExtensions) {
-      print(' ${a.direction}');
-      print(' ${a.uri}');
-      // print(' ${a.preferredEncrypted}');
-      // print(' ${a.preferredId}\n');
-    }
+    // print('codecs ${a.codecs.length}');
+    // for (var a in a.codecs) {
+    //   print(' ${a.clockRate}');
+    //   // print(' ${a.kind}');
+    //   print(' ${a.mimeType}');
+    //   // print(' ${a.name}');
+    //   // print(' ${a.numChannels}');
+    //   print(' ${a.parameters}');
+    //   // print(' ${a.preferredPayloadType}\n');
+    //   // print(' scalabilityModes ${a.scalabilityModes.length}');
+    //   // for (var b in a.scalabilityModes) {
+    //   // print('  ${b}');
+    //   // }
+    //
+    //   // print(' feedback ${a.feedback.length}');
+    //   // for (var b in a.feedback) {
+    //   // print('  ${b.kind}');
+    //   // print('  ${b.messageType}\n');
+    //   // }
+    // }
+    //
+    // print('\nheaderExtensions ${a.headerExtensions.length}');
+    // for (var a in a.headerExtensions) {
+    //   print(' ${a.direction}');
+    //   print(' ${a.uri}');
+    //   // print(' ${a.preferredEncrypted}');
+    //   // print(' ${a.preferredId}\n');
+    // }
 
     await pc.close();
     await videoTrans1.dispose();

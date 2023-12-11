@@ -56,6 +56,7 @@ class RtpSenderController {
             "maxBitrate": enc.maxBitrateBps,
             "maxFramerate": enc.maxFramerate,
             "scaleResolutionDownBy": enc.scaleResolutionDownBy,
+            "scalabilityMode": enc.scalabilityMode,
           ]
         }
 
