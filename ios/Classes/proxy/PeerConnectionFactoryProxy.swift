@@ -20,7 +20,7 @@ class PeerConnectionFactoryProxy {
   }
 
   /// Creates a new `PeerConnectionProxy` based on the provided
-  /// `PeerConnectionConfiguration`. 
+  /// `PeerConnectionConfiguration`.
   func create(conf: PeerConnectionConfiguration) -> PeerConnectionProxy {
     print("SBUG 1")
     let id = self.nextId()

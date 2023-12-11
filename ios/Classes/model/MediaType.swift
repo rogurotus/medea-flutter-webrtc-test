@@ -23,7 +23,6 @@ enum MediaType: Int {
     }
   }
 
-
   /// Converts this `MediaType` into an `RTCRTPMediaType`.
   func intoWebRtc() -> RTCRtpMediaType {
     switch self {
