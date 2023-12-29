@@ -53,7 +53,7 @@ android {
 }
 
 dependencies {
-    implementation 'com.github.instrumentisto:libwebrtc-bin:119.0.0.5@aar'
+    implementation 'com.github.instrumentisto:libwebrtc-bin:119.0.0.11@aar'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
 }

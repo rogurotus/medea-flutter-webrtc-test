@@ -5,6 +5,12 @@ import android.media.AudioManager
 import com.instrumentisto.medea_flutter_webrtc.utils.EglUtils
 import org.webrtc.DefaultVideoDecoderFactory
 import org.webrtc.DefaultVideoEncoderFactory
+
+import org.webrtc.HardwareVideoDecoderFactory
+import org.webrtc.HardwareVideoEncoderFactory
+
+import org.webrtc.SoftwareVideoDecoderFactory
+import org.webrtc.SoftwareVideoEncoderFactory
 import org.webrtc.EglBase
 import org.webrtc.PeerConnectionFactory
 import org.webrtc.audio.JavaAudioDeviceModule
