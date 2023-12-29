@@ -5,6 +5,12 @@ import android.media.AudioManager
 import com.instrumentisto.medea_flutter_webrtc.utils.EglUtils
 import org.webrtc.DefaultVideoDecoderFactory
 import org.webrtc.DefaultVideoEncoderFactory
+
+import org.webrtc.HardwareVideoDecoderFactory
+import org.webrtc.HardwareVideoEncoderFactory
+
+import org.webrtc.SoftwareVideoDecoderFactory
+import org.webrtc.SoftwareVideoEncoderFactory
 import org.webrtc.EglBase
 import org.webrtc.PeerConnectionFactory
 import org.webrtc.audio.JavaAudioDeviceModule
@@ -45,8 +51,8 @@ class State(private val context: Context) {
     factory =
         PeerConnectionFactory.builder()
             .setOptions(PeerConnectionFactory.Options())
-            .setVideoEncoderFactory(DefaultVideoEncoderFactory(eglContext, true, true))
-            .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglContext))
+            .setVideoEncoderFactory(HardwareVideoEncoderFactory(eglContext, true, true))
+            .setVideoDecoderFactory(HardwareVideoDecoderFactory(eglContext))
             .setAudioDeviceModule(audioModule)
             .createPeerConnectionFactory()
     audioModule.setSpeakerMute(false)

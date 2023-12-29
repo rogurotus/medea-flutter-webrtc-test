@@ -13,6 +13,7 @@ import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import android.util.Log
 
 /**
  * Controller of [PeerConnectionProxy] functional.
@@ -145,25 +146,35 @@ class PeerConnectionController(
           }
         }
       }
+      // todo error handling
       "addTransceiver" -> {
+        Log.e("TEST", "START")
         try {
           val mediaType = MediaType.fromInt(call.argument("mediaType")!!)
           val transceiverInitArg: Map<String, Any>? = call.argument("init")
+        Log.e("TEST", "DEBUG1")
           val transceiver =
               if (transceiverInitArg == null) {
+        Log.e("TEST", "DEBUG2")
                 peer.addTransceiver(mediaType, null)
               } else {
+        Log.e("TEST", "DEBUG3")
                 peer.addTransceiver(mediaType, RtpTransceiverInit.fromMap(transceiverInitArg))
               }
           if (transceiver != null) {
+        Log.e("TEST", "DEBUG4")
             val transceiverController = RtpTransceiverController(messenger, transceiver)
             result.success(transceiverController.asFlutterResult())
           } else {
+        Log.e("TEST", "DEBUG5")
             result.success(null)
           }
         } catch (e: Exception) {
+          e.printStackTrace();
+          // Log.e("TEST", e.stackTrace)
           resultUnhandledException(result, e)
         }
+        Log.e("TEST", "DEBUG6")
       }
       "getTransceivers" -> {
         result.success(

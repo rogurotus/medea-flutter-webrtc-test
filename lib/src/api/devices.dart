@@ -141,6 +141,9 @@ Future<List<MediaDisplayInfo>> enumerateDisplays() async {
 /// provided [DeviceConstraints].
 Future<List<NativeMediaStreamTrack>> getUserMedia(
     DeviceConstraints constraints) async {
+  print('WTF');
+  // constraints.video.mandatory!.width = 1920;
+  // constraints.video.mandatory!.height = 1080;
   if (isDesktop) {
     return _getUserMediaFFI(constraints);
   } else {
@@ -196,6 +199,7 @@ Future<int> microphoneVolume() async {
 Future<List<NativeMediaStreamTrack>> _getUserMediaChannel(
     DeviceConstraints constraints) async {
   try {
+    print('RTTR ${constraints.toMap()}');
     List<dynamic>? res = await _mediaDevicesMethodChannel
         .invokeMethod('getUserMedia', {'constraints': constraints.toMap()});
     return res!.map((t) => NativeMediaStreamTrack.from(t)).toList();
