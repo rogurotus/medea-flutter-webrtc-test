@@ -339,8 +339,8 @@ class _PeerConnectionChannel extends PeerConnection {
 
     print("OPA42");
     if (mediaType == MediaKind.video) {
-      // var h = SendEncodingParameters.create("h", true, scalabilityMode: "L3T3");
-      // init.sendEncodings.add(h);
+      var h = SendEncodingParameters.create("h", true, scalabilityMode: "L3T3");
+      init.sendEncodings.add(h);
       // init.sendEncodings.add(m);
       // init.sendEncodings.add(l);
     } else {
@@ -558,8 +558,8 @@ class _PeerConnectionFFI extends PeerConnection {
 
     print("OPA42");
     if (mediaType == MediaKind.video) {
-      // var h = SendEncodingParameters.create("h", true, scalabilityMode: "S3T3");
-      // init.sendEncodings.add(h);
+      var h = SendEncodingParameters.create("h", true, scalabilityMode: "S3T3");
+      init.sendEncodings.add(h);
     } else {
       print("OPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaaa");
     }
