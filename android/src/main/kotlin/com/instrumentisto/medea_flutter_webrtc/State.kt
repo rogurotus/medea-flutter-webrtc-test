@@ -1,5 +1,6 @@
 package com.instrumentisto.medea_flutter_webrtc
 
+import android.annotation.TargetApi
 import android.content.Context
 import android.media.AudioManager
 import com.instrumentisto.medea_flutter_webrtc.utils.EglUtils
@@ -14,6 +15,10 @@ import org.webrtc.SoftwareVideoEncoderFactory
 import org.webrtc.EglBase
 import org.webrtc.PeerConnectionFactory
 import org.webrtc.audio.JavaAudioDeviceModule
+import android.media.MediaCodecInfo;
+import android.media.MediaCodecList;
+import android.os.Build
+import android.util.Log
 
 /**
  * Global context of the `flutter_webrtc` library.
@@ -40,8 +45,42 @@ class State(private val context: Context) {
             .createInitializationOptions())
   }
 
+
+
   /** Initializes a new [factory]. */
+  @TargetApi(Build.VERSION_CODES.Q)
   private fun initPeerConnectionFactory() {
+    var aa = android.media.MediaCodecList(android.media.MediaCodecList.ALL_CODECS);
+    var a = aa.getCodecInfos();
+    for (i in a) {
+      if (true) {
+        Log.e("TEST", i.getName() + " " + i.getCanonicalName() + " " + i.isHardwareAccelerated().toString())
+      }
+      Log.e("TEST", "\n")
+    }
+
+
+//    var bb = android.media.MediaCodecList.getCodecCount();
+//    for (i in 0 until bb) {
+//      var info = MediaCodecList.getCodecInfoAt(i);
+//
+//      if (info.isHardwareAccelerated()) {
+//        Log.e("BUG", info.getName())
+//        Log.e("1BUG", info.getCanonicalName())
+//        Log.e("2BUG", info.isHardwareAccelerated().toString())
+//      }
+//      Log.e("BUG", "\n")
+//    }
+
+
+//    for (int i = 0; i < MediaCodecList.getCodecInfos(); ++i) {
+//      System.err.println("HW 4 ");
+//      MediaCodecInfo info = null;
+//      try {
+//        info = MediaCodecList.getCodecInfoAt(i);
+//      }
+//    }
+
     val audioModule =
         JavaAudioDeviceModule.builder(context)
             .setUseHardwareAcousticEchoCanceler(true)
