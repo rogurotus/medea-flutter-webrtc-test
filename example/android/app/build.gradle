@@ -43,7 +43,7 @@ android {
 
     defaultConfig {
         applicationId "com.instrumentisto.medea_flutter_webrtc_example"
-        minSdkVersion 24
+        minSdkVersion 29
         targetSdkVersion 31
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName

@@ -51,8 +51,8 @@ class State(private val context: Context) {
     factory =
         PeerConnectionFactory.builder()
             .setOptions(PeerConnectionFactory.Options())
-            .setVideoEncoderFactory(HardwareVideoEncoderFactory(eglContext, true, true))
-            .setVideoDecoderFactory(HardwareVideoDecoderFactory(eglContext))
+            .setVideoEncoderFactory(DefaultVideoEncoderFactory(eglContext, true, true))
+            .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglContext))
             .setAudioDeviceModule(audioModule)
             .createPeerConnectionFactory()
     audioModule.setSpeakerMute(false)
