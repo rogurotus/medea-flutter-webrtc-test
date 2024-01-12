@@ -27,7 +27,7 @@ class Encoding {
   /// Initializes a new `Encoding` configuration with the provided data.
   init(
     rid: String, active: Bool, maxBitrate: Int?, maxFramerate: Double?,
-    scaleResolutionDownBy: Double?, scalabilityMode: String?, 
+    scaleResolutionDownBy: Double?, scalabilityMode: String?
   ) {
     self.rid = rid
     self.active = active
