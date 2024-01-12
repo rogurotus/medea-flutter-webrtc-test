@@ -53,7 +53,7 @@ class Encoding {
       params.scaleResolutionDownBy = NSNumber(value: scaleResolutionDownBy)
     }
     if self.scalabilityMode != nil {
-      params.scalabilityMode = self.scalabilityMode as NSString?
+      params.scalabilityMode = self.scalabilityMode! as NSString
     }
 
     return params
