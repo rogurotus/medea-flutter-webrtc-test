@@ -79,7 +79,7 @@ void main() {
   });
 
   testWidgets('Get/set sender parameters', (WidgetTester tester) async {
-    for (var i = 0; i < 10; ++i) {
+    for (var i = 0; i < 11; ++i) {
       try {
         var pc = await PeerConnection.create(IceTransportType.all, []);
 

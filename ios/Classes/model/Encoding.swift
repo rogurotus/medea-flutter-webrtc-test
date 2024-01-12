@@ -21,16 +21,20 @@ class Encoding {
   /// which to scale down the video during encoding.
   var scaleResolutionDownBy: Double?
 
+  /// todo
+  var scalabilityMode: String?
+
   /// Initializes a new `Encoding` configuration with the provided data.
   init(
     rid: String, active: Bool, maxBitrate: Int?, maxFramerate: Double?,
-    scaleResolutionDownBy: Double?
+    scaleResolutionDownBy: Double?, scalabilityMode: String?, 
   ) {
     self.rid = rid
     self.active = active
     self.maxBitrate = maxBitrate
     self.maxFramerate = maxFramerate
     self.scaleResolutionDownBy = scaleResolutionDownBy
+    self.scalabilityMode = scalabilityMode
   }
 
   /// Converts this `Encoding` into an `RTCRtpEncodingParameters`.
@@ -47,6 +51,9 @@ class Encoding {
     }
     if let scaleResolutionDownBy = scaleResolutionDownBy {
       params.scaleResolutionDownBy = NSNumber(value: scaleResolutionDownBy)
+    }
+    if let scalabilityMode = scalabilityMode {
+      params.scalabilityMode = NSString(value: scalabilityMode)
     }
 
     return params
