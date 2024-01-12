@@ -52,8 +52,8 @@ class Encoding {
     if let scaleResolutionDownBy = scaleResolutionDownBy {
       params.scaleResolutionDownBy = NSNumber(value: scaleResolutionDownBy)
     }
-    if let scalabilityMode = scalabilityMode {
-      params.scalabilityMode = NSString(value: scalabilityMode)
+    if self.scalabilityMode != nil {
+      params.scalabilityMode = self.scalabilityMode as NSString?
     }
 
     return params
