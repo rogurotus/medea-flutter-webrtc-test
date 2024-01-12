@@ -42,6 +42,7 @@ class Encoding {
     let params = RTCRtpEncodingParameters()
     params.rid = self.rid
     params.isActive = self.active
+    params.scalabilityMode = self.scalabilityMode
 
     if let maxBitrate = maxBitrate {
       params.maxBitrateBps = NSNumber(value: maxBitrate)
@@ -51,9 +52,6 @@ class Encoding {
     }
     if let scaleResolutionDownBy = scaleResolutionDownBy {
       params.scaleResolutionDownBy = NSNumber(value: scaleResolutionDownBy)
-    }
-    if self.scalabilityMode != nil {
-      params.scalabilityMode = self.scalabilityMode! as NSString
     }
 
     return params
