@@ -5,7 +5,7 @@
 #include "rust/cxx.h"
 
 namespace bridge {
-    
+
 struct OptionF64;
 struct OptionI32;
 struct OptionString;

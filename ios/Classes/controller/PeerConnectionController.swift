@@ -169,14 +169,19 @@ class PeerConnectionController {
           direction: TransceiverDirection(rawValue: direction!)!,
           encodings: sendEncodings
         )
-      let transceiver = RtpTransceiverController(
-        messenger: self.messenger,
-        transceiver: self.peer.addTransceiver(
-          mediaType: MediaType(rawValue: mediaType!)!,
-          transceiverInit: transceiverInit
+        
+      do {
+        let transceiver = RtpTransceiverController(
+          messenger: self.messenger,
+          transceiver: try self.peer.addTransceiver(
+            mediaType: MediaType(rawValue: mediaType!)!,
+            transceiverInit: transceiverInit
+          )
         )
-      )
-      result(transceiver.asFlutterResult())
+        result(transceiver.asFlutterResult())
+      } catch {
+        result(getFlutterError(error))
+      }
     case "getTransceivers":
       result(
         self.peer.getTransceivers().map {

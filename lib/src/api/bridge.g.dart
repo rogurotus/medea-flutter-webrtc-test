@@ -1870,7 +1870,7 @@ class RtpCodecCapability {
   });
 }
 
-/// Used in RtpCapabilities header extensions query and setup methods:
+/// Used in [`RtpCapabilities`] header extensions query and setup methods:
 /// represents the capabilities/preferences
 /// of an implementation for a header extension.
 class RtpHeaderExtensionCapability {
@@ -3491,6 +3491,25 @@ class MedeaFlutterWebrtcNativeImpl implements MedeaFlutterWebrtcNative {
 
   List<RtcStats> _wire2api_list_rtc_stats(dynamic raw) {
     return (raw as List<dynamic>).map(_wire2api_rtc_stats).toList();
+  }
+
+  List<RtcpFeedback> _wire2api_list_rtcp_feedback(dynamic raw) {
+    return (raw as List<dynamic>).map(_wire2api_rtcp_feedback).toList();
+  }
+
+  List<RtpCodecCapability> _wire2api_list_rtp_codec_capability(dynamic raw) {
+    return (raw as List<dynamic>).map(_wire2api_rtp_codec_capability).toList();
+  }
+
+  List<RtpHeaderExtensionCapability>
+      _wire2api_list_rtp_header_extension_capability(dynamic raw) {
+    return (raw as List<dynamic>)
+        .map(_wire2api_rtp_header_extension_capability)
+        .toList();
+  }
+
+  List<ScalabilityMode> _wire2api_list_scalability_mode(dynamic raw) {
+    return (raw as List<dynamic>).map(_wire2api_scalability_mode).toList();
   }
 
   List<VideoCodecInfo> _wire2api_list_video_codec_info(dynamic raw) {

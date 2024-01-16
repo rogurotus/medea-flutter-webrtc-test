@@ -54,7 +54,6 @@ class _RtpSenderChannel extends RtpSender {
   /// Creates an [RtpSender] basing on the [Map] received from the native side.
   _RtpSenderChannel.fromMap(dynamic map) {
     _chan = methodChannel('RtpSender', map['channelId']);
-    temp();
   }
 
   /// [MethodChannel] used for the messaging with the native side.
@@ -69,14 +68,6 @@ class _RtpSenderChannel extends RtpSender {
   @override
   Future<void> dispose() async {
     await _chan.invokeMethod('dispose');
-  }
-
-  Future<void> temp() async {
-    while (true) {
-      await Future.delayed(Duration(milliseconds: 250));
-      dynamic parameters = await _chan.invokeMethod('getParameters');
-      print('LOGLOG ${parameters}');
-    }
   }
 
   @override

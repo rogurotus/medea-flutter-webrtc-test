@@ -94,7 +94,6 @@ class _SendEncodingParametersChannel extends SendEncodingParameters {
 
   @override
   Map<String, dynamic> toMap() {
-    print(scalabilityMode);
     return {
       'rid': rid,
       'active': active,

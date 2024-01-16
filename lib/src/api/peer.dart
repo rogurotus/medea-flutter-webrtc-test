@@ -14,7 +14,6 @@ import '/src/platform/native/media_stream_track.dart';
 import 'bridge.g.dart' as ffi;
 import 'channel.dart';
 import 'transceiver.dart';
-import 'send_encoding_parameters.dart';
 
 /// Checks whether the running platform is a desktop.
 bool isDesktop = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
@@ -360,28 +359,10 @@ class _PeerConnectionChannel extends PeerConnection {
     }
   }
 
-  Future<void> temp() async {
-    while (true) {
-      await Future.delayed(Duration(milliseconds: 250));
-      dynamic parameters = await _chan.invokeMethod('getParameters');
-      print('LOGLOG ${parameters}');
-    }
-  }
-
   @override
   Future<RtpTransceiver> addTransceiver(
       MediaKind mediaType, RtpTransceiverInit init) async {
     _checkNotClosed();
-
-    print("OPA42");
-    if (mediaType == MediaKind.video) {
-      // var h = SendEncodingParameters.create("h", true, scalabilityMode: "L3T3");
-      // init.sendEncodings.add(h);
-      // init.sendEncodings.add(m);
-      // init.sendEncodings.add(l);
-    } else {
-      print("OPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaaa");
-    }
 
     dynamic res = await _chan.invokeMethod(
         'addTransceiver', {'mediaType': mediaType.index, 'init': init.toMap()});
@@ -603,14 +584,6 @@ class _PeerConnectionFFI extends PeerConnection {
   Future<RtpTransceiver> addTransceiver(
       MediaKind mediaType, RtpTransceiverInit init) async {
     _checkNotClosed();
-
-    print("OPA42");
-    if (mediaType == MediaKind.video) {
-      var h = SendEncodingParameters.create("h", true, scalabilityMode: "S3T3");
-      init.sendEncodings.add(h);
-    } else {
-      print("OPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaaa");
-    }
 
     var transceiver = RtpTransceiver.fromFFI(await api!.addTransceiver(
         peer: _peer!,
