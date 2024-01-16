@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'medea_flutter_webrtc'
-  s.version          = '0.8.3-dev'
+  s.version          = '0.10.0-dev'
   s.summary          = 'Flutter WebRTC plugin based on Google WebRTC'
   s.description      = <<-DESC
 Flutter WebRTC plugin based on Google WebRTC.
@@ -15,7 +15,7 @@ Flutter WebRTC plugin based on Google WebRTC.
   s.source           = { :path => '.' }
   s.source_files     = 'Classes/**/*'
   s.dependency 'Flutter'
-  s.vendored_frameworks = 'WebRTC.xcframework'
+  s.dependency 'instrumentisto-libwebrtc-bin', '118.0.5993.88'
   s.dependency 'libyuv-iOS'
   s.platform         = :ios, '13.0'
   s.static_framework = true

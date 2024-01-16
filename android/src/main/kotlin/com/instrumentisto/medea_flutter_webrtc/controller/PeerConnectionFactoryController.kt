@@ -5,6 +5,8 @@ import com.instrumentisto.medea_flutter_webrtc.model.IceServer
 import com.instrumentisto.medea_flutter_webrtc.model.IceTransportType
 import com.instrumentisto.medea_flutter_webrtc.model.PeerConnectionConfiguration
 import com.instrumentisto.medea_flutter_webrtc.model.RtpCapabilities
+import com.instrumentisto.medea_flutter_webrtc.model.VideoCodec
+import com.instrumentisto.medea_flutter_webrtc.model.VideoCodecInfo
 import com.instrumentisto.medea_flutter_webrtc.proxy.PeerConnectionFactoryProxy
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
@@ -21,6 +23,9 @@ class PeerConnectionFactoryController(private val messenger: BinaryMessenger, st
     MethodChannel.MethodCallHandler {
   /** Factory creating new [PeerConnectionController]s. */
   private val factory: PeerConnectionFactoryProxy = PeerConnectionFactoryProxy(state)
+
+  /** Application context to access encoder and decoder used. */
+  private val state: State = state
 
   /** Channel listened for the [MethodCall]s. */
   private val chan = MethodChannel(messenger, ChannelNameGenerator.name("PeerConnectionFactory", 0))
@@ -59,6 +64,30 @@ class PeerConnectionFactoryController(private val messenger: BinaryMessenger, st
                     .getPeerConnectionFactory()
                     .getRtpSenderCapabilities(MediaStreamTrack.MediaType.values()[kind!!]))
         result.success(capabilities.asFlutterResult())
+      }
+      "videoEncoders" -> {
+        val map = hashMapOf<VideoCodec, VideoCodecInfo>()
+
+        for (c in state.encoder.getSWCodecs().mapNotNull { VideoCodec.valueOfOrNull(it.name) }) {
+          map[c] = VideoCodecInfo(c, false)
+        }
+        for (c in state.encoder.getHWCodecs().mapNotNull { VideoCodec.valueOfOrNull(it.name) }) {
+          map[c] = VideoCodecInfo(c, true)
+        }
+
+        result.success(map.values.map { it.asFlutterResult() })
+      }
+      "videoDecoders" -> {
+        val map = hashMapOf<VideoCodec, VideoCodecInfo>()
+
+        for (c in state.decoder.getSWCodecs().mapNotNull { VideoCodec.valueOfOrNull(it.name) }) {
+          map[c] = VideoCodecInfo(c, false)
+        }
+        for (c in state.decoder.getHWCodecs().mapNotNull { VideoCodec.valueOfOrNull(it.name) }) {
+          map[c] = VideoCodecInfo(c, true)
+        }
+
+        result.success(map.values.map { it.asFlutterResult() })
       }
       "dispose" -> {
         chan.setMethodCallHandler(null)

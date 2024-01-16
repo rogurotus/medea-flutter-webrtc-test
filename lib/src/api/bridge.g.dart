@@ -14,6 +14,16 @@ import 'package:uuid/uuid.dart';
 part 'bridge.g.freezed.dart';
 
 abstract class MedeaFlutterWebrtcNative {
+  /// Returns all [`VideoCodecInfo`]s of the supported video encoders.
+  Future<List<VideoCodecInfo>> videoEncoders({dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kVideoEncodersConstMeta;
+
+  /// Returns all [`VideoCodecInfo`]s of the supported video decoders.
+  Future<List<VideoCodecInfo>> videoDecoders({dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kVideoDecodersConstMeta;
+
   /// Configures media acquisition to use fake devices instead of actual camera
   /// and microphone.
   Future<void> enableFakeMedia({dynamic hint});
@@ -2238,6 +2248,48 @@ enum TrackState {
   ended,
 }
 
+/// Supported video codecs.
+enum VideoCodec {
+  /// [AV1] AOMedia Video 1.
+  ///
+  /// [AV1]: https://en.wikipedia.org/wiki/AV1
+  av1,
+
+  /// [H.264] Advanced Video Coding (AVC).
+  ///
+  /// [H.264]: https://en.wikipedia.org/wiki/Advanced_Video_Coding
+  h264,
+
+  /// [H.265] High Efficiency Video Coding (HEVC).
+  ///
+  /// [H.265]: https://en.wikipedia.org/wiki/High_Efficiency_Video_Coding
+  h265,
+
+  /// [VP8] codec.
+  ///
+  /// [VP8]: https://en.wikipedia.org/wiki/VP8
+  vp8,
+
+  /// [VP9] codec.
+  ///
+  /// [VP9]: https://en.wikipedia.org/wiki/VP9
+  vp9,
+}
+
+/// [`VideoCodec`] info for encoding/decoding.
+class VideoCodecInfo {
+  /// Indicator whether hardware acceleration should be used.
+  final bool isHardwareAccelerated;
+
+  /// [`VideoCodec`] to be used for encoding/decoding.
+  final VideoCodec codec;
+
+  const VideoCodecInfo({
+    required this.isHardwareAccelerated,
+    required this.codec,
+  });
+}
+
 /// Nature and settings of the video [`MediaStreamTrack`] returned by
 /// [`Webrtc::get_media()`].
 class VideoConstraints {
@@ -2278,6 +2330,40 @@ class MedeaFlutterWebrtcNativeImpl implements MedeaFlutterWebrtcNative {
   factory MedeaFlutterWebrtcNativeImpl.wasm(FutureOr<WasmModule> module) =>
       MedeaFlutterWebrtcNativeImpl(module as ExternalLibrary);
   MedeaFlutterWebrtcNativeImpl.raw(this._platform);
+  Future<List<VideoCodecInfo>> videoEncoders({dynamic hint}) {
+    return _platform.executeNormal(FlutterRustBridgeTask(
+      callFfi: (port_) => _platform.inner.wire_video_encoders(port_),
+      parseSuccessData: _wire2api_list_video_codec_info,
+      parseErrorData: null,
+      constMeta: kVideoEncodersConstMeta,
+      argValues: [],
+      hint: hint,
+    ));
+  }
+
+  FlutterRustBridgeTaskConstMeta get kVideoEncodersConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "video_encoders",
+        argNames: [],
+      );
+
+  Future<List<VideoCodecInfo>> videoDecoders({dynamic hint}) {
+    return _platform.executeNormal(FlutterRustBridgeTask(
+      callFfi: (port_) => _platform.inner.wire_video_decoders(port_),
+      parseSuccessData: _wire2api_list_video_codec_info,
+      parseErrorData: null,
+      constMeta: kVideoDecodersConstMeta,
+      argValues: [],
+      hint: hint,
+    ));
+  }
+
+  FlutterRustBridgeTaskConstMeta get kVideoDecodersConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "video_decoders",
+        argNames: [],
+      );
+
   Future<void> enableFakeMedia({dynamic hint}) {
     return _platform.executeNormal(FlutterRustBridgeTask(
       callFfi: (port_) => _platform.inner.wire_enable_fake_media(port_),
@@ -3407,23 +3493,8 @@ class MedeaFlutterWebrtcNativeImpl implements MedeaFlutterWebrtcNative {
     return (raw as List<dynamic>).map(_wire2api_rtc_stats).toList();
   }
 
-  List<RtcpFeedback> _wire2api_list_rtcp_feedback(dynamic raw) {
-    return (raw as List<dynamic>).map(_wire2api_rtcp_feedback).toList();
-  }
-
-  List<RtpCodecCapability> _wire2api_list_rtp_codec_capability(dynamic raw) {
-    return (raw as List<dynamic>).map(_wire2api_rtp_codec_capability).toList();
-  }
-
-  List<RtpHeaderExtensionCapability>
-      _wire2api_list_rtp_header_extension_capability(dynamic raw) {
-    return (raw as List<dynamic>)
-        .map(_wire2api_rtp_header_extension_capability)
-        .toList();
-  }
-
-  List<ScalabilityMode> _wire2api_list_scalability_mode(dynamic raw) {
-    return (raw as List<dynamic>).map(_wire2api_scalability_mode).toList();
+  List<VideoCodecInfo> _wire2api_list_video_codec_info(dynamic raw) {
+    return (raw as List<dynamic>).map(_wire2api_video_codec_info).toList();
   }
 
   MediaDeviceInfo _wire2api_media_device_info(dynamic raw) {
@@ -3925,6 +3996,20 @@ class MedeaFlutterWebrtcNativeImpl implements MedeaFlutterWebrtcNative {
   void _wire2api_unit(dynamic raw) {
     return;
   }
+
+  VideoCodec _wire2api_video_codec(dynamic raw) {
+    return VideoCodec.values[raw as int];
+  }
+
+  VideoCodecInfo _wire2api_video_codec_info(dynamic raw) {
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return VideoCodecInfo(
+      isHardwareAccelerated: _wire2api_bool(arr[0]),
+      codec: _wire2api_video_codec(arr[1]),
+    );
+  }
 }
 
 // Section: api2wire
@@ -4422,6 +4507,34 @@ class MedeaFlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
           'init_frb_dart_api_dl');
   late final _init_frb_dart_api_dl = _init_frb_dart_api_dlPtr
       .asFunction<int Function(ffi.Pointer<ffi.Void>)>();
+
+  void wire_video_encoders(
+    int port_,
+  ) {
+    return _wire_video_encoders(
+      port_,
+    );
+  }
+
+  late final _wire_video_encodersPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+          'wire_video_encoders');
+  late final _wire_video_encoders =
+      _wire_video_encodersPtr.asFunction<void Function(int)>();
+
+  void wire_video_decoders(
+    int port_,
+  ) {
+    return _wire_video_decoders(
+      port_,
+    );
+  }
+
+  late final _wire_video_decodersPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+          'wire_video_decoders');
+  late final _wire_video_decoders =
+      _wire_video_decodersPtr.asFunction<void Function(int)>();
 
   void wire_enable_fake_media(
     int port_,
