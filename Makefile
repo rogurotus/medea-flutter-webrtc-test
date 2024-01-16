@@ -15,8 +15,8 @@ eq = $(if $(or $(1),$(2)),$(and $(findstring $(1),$(2)),\
 # Project parameters #
 ######################
 
-RUST_VER ?= 1.74
-RUST_NIGHTLY_VER ?= nightly-2023-11-16
+RUST_VER ?= 1.75
+RUST_NIGHTLY_VER ?= nightly-2024-01-02
 
 FLUTTER_RUST_BRIDGE_VER ?= $(strip \
 	$(shell grep -A1 'name = "flutter_rust_bridge"' Cargo.lock \
@@ -383,8 +383,6 @@ endif
 		android/src/main/kotlin/
 
 
-temp:
-cd ios/ && curl https://github.com/instrumentisto/libwebrtc-bin/releases/download/119.0.6045.159/libwebrtc-ios.zip --output libwebrtc-ios.zip && unzip libwebrtc-ios.zip && cd ./libwebrtc-ios && mv WebRTC.xcframework ../WebRTC.xcframework && cd .. && ls
 
 
 ##################

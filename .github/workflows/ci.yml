@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["*"]
+    branches: ["main"]
     tags: ["*"]
   pull_request:
     branches: ["main"]
@@ -157,7 +157,7 @@ jobs:
       - run: make cargo.build platform=${{ matrix.platform }} debug=no
       - run: make flutter.build platform=${{ matrix.platform }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.platform }}
           path: ${{ matrix.platform }}/rust/
@@ -190,7 +190,7 @@ jobs:
       - run: make cargo.build platform=linux debug=no
       - run: make flutter.build platform=linux
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: build-linux
           path: linux/rust/
@@ -204,18 +204,19 @@ jobs:
 
   test-flutter:
     name: test (example, ${{ matrix.platform }})
+    needs: ["build", "build-linux"]
     strategy:
       fail-fast: false
       matrix:
         platform:
-          # - android
+          - android
           - ios
-          # - linux
-          # - macos
-          # - windows
+          - linux
+          - macos
+          - windows
     runs-on: ${{ (matrix.platform == 'linux' &&   'ubuntu-latest')
               || (matrix.platform == 'windows' && 'windows-2019')
-              ||                                  'macos-12' }}
+              ||                                  'macos-13' }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@v1
@@ -231,12 +232,6 @@ jobs:
       - run: flutter config --enable-${{ matrix.platform }}-desktop
         if: ${{ matrix.platform != 'android'
              && matrix.platform != 'ios' }}
-
-      - name: Install `${{ matrix.platform }}` platform dependencies
-        run: |
-          curl -H "Accept: application/vnd.github+json" -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -L -o build.zip "https://api.github.com/repos/rogurotus/libwebrtc-bin-test/actions/artifacts/1162602535/zip" && ls -a && unzip build.zip && unzip libwebrtc-ios.zip && ls -a && mv WebRTC.xcframework ./ios/WebRTC.xcframework
-        # && mv WebRTC.xcframework ../WebRTC.xcframework && cd .. && ls
-        if: ${{ matrix.platform == 'ios' }}
 
       - name: Install `${{ matrix.platform }}` platform dependencies
         run: |
@@ -386,17 +381,17 @@ jobs:
       - uses: subosito/flutter-action@v2
         if: ${{ steps.skip.outputs.no == 'true' }}
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: build-linux
           path: linux/rust/
         if: ${{ steps.skip.outputs.no == 'true' }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: build-macos
           path: macos/rust/
         if: ${{ steps.skip.outputs.no == 'true' }}
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: build-windows
           path: windows/rust/
