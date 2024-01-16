@@ -169,11 +169,11 @@ class PeerConnectionController {
           direction: TransceiverDirection(rawValue: direction!)!,
           encodings: sendEncodings
         )
-        
+
       do {
-        let transceiver = RtpTransceiverController(
+        let transceiver = try RtpTransceiverController(
           messenger: self.messenger,
-          transceiver: try self.peer.addTransceiver(
+          transceiver: self.peer.addTransceiver(
             mediaType: MediaType(rawValue: mediaType!)!,
             transceiverInit: transceiverInit
           )

@@ -59,7 +59,8 @@ class PeerConnectionProxy {
   /// Creates a new `RtpTransceiverProxy` based on the provided `MediaType` and
   /// `RtpTransceiverProxy` configuration.
   func addTransceiver(mediaType: MediaType,
-                      transceiverInit: TransceiverInit) throws -> RtpTransceiverProxy
+                      transceiverInit: TransceiverInit)
+    throws -> RtpTransceiverProxy
   {
     let transceiver = self.peer.addTransceiver(
       of: mediaType.intoWebRtc(), init: transceiverInit.intoWebRtc()
