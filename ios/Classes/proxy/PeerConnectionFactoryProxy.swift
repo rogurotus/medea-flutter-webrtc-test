@@ -11,7 +11,7 @@ class PeerConnectionFactoryProxy {
   private var peerObservers: [Int: PeerObserver] = [:]
 
   /// Underlying native factory object of this factory.
-  public var factory: RTCPeerConnectionFactory
+  private var factory: RTCPeerConnectionFactory
 
   /// Initializes a new `PeerConnectionFactoryProxy` based on the provided
   /// `State`.
@@ -19,17 +19,48 @@ class PeerConnectionFactoryProxy {
     self.factory = state.getPeerFactory()
   }
 
+  /// Returns sender capabilities of this factory.
+  func rtpSenderCapabilities(kind: RTCRtpMediaType) -> RtpCapabilities {
+    self.peerFactory.factory
+        .rtpSenderCapabilities(for: kind)
+        
+    return RtpCapabilities(
+      codecs: capabilities.codecs.map { codec -> CodecCapability in
+        var preferredPayloadType: Int = (codec.preferredPayloadType != nil) ?
+          Int(codec.preferredPayloadType!) : 0
+        var kind = MediaType.fromWebRtc(kind: codec.kind)
+        var clockRate = (codec.clockRate != nil) ? Int(codec.clockRate!) : 0
+        var numChannels: Int? = (codec.numChannels != nil) ?
+          Int(codec.numChannels!) : nil
+        return CodecCapability(
+          preferredPayloadType: preferredPayloadType,
+          name: codec.name,
+          kind: kind,
+          clockRate: clockRate,
+          numChannels: numChannels,
+          parameters: codec.parameters,
+          mimeType: codec.mimeType
+        )
+      },
+      headerExtensions: capabilities.header_extensions
+        .map { header -> HeaderExtensionCapability in
+          var preferredId = Int(header.preferred_id)
+          return HeaderExtensionCapability(
+            uri: header.uri,
+            preferredId: preferredId,
+            preferredEncrypted: header.preferred_encrypt
+          )
+        }
+    )
+  }
+
   /// Creates a new `PeerConnectionProxy` based on the provided
   /// `PeerConnectionConfiguration`.
   func create(conf: PeerConnectionConfiguration) -> PeerConnectionProxy {
-    print("SBUG 1")
     let id = self.nextId()
-    print("SBUG 2")
 
     let config = conf.intoWebRtc()
-    print("SBUG 3")
     let peerObserver = PeerObserver()
-    print("SBUG 4")
     let peer = self.factory.peerConnection(
       with: config,
       constraints: RTCMediaConstraints(
@@ -38,14 +69,10 @@ class PeerConnectionFactoryProxy {
       ),
       delegate: peerObserver
     )
-    print("SBUG 5")
     let peerProxy = PeerConnectionProxy(id: id, peer: peer!)
-    print("SBUG 6")
     peerObserver.setPeer(peer: peerProxy)
-    print("SBUG 7")
 
     self.peerObservers[id] = peerObserver
-    print("SBUG 8")
 
     return peerProxy
   }

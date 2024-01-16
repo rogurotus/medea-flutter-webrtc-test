@@ -21,7 +21,7 @@ class Encoding {
   /// which to scale down the video during encoding.
   var scaleResolutionDownBy: Double?
 
-  /// todo
+  /// Scalability mode describing layers within the media stream.
   var scalabilityMode: String?
 
   /// Initializes a new `Encoding` configuration with the provided data.
