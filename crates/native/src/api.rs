@@ -516,10 +516,9 @@ impl From<sys::IceCandidateStats> for IceCandidateStats {
     }
 }
 
-/// [`RtpCapabilities`] is used to represent
-/// the static capabilities of an endpoint.
-/// An application can use these capabilities
-/// to construct an [`RtpParameters`].
+/// [`RtpCapabilities`] is used to represent the static capabilities of an
+/// endpoint. An application can use these capabilities to construct an
+/// [`RtpParameters`].
 #[derive(Debug)]
 pub struct RtpCapabilities {
     // Supported codecs.
@@ -594,134 +593,167 @@ pub enum ScalabilityMode {
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L1T1*
     L1T1 = 0,
+
     /// [ScalabilityMode.L1T2][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L1T2*
     L1T2,
+
     /// [ScalabilityMode.L1T3][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L1T3*
     L1T3,
+
     /// [ScalabilityMode.L2T1][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L2T1*
     L2T1,
+
     /// [ScalabilityMode.L2T1h][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L2T1*
     L2T1h,
+
     /// [ScalabilityMode.L2T1_KEY][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L2T1_KEY*
     L2t1Key,
+
     /// [ScalabilityMode.L2T2][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L2T2h*
     L2T2,
+
     /// [ScalabilityMode.L2T2h][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L2T2*
     L2T2h,
+
     /// [ScalabilityMode.L2T2_KEY][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L2T2_KEY*
     L2T2Key,
+
     /// [ScalabilityMode.L2T2_KEY_SHIFT][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L2T2_KEY_SHIFT*
     L2T2KeyShift,
+
     /// [ScalabilityMode.L2T3][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L2T3*
     L2T3,
+
     /// [ScalabilityMode.L2T3h][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L2T3*
     L2T3h,
+
     /// [ScalabilityMode.L2T3_KEY][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L2T3_KEY*
     L2T3Key,
+
     /// [ScalabilityMode.L3T1][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L3T1*
     L3T1,
+
     /// [ScalabilityMode.L3T1h][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L3T1*
     L3T1h,
+
     /// [ScalabilityMode.L3T1_KEY][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L3T1_KEY*
     L3T1Key,
+
     /// [ScalabilityMode.L3T2][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L3T2h*
     L3T2,
+
     /// [ScalabilityMode.L3T2h][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L3T2*
     L3T2h,
+
     /// [ScalabilityMode.L3T2_KEY][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L3T2_KEY*
     L3T2Key,
+
     /// [ScalabilityMode.kL3T3][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#kL3T3*
     L3T3,
+
     /// [ScalabilityMode.kL3T3h][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#kL3T3*
     L3T3h,
+
     /// [ScalabilityMode.kL3T3_KEY][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#L3T3_KEY*
     L3T3Key,
+
     /// [ScalabilityMode.kS2T1][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#kS2T1*
     S2T1,
+
     /// [ScalabilityMode.kS2T1h][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#kS2T1*
     S2T1h,
+
     /// [ScalabilityMode.kS2T2][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#kS2T2*
     S2T2,
+
     /// [ScalabilityMode.kS2T2h][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#kS2T2*
     S2T2h,
+
     /// [ScalabilityMode.S2T3][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#S2T3h*
     S2T3,
+
     /// [ScalabilityMode.S2T3h][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#S2T3*
     S2T3h,
+
     /// [ScalabilityMode.S3T1h][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#S3T1*
     S3T1,
+
     /// [ScalabilityMode.S3T1h][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#S3T1*
     S3T1h,
+
     /// [ScalabilityMode.S3T2][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#S3T2*
     S3T2,
+
     /// [ScalabilityMode.S3T2h][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#S3T2*
     S3T2h,
+
     /// [ScalabilityMode.S3T3][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#S3T3*
     S3T3,
+
     /// [ScalabilityMode.S3T3h][0] representation.
     ///
     /// [0]: https://www.w3.org/TR/webrtc-svc/#S3T3*
@@ -747,8 +779,10 @@ pub enum RtcpFeedbackType {
 pub enum RtcpFeedbackMessageType {
     /// Equivalent to {type: "nack", parameter: undefined} in ORTC.
     GenericNACK,
+
     /// Usable with NACK.
     PLI,
+
     /// Usable with CCM.
     FIR,
 }
@@ -807,7 +841,6 @@ pub struct RtpHeaderExtensionCapability {
     pub preferred_id: Option<i32>,
 
     /// If true, it's preferred that the value in the header is encrypted.
-    /// TODO(deadbeef): Not implemented.
     pub preferred_encrypted: bool,
 
     /// The direction of the extension. The kStopped value is only used with
@@ -827,8 +860,6 @@ impl From<sys::RtpHeaderExtensionCapability> for RtpHeaderExtensionCapability {
     }
 }
 
-/// [`RtpCodecCapability`] is to [`RtpCodecParameters`] as [`RtpCapabilities`]
-/// is to [`RtpParameters`].
 /// This represents the static capabilities of an endpoint's
 /// implementation of a codec.
 #[derive(Debug)]

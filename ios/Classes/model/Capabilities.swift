@@ -6,8 +6,10 @@ import WebRTC
 class HeaderExtensionCapability {
   /// URI of this extension, as defined in RFC8285.
   var uri: String
+
   /// Preferred value of ID that goes in the packet.
   var preferredId: Int
+
   /// If true, it's preferred that the value in the header is encrypted.
   var preferredEncrypted: Bool
 
@@ -33,15 +35,20 @@ class CodecCapability {
   /// Default payload type for this codec. Mainly needed for codecs that have
   /// statically assigned payload types.
   var preferredPayloadType: Int
+
   /// Used to identify the codec. Equivalent to MIME subtype.
   var name: String
+
   /// The media type of this codec. Equivalent to MIME top-level type.
   var kind: MediaType
+
   /// If unset, the implementation default is used.
   var clockRate: Int
+
   /// The number of audio channels used. Unset for video codecs. If unset for
   /// audio, the implementation default is used.
   var numChannels: Int?
+
   /// Codec-specific parameters that must be signaled to the remote party.
   ///
   /// Corresponds to "a=fmtp" parameters in SDP.
@@ -51,6 +58,7 @@ class CodecCapability {
   /// SDP.
   /// Boolean values are represented by the string "1".
   var parameters: [String: String]
+
   /// Build MIME "type/subtype" string from `name` and `kind`.
   var mimeType: String
 
@@ -90,6 +98,7 @@ class CodecCapability {
 class RtpCapabilities {
   /// Supported codecs.
   var codecs: [CodecCapability]
+
   /// Supported RTP header extensions.
   var headerExtensions: [HeaderExtensionCapability]
 

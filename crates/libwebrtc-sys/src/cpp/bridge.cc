@@ -872,7 +872,6 @@ rust::Box<bridge::OptionI32> rtc_codec_num_channels(
 }
 
 // Returns the `parameters` of the provided `RtpCodecCapability`.
-
 std::unique_ptr<std::vector<StringPair>> rtc_codec_parameters(
     const RtpCodecCapability& capabilty) {
   std::vector<StringPair> result;
@@ -883,7 +882,6 @@ std::unique_ptr<std::vector<StringPair>> rtc_codec_parameters(
 }
 
 // Returns the `rtcp_feedback` of the provided `RtpCodecCapability`.
-
 rust::Vec<RtcpFeedbackContainer> rtc_codec_rtcp_feedback(
     const RtpCodecCapability& capabilty) {
   rust::Vec<RtcpFeedbackContainer> result;

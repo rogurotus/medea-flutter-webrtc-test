@@ -101,6 +101,7 @@ void main() {
     videoInit1.sendEncodings.add(l);
 
     var videoTrans1 = await pc.addTransceiver(MediaKind.video, videoInit1);
+
     var parameters = await videoTrans1.sender.getParameters();
 
     // assert initial values

@@ -911,9 +911,9 @@ impl RtcpFeedback {
     }
 }
 
-/// Used in [`RtpCapabilities`] header extensions query
-/// and setup methods: represents the capabilities/preferences of an
-/// implementation for a header extension.
+/// Used in [`RtpCapabilities`] header extensions query and setup methods:
+/// represents the capabilities/preferences of an implementation for a header
+/// extension.
 pub struct RtpHeaderExtensionCapability(
     UniquePtr<webrtc::RtpHeaderExtensionCapability>,
 );
@@ -946,8 +946,8 @@ impl RtpHeaderExtensionCapability {
 
 /// [`RtpCodecCapability`] is to [`RtpCodecParameters`] as [`RtpCapabilities`]
 /// is to [`RtpParameters`].
-/// This represents the static capabilities of an endpoint's
-/// implementation of a codec.
+/// This represents the static capabilities of an endpoint's implementation of
+/// a codec.
 pub struct RtpCodecCapability(UniquePtr<webrtc::RtpCodecCapability>);
 
 impl RtpCodecCapability {
@@ -999,11 +999,10 @@ impl RtpCodecCapability {
     ///
     /// Corresponds to "a=fmtp" parameters in SDP.
     ///
-    /// Contrary to ORTC, these parameters
-    /// are named using all lowercase strings.
-    /// This helps make the mapping to SDP simpler,
-    /// mimeTypeif an application is using SDP.
-    /// Boolean values are represented by the string "1".
+    /// Contrary to ORTC, these parameters are named using all lowercase
+    /// strings. This helps make the mapping to SDP simpler, mimeTypeif an
+    /// application is using SDP. Boolean values are represented by the string
+    /// "1".
     #[must_use]
     pub fn parameters(&self) -> HashMap<String, String> {
         let mut result = HashMap::new();
@@ -1693,9 +1692,9 @@ impl Thread {
 unsafe impl Send for webrtc::Thread {}
 unsafe impl Sync for webrtc::Thread {}
 
-/// [`RtpCapabilities`] is used to represent
-/// the static capabilities of an endpoint.
-/// An application can use these capabilities to construct an [`RtpParameters`].
+/// [`RtpCapabilities`] is used to represent the static capabilities of an
+/// endpoint. An application can use these capabilities to construct an
+/// [`RtpParameters`].
 pub struct RtpCapabilities(UniquePtr<webrtc::RtpCapabilities>);
 
 impl RtpCapabilities {

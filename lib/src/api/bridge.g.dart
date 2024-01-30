@@ -1801,10 +1801,9 @@ enum RtcpFeedbackType {
   transportCc,
 }
 
-/// [`RtpCapabilities`] is used to represent
-/// the static capabilities of an endpoint.
-/// An application can use these capabilities
-/// to construct an [`RtpParameters`].
+/// [`RtpCapabilities`] is used to represent the static capabilities of an
+/// endpoint. An application can use these capabilities to construct an
+/// [`RtpParameters`].
 class RtpCapabilities {
   final List<RtpCodecCapability> codecs;
   final List<RtpHeaderExtensionCapability> headerExtensions;
@@ -1815,8 +1814,6 @@ class RtpCapabilities {
   });
 }
 
-/// [`RtpCodecCapability`] is to [`RtpCodecParameters`] as [`RtpCapabilities`]
-/// is to [`RtpParameters`].
 /// This represents the static capabilities of an endpoint's
 /// implementation of a codec.
 class RtpCodecCapability {
@@ -1881,7 +1878,6 @@ class RtpHeaderExtensionCapability {
   final int? preferredId;
 
   /// If true, it's preferred that the value in the header is encrypted.
-  /// TODO(deadbeef): Not implemented.
   final bool preferredEncrypted;
 
   /// The direction of the extension. The kStopped value is only used with

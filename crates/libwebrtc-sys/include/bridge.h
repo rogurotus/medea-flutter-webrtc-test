@@ -538,58 +538,76 @@ std::unique_ptr<RtpReceiverInterface> transceiver_receiver(
     const RtpTransceiverInterface& transceiver);
 
 // Returns the sender `RtpCapabilities` of the provided `MediaType`.
-std::unique_ptr<RtpCapabilities> get_rtp_sender_capabilities(const PeerConnectionFactoryInterface& peer_connection_factory, MediaType kind);
+std::unique_ptr<RtpCapabilities> get_rtp_sender_capabilities(
+    const PeerConnectionFactoryInterface& peer_connection_factory,
+    MediaType kind);
 
 // Returns the `RtpCodecCapability` of the provided `RtpCapabilities`.
-rust::Vec<RtpCodecCapabilityContainer> rtp_capabilities_codecs(const RtpCapabilities& capabilty);
+rust::Vec<RtpCodecCapabilityContainer> rtp_capabilities_codecs(
+    const RtpCapabilities& capabilty);
 
 // Returns the `RtpHeaderExtensionCapability` of the provided `RtpCapabilities`.
-rust::Vec<RtpHeaderExtensionCapabilityContainer> rtp_capabilities_header_extensions(const RtpCapabilities& capabilty);
+rust::Vec<RtpHeaderExtensionCapabilityContainer>
+rtp_capabilities_header_extensions(const RtpCapabilities& capabilty);
 
 // Returns the `uri` of the provided `RtpHeaderExtensionCapability`.
-std::unique_ptr<std::string> header_extensions_uri(const RtpHeaderExtensionCapability& header_extensions);
+std::unique_ptr<std::string> header_extensions_uri(
+    const RtpHeaderExtensionCapability& header_extensions);
 
 // Returns the `preferred_id` of the provided `RtpHeaderExtensionCapability`.
-rust::Box<bridge::OptionI32> header_extensions_preferred_id(const RtpHeaderExtensionCapability& header_extensions);
+rust::Box<bridge::OptionI32> header_extensions_preferred_id(
+    const RtpHeaderExtensionCapability& header_extensions);
 
-// Returns the `preferred_encrypted` of the provided `RtpHeaderExtensionCapability`.
-bool header_extensions_preferred_encrypted(const RtpHeaderExtensionCapability& header_extensions);
+// Returns the `preferred_encrypted` of the provided
+// `RtpHeaderExtensionCapability`.
+bool header_extensions_preferred_encrypted(
+    const RtpHeaderExtensionCapability& header_extensions);
 
 // Returns the `direction` of the provided `RtpHeaderExtensionCapability`.
-RtpTransceiverDirection header_extensions_direction(const RtpHeaderExtensionCapability& header_extensions);
+RtpTransceiverDirection header_extensions_direction(
+    const RtpHeaderExtensionCapability& header_extensions);
 
 // Returns the `payload_type` of the provided `RtpCodecCapability`.
-rust::Box<bridge::OptionI32> preferred_payload_type(const RtpCodecCapability& capabilty);
+rust::Box<bridge::OptionI32> preferred_payload_type(
+    const RtpCodecCapability& capabilty);
 
 // Returns the `scalability_modes` of the provided `RtpCodecCapability`.
-rust::Vec<ScalabilityMode> scalability_modes(const RtpCodecCapability& capabilty);
+rust::Vec<ScalabilityMode> scalability_modes(
+    const RtpCodecCapability& capabilty);
 
 // Returns the `mime_type` of the provided `RtpCodecCapability`.
-std::unique_ptr<std::string> rtc_codec_mime_type(const RtpCodecCapability& capabilty);
+std::unique_ptr<std::string> rtc_codec_mime_type(
+    const RtpCodecCapability& capabilty);
 
 // Returns the `name` of the provided `RtpCodecCapability`.
-  std::unique_ptr<std::string> rtc_codec_name(const RtpCodecCapability& capabilty);
+std::unique_ptr<std::string> rtc_codec_name(
+    const RtpCodecCapability& capabilty);
 
 // Returns the `kind` of the provided `RtpCodecCapability`.
-  MediaType rtc_codec_kind(const RtpCodecCapability& capabilty);
+MediaType rtc_codec_kind(const RtpCodecCapability& capabilty);
 
 // Returns the `clock_rate` of the provided `RtpCodecCapability`.
-  rust::Box<bridge::OptionI32> rtc_codec_clock_rate(const RtpCodecCapability& capabilty);
+rust::Box<bridge::OptionI32> rtc_codec_clock_rate(
+    const RtpCodecCapability& capabilty);
 
 // Returns the `num_channels` of the provided `RtpCodecCapability`.
-  rust::Box<bridge::OptionI32> rtc_codec_num_channels(const RtpCodecCapability& capabilty);
+rust::Box<bridge::OptionI32> rtc_codec_num_channels(
+    const RtpCodecCapability& capabilty);
 
 // Returns the `parameters` of the provided `RtpCodecCapability`.
-  std::unique_ptr<std::vector<StringPair>> rtc_codec_parameters(const RtpCodecCapability& capabilty);
+std::unique_ptr<std::vector<StringPair>> rtc_codec_parameters(
+    const RtpCodecCapability& capabilty);
 
 // Returns the `rtcp_feedback` of the provided `RtpCodecCapability`.
-  rust::Vec<RtcpFeedbackContainer> rtc_codec_rtcp_feedback(const RtpCodecCapability& capabilty);
+rust::Vec<RtcpFeedbackContainer> rtc_codec_rtcp_feedback(
+    const RtpCodecCapability& capabilty);
 
 // Returns the `type` of the provided `RtcpFeedback`.
-  webrtc::RtcpFeedbackType rtcp_feedback_type(const RtcpFeedback& feedback);
+webrtc::RtcpFeedbackType rtcp_feedback_type(const RtcpFeedback& feedback);
 
 // Returns the `message_type` of the provided `RtcpFeedback`.
-  rust::Box<bridge::OptionI32> rtcp_feedback_message_type(const RtcpFeedback& feedback);
+rust::Box<bridge::OptionI32> rtcp_feedback_message_type(
+    const RtcpFeedback& feedback);
 
 // Calls `Candidate->ToString`.
 std::unique_ptr<std::string> candidate_to_string(

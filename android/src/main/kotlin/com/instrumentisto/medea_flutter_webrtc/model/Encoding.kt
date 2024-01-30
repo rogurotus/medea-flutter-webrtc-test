@@ -46,6 +46,7 @@ data class Encoding(
     encoding.maxBitrateBps = maxBitrate
     encoding.maxFramerate = maxFramerate?.toInt()
     encoding.scalabilityMode = scalabilityMode
+
     return encoding
   }
 }
