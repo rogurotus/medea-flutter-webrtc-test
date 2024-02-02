@@ -56,10 +56,10 @@ class PeerConnectionFactoryController {
       result(peer.asFlutterResult())
     case "getRtpSenderCapabilities":
       let kind = argsMap!["kind"] as? Int
+      let mediaKind = MediaType(rawValue: kind)!
 
-      // todo RTCRtpMediaType from kind
       let capabilities = self
-        .rtpSenderCapabilities(kind: RTCRtpMediaType.video)
+        .rtpSenderCapabilities(kind: mediaKind.intoWebRtc())
 
       result(capabilities.asFlutterResult())
     case "videoEncoders":

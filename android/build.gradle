@@ -53,8 +53,7 @@ android {
 }
 
 dependencies {
-    // TODO(rogurotus): fix after libwebrtc-bin.
-    implementation 'com.github.instrumentisto:libwebrtc-bin:118.0.5993.88@aar'
+    implementation 'com.github.instrumentisto:libwebrtc-bin:121.0.6167.85@aar'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
 }
