@@ -212,47 +212,56 @@ void main() {
   });
 
   testWidgets('Video codec info', (WidgetTester tester) async {
-    // Desktop only.
-    if (!Platform.isAndroid) {
-      var decoders = await PeerConnection.videoDecoders();
-      expect(decoders.where((dec) => dec.codec == VideoCodec.VP8).length,
-          isNonZero);
-      expect(decoders.where((dec) => dec.codec == VideoCodec.VP9).length,
-          isNonZero);
-      expect(decoders.where((dec) => dec.codec == VideoCodec.AV1).length,
-          isNonZero);
-      expect(decoders.where((dec) => dec.codec == VideoCodec.H264).length,
-          isNonZero);
+    var decoders = await PeerConnection.videoDecoders();
+    expect(
+        decoders.where((dec) => dec.codec == VideoCodec.VP8).length, isNonZero);
+    expect(
+        decoders.where((dec) => dec.codec == VideoCodec.VP9).length, isNonZero);
+    expect(
+        decoders.where((dec) => dec.codec == VideoCodec.AV1).length, isNonZero);
+    expect(decoders.where((dec) => dec.codec == VideoCodec.H264).length,
+        isNonZero);
 
-      var encoders = await PeerConnection.videoEncoders();
-      expect(encoders.where((enc) => enc.codec == VideoCodec.VP8).length,
-          isNonZero);
-      expect(encoders.where((enc) => enc.codec == VideoCodec.VP9).length,
-          isNonZero);
-      expect(encoders.where((enc) => enc.codec == VideoCodec.AV1).length,
-          isNonZero);
-      expect(encoders.where((enc) => enc.codec == VideoCodec.H264).length,
-          isNonZero);
-    }
+    var encoders = await PeerConnection.videoEncoders();
+    expect(
+        encoders.where((enc) => enc.codec == VideoCodec.VP8).length, isNonZero);
+    expect(
+        encoders.where((enc) => enc.codec == VideoCodec.VP9).length, isNonZero);
+    expect(
+        encoders.where((enc) => enc.codec == VideoCodec.AV1).length, isNonZero);
+    expect(encoders.where((enc) => enc.codec == VideoCodec.H264).length,
+        isNonZero);
   });
 
   testWidgets('Get capabilities', (WidgetTester tester) async {
-    var pc = await PeerConnection.create(IceTransportType.all, []);
-    var t1 = await pc.addTransceiver(
-        MediaKind.video, RtpTransceiverInit(TransceiverDirection.sendRecv));
+    if (!Platform.isAndroid) {
+      var pc = await PeerConnection.create(IceTransportType.all, []);
+      var t1 = await pc.addTransceiver(
+          MediaKind.video, RtpTransceiverInit(TransceiverDirection.sendRecv));
 
-    var capabilities = await t1.sender.getCapabilities(MediaKind.video);
+      var capabilities = await t1.sender.getCapabilities(MediaKind.video);
 
-    expect(
-        capabilities.codecs
-            .where((cap) => cap.mimeType == 'video/H264')
-            .firstOrNull,
-        isNotNull);
-    expect(
-        capabilities.codecs
-            .where((cap) => cap.mimeType == 'video/VP9')
-            .firstOrNull,
-        isNotNull);
+      expect(
+          capabilities.codecs
+              .where((cap) => cap.mimeType == 'video/H264')
+              .firstOrNull,
+          isNotNull);
+      expect(
+          capabilities.codecs
+              .where((cap) => cap.mimeType == 'video/VP9')
+              .firstOrNull,
+          isNotNull);
+      expect(
+          capabilities.codecs
+              .where((cap) => cap.mimeType == 'video/VP8')
+              .firstOrNull,
+          isNotNull);
+      expect(
+          capabilities.codecs
+              .where((cap) => cap.mimeType == 'video/AV1')
+              .firstOrNull,
+          isNotNull);
+    }
   });
 
   testWidgets('Get transceivers', (WidgetTester tester) async {
