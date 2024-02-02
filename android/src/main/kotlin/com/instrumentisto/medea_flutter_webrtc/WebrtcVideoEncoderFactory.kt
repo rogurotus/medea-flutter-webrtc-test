@@ -48,10 +48,6 @@ class WebrtcVideoEncoderFactory
   }
 
   override fun queryCodecSupport(codecInfo: VideoCodecInfo, scalability: String): CodecSupport {
-    val support = hwFactory.queryCodecSupport(codecInfo, scalability)
-    if (support != null) {
-      return support
-    }
     return swFactory.queryCodecSupport(codecInfo, scalability)
   }
 
