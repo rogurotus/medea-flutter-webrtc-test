@@ -56,9 +56,10 @@ class PeerConnectionFactoryController {
       result(peer.asFlutterResult())
     case "getRtpSenderCapabilities":
       let kind = argsMap!["kind"] as? Int
-      let mediaKind = MediaType(rawValue: kind)!
+      let mediaKind = MediaType(rawValue: kind!)!
 
       let capabilities = self
+        .peerFactory
         .rtpSenderCapabilities(kind: mediaKind.intoWebRtc())
 
       result(capabilities.asFlutterResult())
