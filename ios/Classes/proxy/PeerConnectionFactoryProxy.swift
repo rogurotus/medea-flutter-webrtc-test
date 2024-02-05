@@ -21,7 +21,7 @@ class PeerConnectionFactoryProxy {
 
   /// Returns sender capabilities of this factory.
   func rtpSenderCapabilities(kind: RTCRtpMediaType) -> RtpCapabilities {
-    var capabilities = self.peerFactory.factory
+    var capabilities = self.factory
       .rtpSenderCapabilities(for: kind)
 
     return RtpCapabilities(
