@@ -22,6 +22,7 @@
 #include "libyuv.h"
 #include "modules/audio_device/include/audio_device_factory.h"
 #include "pc/proxy.h"
+#include <iostream>
 
 namespace bridge {
 
@@ -981,6 +982,47 @@ void audio_track_unregister_observer(AudioTrackInterface& track,
 std::unique_ptr<RtpSenderInterface> transceiver_sender(
     const RtpTransceiverInterface& transceiver) {
   return std::make_unique<RtpSenderInterface>(transceiver->sender());
+}
+
+// Changes the preferred `RtpTransceiverInterface` codecs to the given
+// `Vec<RtpCodecCapability>`.
+void set_codec_preferences(const RtpTransceiverInterface& transceiver,
+                           rust::Vec<RtpCodecCapabilityContainer> codecs) {
+  RtpCodecCapability* array = new RtpCodecCapability[codecs.size()];
+  for (int i = 0; i < codecs.size(); ++i) {
+    array[i] = *codecs[i].ptr.get();
+  }
+  rtc::ArrayView<RtpCodecCapability> rtp_codecs(array, codecs.size());
+  transceiver->SetCodecPreferences(rtp_codecs);
+}
+
+// Creates a new `RtpCodecCapability`.
+std::unique_ptr<RtpCodecCapability> create_codec_capability(
+    int preferred_payload_type,
+    rust::String name,
+    MediaType kind,
+    int clock_rate,
+    int num_channels,
+    rust::Vec<StringPair> parameters) {
+  RtpCodecCapability codec;
+  if (clock_rate > 0) {
+    codec.preferred_payload_type = preferred_payload_type;
+  }
+  codec.name = std::string(name);
+  codec.kind = kind;
+  if (clock_rate > 0) {
+    codec.clock_rate = clock_rate;
+  }
+  if (num_channels > 0) {
+    codec.num_channels = num_channels;
+  }
+  std::map<std::string, std::string> map;
+  for (int i = 0; i < parameters.size(); ++i) {
+    map[std::string(parameters[i].first)] = std::string(parameters[i].second);
+  }
+
+  codec.parameters = map;
+  return std::make_unique<RtpCodecCapability>(codec);
 }
 
 // Returns the `receiver` of the provided `RtpTransceiverInterface`.

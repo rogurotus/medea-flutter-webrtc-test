@@ -266,6 +266,33 @@ void main() {
     }
   });
 
+  testWidgets('SetCodecPreferences', (WidgetTester tester) async {
+    var pc = await PeerConnection.create(IceTransportType.all, []);
+    var vtrans = await pc.addTransceiver(
+        MediaKind.video, RtpTransceiverInit(TransceiverDirection.sendRecv));
+
+    var capabilities = await vtrans.sender.getCapabilities(MediaKind.video);
+
+    var names = capabilities.codecs.map((c) => c.name).toList();
+    expect(names.contains("VP9"), isTrue);
+    expect(names.contains("H264"), isTrue);
+    expect(names.contains("AV1"), isTrue);
+    expect(names.contains("VP8"), isTrue);
+
+    var h264Preferences = capabilities.codecs.where((element) {
+      return element.name == 'H264';
+    }).toList();
+
+    await vtrans.setCodecPreferences(h264Preferences);
+
+    var offer = await pc.createOffer();
+
+    expect(offer.description.contains("H264"), isTrue);
+    expect(offer.description.contains("VP9"), isFalse);
+    expect(offer.description.contains("VP8"), isFalse);
+    expect(offer.description.contains("AV1"), isFalse);
+  });
+
   testWidgets('Get transceivers', (WidgetTester tester) async {
     var pc = await PeerConnection.create(IceTransportType.all, []);
     var t1 = await pc.addTransceiver(

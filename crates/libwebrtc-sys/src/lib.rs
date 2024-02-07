@@ -858,6 +858,18 @@ impl RtpTransceiverInterface {
         Ok(())
     }
 
+    /// Changes the preferred [`RtpTransceiverInterface`] codecs
+    /// to the given [`Vec<RtpCodecCapability>`].
+    #[must_use]
+    pub fn set_codec_preferences(&self, codecs: Vec<RtpCodecCapability>) {
+        let codecs = codecs
+            .into_iter()
+            .map(|c| webrtc::RtpCodecCapabilityContainer { ptr: c.0 })
+            .collect();
+
+        let _ = webrtc::set_codec_preferences(&self.inner, codecs);
+    }
+
     /// Returns the [`RtpSenderInterface`] object responsible for encoding and
     /// sending data to the remote peer.
     #[must_use]
@@ -951,6 +963,29 @@ impl RtpHeaderExtensionCapability {
 pub struct RtpCodecCapability(UniquePtr<webrtc::RtpCodecCapability>);
 
 impl RtpCodecCapability {
+    /// Creates a new [`RtpCodecCapability`].
+    pub fn new(
+        preferred_payload_type: Option<i32>,
+        name: String,
+        kind: MediaType,
+        clock_rate: Option<i32>,
+        num_channels: Option<i32>,
+        parameters: Vec<(String, String)>,
+    ) -> Self {
+        let ptr = webrtc::create_codec_capability(
+            preferred_payload_type.unwrap_or(-1),
+            name,
+            kind,
+            clock_rate.unwrap_or(-1),
+            num_channels.unwrap_or(-1),
+            parameters
+                .into_iter()
+                .map(|(first, second)| webrtc::StringPair { first, second })
+                .collect(),
+        );
+        Self(ptr)
+    }
+
     /// Default payload type for this codec. Mainly needed for codecs that have
     /// statically assigned payload types.
     #[must_use]

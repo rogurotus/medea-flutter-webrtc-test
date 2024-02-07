@@ -2654,6 +2654,16 @@ pub fn stop_transceiver(
     transceiver.stop()
 }
 
+/// Changes the preferred [`RtpTransceiver`] codecs
+/// to the given [`Vec<RtpCodecCapability>`].
+#[allow(clippy::needless_pass_by_value)]
+pub fn set_codec_preferences(
+    transceiver: RustOpaque<Arc<RtpTransceiver>>,
+    codecs: Vec<RtpCodecCapability>,
+) {
+    transceiver.set_codec_preferences(codecs);
+}
+
 /// Replaces the specified [`AudioTrack`] (or [`VideoTrack`]) on the
 /// [`sys::Transceiver`]'s `sender`.
 #[allow(clippy::needless_pass_by_value)]

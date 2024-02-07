@@ -63,7 +63,8 @@ class RtpHeaderExtensionCapability {
 /// RtpParameters. This represents the static capabilities of an endpoint's
 /// implementation of a codec.
 class RtpCodecCapability {
-  RtpCodecCapability(this.mimeType, this.clockRate, this.parameters);
+  RtpCodecCapability(this.mimeType, this.clockRate, this.parameters, this.kind,
+      this.name, this.numChannels, this.preferredPayloadType);
 
   static RtpCodecCapability fromFFI(ffi.RtpCodecCapability capability) {
     Map<String, String> parameters = {};
@@ -72,7 +73,13 @@ class RtpCodecCapability {
     }
 
     return RtpCodecCapability(
-        capability.mimeType, capability.clockRate, parameters);
+        capability.mimeType,
+        capability.clockRate,
+        parameters,
+        MediaKind.values[capability.kind.index],
+        capability.name,
+        capability.numChannels,
+        capability.preferredPayloadType);
   }
 
   static RtpCodecCapability fromMap(dynamic map) {
@@ -83,10 +90,25 @@ class RtpCodecCapability {
       }
     }
     return RtpCodecCapability(
-      map['mimeType'],
-      map['clockRate'],
-      parameters,
-    );
+        map['mimeType'],
+        map['clockRate'],
+        parameters,
+        MediaKind.values[map['kind']],
+        map['name'],
+        map['numChannels'],
+        map['preferredPayloadType']);
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'mimeType': mimeType,
+      'clockRate': clockRate ?? 0,
+      'parameters': parameters,
+      'preferredPayloadType': preferredPayloadType ?? 0,
+      'name': name,
+      'kind': kind.index,
+      'numChannels': numChannels
+    };
   }
 
   /// Build MIME "type/subtype" string from `name` and `kind`.
@@ -94,6 +116,20 @@ class RtpCodecCapability {
 
   /// If unset, the implementation default is used.
   int? clockRate;
+
+  /// Default payload type for this codec. Mainly needed for codecs that have
+  /// statically assigned payload types.
+  int? preferredPayloadType;
+
+  /// Used to identify the codec. Equivalent to MIME subtype.
+  String name;
+
+  /// The media type of this codec. Equivalent to MIME top-level type.
+  MediaKind kind;
+
+  /// The number of audio channels used. Unset for video codecs. If unset for
+  /// audio, the implementation default is used.
+  int? numChannels;
 
   /// Codec-specific parameters that must be signaled to the remote party.
   ///

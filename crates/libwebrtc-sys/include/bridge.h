@@ -533,6 +533,20 @@ void audio_track_unregister_observer(AudioTrackInterface& track,
 std::unique_ptr<RtpSenderInterface> transceiver_sender(
     const RtpTransceiverInterface& transceiver);
 
+// Changes the preferred `RtpTransceiverInterface` codecs to the given
+// `Vec<RtpCodecCapability>`.
+void set_codec_preferences(const RtpTransceiverInterface& transceiver,
+                           rust::Vec<RtpCodecCapabilityContainer> codecs);
+
+// Creates a new `RtpCodecCapability`.
+std::unique_ptr<RtpCodecCapability> create_codec_capability(
+    int preferred_payload_type,
+    rust::String name,
+    MediaType kind,
+    int clock_rate,
+    int num_channels,
+    rust::Vec<StringPair> parameters);
+
 // Returns the `receiver` of the provided `RtpTransceiverInterface`.
 std::unique_ptr<RtpReceiverInterface> transceiver_receiver(
     const RtpTransceiverInterface& transceiver);

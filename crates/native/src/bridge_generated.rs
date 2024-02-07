@@ -357,6 +357,26 @@ fn wire_stop_transceiver_impl(
         },
     )
 }
+fn wire_set_codec_preferences_impl(
+    port_: MessagePort,
+    transceiver: impl Wire2Api<RustOpaque<Arc<RtpTransceiver>>> + UnwindSafe,
+    codecs: impl Wire2Api<Vec<RtpCodecCapability>> + UnwindSafe,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap::<_, _, _, (), _>(
+        WrapInfo {
+            debug_name: "set_codec_preferences",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_transceiver = transceiver.wire2api();
+            let api_codecs = codecs.wire2api();
+            move |task_callback| {
+                Result::<_, ()>::Ok(set_codec_preferences(api_transceiver, api_codecs))
+            }
+        },
+    )
+}
 fn wire_sender_replace_track_impl(
     port_: MessagePort,
     peer: impl Wire2Api<RustOpaque<Arc<PeerConnection>>> + UnwindSafe,
@@ -831,6 +851,29 @@ impl Wire2Api<MediaType> for i32 {
     }
 }
 
+impl Wire2Api<RtcpFeedbackMessageType> for i32 {
+    fn wire2api(self) -> RtcpFeedbackMessageType {
+        match self {
+            0 => RtcpFeedbackMessageType::GenericNACK,
+            1 => RtcpFeedbackMessageType::PLI,
+            2 => RtcpFeedbackMessageType::FIR,
+            _ => unreachable!("Invalid variant for RtcpFeedbackMessageType: {}", self),
+        }
+    }
+}
+impl Wire2Api<RtcpFeedbackType> for i32 {
+    fn wire2api(self) -> RtcpFeedbackType {
+        match self {
+            0 => RtcpFeedbackType::CCM,
+            1 => RtcpFeedbackType::LNTF,
+            2 => RtcpFeedbackType::NACK,
+            3 => RtcpFeedbackType::REMB,
+            4 => RtcpFeedbackType::TransportCC,
+            _ => unreachable!("Invalid variant for RtcpFeedbackType: {}", self),
+        }
+    }
+}
+
 impl Wire2Api<RtpTransceiverDirection> for i32 {
     fn wire2api(self) -> RtpTransceiverDirection {
         match self {
@@ -844,6 +887,47 @@ impl Wire2Api<RtpTransceiverDirection> for i32 {
     }
 }
 
+impl Wire2Api<ScalabilityMode> for i32 {
+    fn wire2api(self) -> ScalabilityMode {
+        match self {
+            0 => ScalabilityMode::L1T1,
+            1 => ScalabilityMode::L1T2,
+            2 => ScalabilityMode::L1T3,
+            3 => ScalabilityMode::L2T1,
+            4 => ScalabilityMode::L2T1h,
+            5 => ScalabilityMode::L2t1Key,
+            6 => ScalabilityMode::L2T2,
+            7 => ScalabilityMode::L2T2h,
+            8 => ScalabilityMode::L2T2Key,
+            9 => ScalabilityMode::L2T2KeyShift,
+            10 => ScalabilityMode::L2T3,
+            11 => ScalabilityMode::L2T3h,
+            12 => ScalabilityMode::L2T3Key,
+            13 => ScalabilityMode::L3T1,
+            14 => ScalabilityMode::L3T1h,
+            15 => ScalabilityMode::L3T1Key,
+            16 => ScalabilityMode::L3T2,
+            17 => ScalabilityMode::L3T2h,
+            18 => ScalabilityMode::L3T2Key,
+            19 => ScalabilityMode::L3T3,
+            20 => ScalabilityMode::L3T3h,
+            21 => ScalabilityMode::L3T3Key,
+            22 => ScalabilityMode::S2T1,
+            23 => ScalabilityMode::S2T1h,
+            24 => ScalabilityMode::S2T2,
+            25 => ScalabilityMode::S2T2h,
+            26 => ScalabilityMode::S2T3,
+            27 => ScalabilityMode::S2T3h,
+            28 => ScalabilityMode::S3T1,
+            29 => ScalabilityMode::S3T1h,
+            30 => ScalabilityMode::S3T2,
+            31 => ScalabilityMode::S3T2h,
+            32 => ScalabilityMode::S3T3,
+            33 => ScalabilityMode::S3T3h,
+            _ => unreachable!("Invalid variant for ScalabilityMode: {}", self),
+        }
+    }
+}
 impl Wire2Api<SdpType> for i32 {
     fn wire2api(self) -> SdpType {
         match self {
@@ -2040,6 +2124,15 @@ mod io {
     }
 
     #[no_mangle]
+    pub extern "C" fn wire_set_codec_preferences(
+        port_: i64,
+        transceiver: wire_ArcRtpTransceiver,
+        codecs: *mut wire_list_rtp_codec_capability,
+    ) {
+        wire_set_codec_preferences_impl(port_, transceiver, codecs)
+    }
+
+    #[no_mangle]
     pub extern "C" fn wire_sender_replace_track(
         port_: i64,
         peer: wire_ArcPeerConnection,
@@ -2271,6 +2364,11 @@ mod io {
     }
 
     #[no_mangle]
+    pub extern "C" fn new_box_autoadd_rtcp_feedback_message_type_0(value: i32) -> *mut i32 {
+        support::new_leak_box_ptr(value)
+    }
+
+    #[no_mangle]
     pub extern "C" fn new_box_autoadd_rtp_transceiver_init_0() -> *mut wire_RtpTransceiverInit {
         support::new_leak_box_ptr(wire_RtpTransceiverInit::new_with_null_ptr())
     }
@@ -2283,6 +2381,20 @@ mod io {
     #[no_mangle]
     pub extern "C" fn new_box_autoadd_video_constraints_0() -> *mut wire_VideoConstraints {
         support::new_leak_box_ptr(wire_VideoConstraints::new_with_null_ptr())
+    }
+
+    #[no_mangle]
+    pub extern "C" fn new_list___record__String_String_0(
+        len: i32,
+    ) -> *mut wire_list___record__String_String {
+        let wrap = wire_list___record__String_String {
+            ptr: support::new_leak_vec_ptr(
+                <wire___record__String_String>::new_with_null_ptr(),
+                len,
+            ),
+            len,
+        };
+        support::new_leak_box_ptr(wrap)
     }
 
     #[no_mangle]
@@ -2311,6 +2423,35 @@ mod io {
                 <wire_RtcRtpEncodingParameters>::new_with_null_ptr(),
                 len,
             ),
+            len,
+        };
+        support::new_leak_box_ptr(wrap)
+    }
+
+    #[no_mangle]
+    pub extern "C" fn new_list_rtcp_feedback_0(len: i32) -> *mut wire_list_rtcp_feedback {
+        let wrap = wire_list_rtcp_feedback {
+            ptr: support::new_leak_vec_ptr(<wire_RtcpFeedback>::new_with_null_ptr(), len),
+            len,
+        };
+        support::new_leak_box_ptr(wrap)
+    }
+
+    #[no_mangle]
+    pub extern "C" fn new_list_rtp_codec_capability_0(
+        len: i32,
+    ) -> *mut wire_list_rtp_codec_capability {
+        let wrap = wire_list_rtp_codec_capability {
+            ptr: support::new_leak_vec_ptr(<wire_RtpCodecCapability>::new_with_null_ptr(), len),
+            len,
+        };
+        support::new_leak_box_ptr(wrap)
+    }
+
+    #[no_mangle]
+    pub extern "C" fn new_list_scalability_mode_0(len: i32) -> *mut wire_list_scalability_mode {
+        let wrap = wire_list_scalability_mode {
+            ptr: support::new_leak_vec_ptr(Default::default(), len),
             len,
         };
         support::new_leak_box_ptr(wrap)
@@ -2424,6 +2565,11 @@ mod io {
             vec.into_iter().map(Wire2Api::wire2api).collect()
         }
     }
+    impl Wire2Api<(String, String)> for wire___record__String_String {
+        fn wire2api(self) -> (String, String) {
+            (self.field0.wire2api(), self.field1.wire2api())
+        }
+    }
     impl
         Wire2Api<(
             RtcRtpEncodingParameters,
@@ -2481,6 +2627,12 @@ mod io {
             Wire2Api::<RtcRtpSendParameters>::wire2api(*wrap).into()
         }
     }
+    impl Wire2Api<RtcpFeedbackMessageType> for *mut i32 {
+        fn wire2api(self) -> RtcpFeedbackMessageType {
+            let wrap = unsafe { support::box_from_leak_ptr(self) };
+            Wire2Api::<RtcpFeedbackMessageType>::wire2api(*wrap).into()
+        }
+    }
     impl Wire2Api<RtpTransceiverInit> for *mut wire_RtpTransceiverInit {
         fn wire2api(self) -> RtpTransceiverInit {
             let wrap = unsafe { support::box_from_leak_ptr(self) };
@@ -2499,6 +2651,15 @@ mod io {
         }
     }
 
+    impl Wire2Api<Vec<(String, String)>> for *mut wire_list___record__String_String {
+        fn wire2api(self) -> Vec<(String, String)> {
+            let vec = unsafe {
+                let wrap = support::box_from_leak_ptr(self);
+                support::vec_from_leak_ptr(wrap.ptr, wrap.len)
+            };
+            vec.into_iter().map(Wire2Api::wire2api).collect()
+        }
+    }
     impl
         Wire2Api<
             Vec<(
@@ -2531,6 +2692,33 @@ mod io {
     }
     impl Wire2Api<Vec<RtcRtpEncodingParameters>> for *mut wire_list_rtc_rtp_encoding_parameters {
         fn wire2api(self) -> Vec<RtcRtpEncodingParameters> {
+            let vec = unsafe {
+                let wrap = support::box_from_leak_ptr(self);
+                support::vec_from_leak_ptr(wrap.ptr, wrap.len)
+            };
+            vec.into_iter().map(Wire2Api::wire2api).collect()
+        }
+    }
+    impl Wire2Api<Vec<RtcpFeedback>> for *mut wire_list_rtcp_feedback {
+        fn wire2api(self) -> Vec<RtcpFeedback> {
+            let vec = unsafe {
+                let wrap = support::box_from_leak_ptr(self);
+                support::vec_from_leak_ptr(wrap.ptr, wrap.len)
+            };
+            vec.into_iter().map(Wire2Api::wire2api).collect()
+        }
+    }
+    impl Wire2Api<Vec<RtpCodecCapability>> for *mut wire_list_rtp_codec_capability {
+        fn wire2api(self) -> Vec<RtpCodecCapability> {
+            let vec = unsafe {
+                let wrap = support::box_from_leak_ptr(self);
+                support::vec_from_leak_ptr(wrap.ptr, wrap.len)
+            };
+            vec.into_iter().map(Wire2Api::wire2api).collect()
+        }
+    }
+    impl Wire2Api<Vec<ScalabilityMode>> for *mut wire_list_scalability_mode {
+        fn wire2api(self) -> Vec<ScalabilityMode> {
             let vec = unsafe {
                 let wrap = support::box_from_leak_ptr(self);
                 support::vec_from_leak_ptr(wrap.ptr, wrap.len)
@@ -2582,6 +2770,30 @@ mod io {
             RtcRtpSendParameters {
                 encodings: self.encodings.wire2api(),
                 inner: self.inner.wire2api(),
+            }
+        }
+    }
+    impl Wire2Api<RtcpFeedback> for wire_RtcpFeedback {
+        fn wire2api(self) -> RtcpFeedback {
+            RtcpFeedback {
+                message_type: self.message_type.wire2api(),
+                kind: self.kind.wire2api(),
+            }
+        }
+    }
+
+    impl Wire2Api<RtpCodecCapability> for wire_RtpCodecCapability {
+        fn wire2api(self) -> RtpCodecCapability {
+            RtpCodecCapability {
+                preferred_payload_type: self.preferred_payload_type.wire2api(),
+                scalability_modes: self.scalability_modes.wire2api(),
+                mime_type: self.mime_type.wire2api(),
+                name: self.name.wire2api(),
+                kind: self.kind.wire2api(),
+                clock_rate: self.clock_rate.wire2api(),
+                num_channels: self.num_channels.wire2api(),
+                parameters: self.parameters.wire2api(),
+                feedback: self.feedback.wire2api(),
             }
         }
     }
@@ -2649,6 +2861,13 @@ mod io {
 
     #[repr(C)]
     #[derive(Clone)]
+    pub struct wire___record__String_String {
+        field0: *mut wire_uint_8_list,
+        field1: *mut wire_uint_8_list,
+    }
+
+    #[repr(C)]
+    #[derive(Clone)]
     pub struct wire___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters {
         field0: wire_RtcRtpEncodingParameters,
         field1: wire_ArcRtpEncodingParameters,
@@ -2658,6 +2877,13 @@ mod io {
     #[derive(Clone)]
     pub struct wire_AudioConstraints {
         device_id: *mut wire_uint_8_list,
+    }
+
+    #[repr(C)]
+    #[derive(Clone)]
+    pub struct wire_list___record__String_String {
+        ptr: *mut wire___record__String_String,
+        len: i32,
     }
 
     #[repr(C)]
@@ -2678,6 +2904,27 @@ mod io {
     #[derive(Clone)]
     pub struct wire_list_rtc_rtp_encoding_parameters {
         ptr: *mut wire_RtcRtpEncodingParameters,
+        len: i32,
+    }
+
+    #[repr(C)]
+    #[derive(Clone)]
+    pub struct wire_list_rtcp_feedback {
+        ptr: *mut wire_RtcpFeedback,
+        len: i32,
+    }
+
+    #[repr(C)]
+    #[derive(Clone)]
+    pub struct wire_list_rtp_codec_capability {
+        ptr: *mut wire_RtpCodecCapability,
+        len: i32,
+    }
+
+    #[repr(C)]
+    #[derive(Clone)]
+    pub struct wire_list_scalability_mode {
+        ptr: *mut i32,
         len: i32,
     }
 
@@ -2720,6 +2967,27 @@ mod io {
     pub struct wire_RtcRtpSendParameters {
         encodings: *mut wire_list___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters,
         inner: wire_ArcRtpParameters,
+    }
+
+    #[repr(C)]
+    #[derive(Clone)]
+    pub struct wire_RtcpFeedback {
+        message_type: *mut i32,
+        kind: i32,
+    }
+
+    #[repr(C)]
+    #[derive(Clone)]
+    pub struct wire_RtpCodecCapability {
+        preferred_payload_type: *mut i32,
+        scalability_modes: *mut wire_list_scalability_mode,
+        mime_type: *mut wire_uint_8_list,
+        name: *mut wire_uint_8_list,
+        kind: i32,
+        clock_rate: *mut i32,
+        num_channels: *mut i32,
+        parameters: *mut wire_list___record__String_String,
+        feedback: *mut wire_list_rtcp_feedback,
     }
 
     #[repr(C)]
@@ -2784,6 +3052,21 @@ mod io {
             Self {
                 ptr: core::ptr::null(),
             }
+        }
+    }
+
+    impl NewWithNullPtr for wire___record__String_String {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                field0: core::ptr::null_mut(),
+                field1: core::ptr::null_mut(),
+            }
+        }
+    }
+
+    impl Default for wire___record__String_String {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
         }
     }
 
@@ -2892,6 +3175,43 @@ mod io {
     }
 
     impl Default for wire_RtcRtpSendParameters {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
+        }
+    }
+
+    impl NewWithNullPtr for wire_RtcpFeedback {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                message_type: core::ptr::null_mut(),
+                kind: Default::default(),
+            }
+        }
+    }
+
+    impl Default for wire_RtcpFeedback {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
+        }
+    }
+
+    impl NewWithNullPtr for wire_RtpCodecCapability {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                preferred_payload_type: core::ptr::null_mut(),
+                scalability_modes: core::ptr::null_mut(),
+                mime_type: core::ptr::null_mut(),
+                name: core::ptr::null_mut(),
+                kind: Default::default(),
+                clock_rate: core::ptr::null_mut(),
+                num_channels: core::ptr::null_mut(),
+                parameters: core::ptr::null_mut(),
+                feedback: core::ptr::null_mut(),
+            }
+        }
+    }
+
+    impl Default for wire_RtpCodecCapability {
         fn default() -> Self {
             Self::new_with_null_ptr()
         }

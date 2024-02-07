@@ -166,6 +166,15 @@ abstract class MedeaFlutterWebrtcNative {
 
   FlutterRustBridgeTaskConstMeta get kStopTransceiverConstMeta;
 
+  /// Changes the preferred [`RtpTransceiver`] codecs
+  /// to the given [`Vec<RtpCodecCapability>`].
+  Future<void> setCodecPreferences(
+      {required ArcRtpTransceiver transceiver,
+      required List<RtpCodecCapability> codecs,
+      dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kSetCodecPreferencesConstMeta;
+
   /// Replaces the specified [`AudioTrack`] (or [`VideoTrack`]) on the
   /// [`sys::Transceiver`]'s `sender`.
   Future<void> senderReplaceTrack(
@@ -2742,6 +2751,29 @@ class MedeaFlutterWebrtcNativeImpl implements MedeaFlutterWebrtcNative {
         argNames: ["transceiver"],
       );
 
+  Future<void> setCodecPreferences(
+      {required ArcRtpTransceiver transceiver,
+      required List<RtpCodecCapability> codecs,
+      dynamic hint}) {
+    var arg0 = _platform.api2wire_ArcRtpTransceiver(transceiver);
+    var arg1 = _platform.api2wire_list_rtp_codec_capability(codecs);
+    return _platform.executeNormal(FlutterRustBridgeTask(
+      callFfi: (port_) =>
+          _platform.inner.wire_set_codec_preferences(port_, arg0, arg1),
+      parseSuccessData: _wire2api_unit,
+      parseErrorData: null,
+      constMeta: kSetCodecPreferencesConstMeta,
+      argValues: [transceiver, codecs],
+      hint: hint,
+    ));
+  }
+
+  FlutterRustBridgeTaskConstMeta get kSetCodecPreferencesConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "set_codec_preferences",
+        argNames: ["transceiver", "codecs"],
+      );
+
   Future<void> senderReplaceTrack(
       {required ArcPeerConnection peer,
       required ArcRtpTransceiver transceiver,
@@ -4060,7 +4092,22 @@ int api2wire_media_type(MediaType raw) {
 }
 
 @protected
+int api2wire_rtcp_feedback_message_type(RtcpFeedbackMessageType raw) {
+  return api2wire_i32(raw.index);
+}
+
+@protected
+int api2wire_rtcp_feedback_type(RtcpFeedbackType raw) {
+  return api2wire_i32(raw.index);
+}
+
+@protected
 int api2wire_rtp_transceiver_direction(RtpTransceiverDirection raw) {
+  return api2wire_i32(raw.index);
+}
+
+@protected
+int api2wire_scalability_mode(ScalabilityMode raw) {
   return api2wire_i32(raw.index);
 }
 
@@ -4175,6 +4222,13 @@ class MedeaFlutterWebrtcNativePlatform
   }
 
   @protected
+  ffi.Pointer<ffi.Int32> api2wire_box_autoadd_rtcp_feedback_message_type(
+      RtcpFeedbackMessageType raw) {
+    return inner.new_box_autoadd_rtcp_feedback_message_type_0(
+        api2wire_rtcp_feedback_message_type(raw));
+  }
+
+  @protected
   ffi.Pointer<wire_RtpTransceiverInit>
       api2wire_box_autoadd_rtp_transceiver_init(RtpTransceiverInit raw) {
     final ptr = inner.new_box_autoadd_rtp_transceiver_init_0();
@@ -4198,6 +4252,16 @@ class MedeaFlutterWebrtcNativePlatform
   @protected
   int api2wire_i64(int raw) {
     return raw;
+  }
+
+  @protected
+  ffi.Pointer<wire_list___record__String_String>
+      api2wire_list___record__String_String(List<(String, String)> raw) {
+    final ans = inner.new_list___record__String_String_0(raw.length);
+    for (var i = 0; i < raw.length; ++i) {
+      _api_fill_to_wire___record__String_String(raw[i], ans.ref.ptr[i]);
+    }
+    return ans;
   }
 
   @protected
@@ -4237,6 +4301,36 @@ class MedeaFlutterWebrtcNativePlatform
   }
 
   @protected
+  ffi.Pointer<wire_list_rtcp_feedback> api2wire_list_rtcp_feedback(
+      List<RtcpFeedback> raw) {
+    final ans = inner.new_list_rtcp_feedback_0(raw.length);
+    for (var i = 0; i < raw.length; ++i) {
+      _api_fill_to_wire_rtcp_feedback(raw[i], ans.ref.ptr[i]);
+    }
+    return ans;
+  }
+
+  @protected
+  ffi.Pointer<wire_list_rtp_codec_capability>
+      api2wire_list_rtp_codec_capability(List<RtpCodecCapability> raw) {
+    final ans = inner.new_list_rtp_codec_capability_0(raw.length);
+    for (var i = 0; i < raw.length; ++i) {
+      _api_fill_to_wire_rtp_codec_capability(raw[i], ans.ref.ptr[i]);
+    }
+    return ans;
+  }
+
+  @protected
+  ffi.Pointer<wire_list_scalability_mode> api2wire_list_scalability_mode(
+      List<ScalabilityMode> raw) {
+    final ans = inner.new_list_scalability_mode_0(raw.length);
+    for (var i = 0; i < raw.length; ++i) {
+      ans.ref.ptr[i] = api2wire_scalability_mode(raw[i]);
+    }
+    return ans;
+  }
+
+  @protected
   ffi.Pointer<wire_uint_8_list> api2wire_opt_String(String? raw) {
     return raw == null ? ffi.nullptr : api2wire_String(raw);
   }
@@ -4257,6 +4351,14 @@ class MedeaFlutterWebrtcNativePlatform
   @protected
   ffi.Pointer<ffi.Int32> api2wire_opt_box_autoadd_i32(int? raw) {
     return raw == null ? ffi.nullptr : api2wire_box_autoadd_i32(raw);
+  }
+
+  @protected
+  ffi.Pointer<ffi.Int32> api2wire_opt_box_autoadd_rtcp_feedback_message_type(
+      RtcpFeedbackMessageType? raw) {
+    return raw == null
+        ? ffi.nullptr
+        : api2wire_box_autoadd_rtcp_feedback_message_type(raw);
   }
 
   @protected
@@ -4322,6 +4424,12 @@ class MedeaFlutterWebrtcNativePlatform
   void _api_fill_to_wire_ArcRtpTransceiver(
       ArcRtpTransceiver apiObj, wire_ArcRtpTransceiver wireObj) {
     wireObj.ptr = apiObj.shareOrMove();
+  }
+
+  void _api_fill_to_wire___record__String_String(
+      (String, String) apiObj, wire___record__String_String wireObj) {
+    wireObj.field0 = api2wire_String(apiObj.$1);
+    wireObj.field1 = api2wire_String(apiObj.$2);
   }
 
   void
@@ -4408,6 +4516,29 @@ class MedeaFlutterWebrtcNativePlatform
         api2wire_list___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters(
             apiObj.encodings);
     wireObj.inner = api2wire_ArcRtpParameters(apiObj.inner);
+  }
+
+  void _api_fill_to_wire_rtcp_feedback(
+      RtcpFeedback apiObj, wire_RtcpFeedback wireObj) {
+    wireObj.message_type =
+        api2wire_opt_box_autoadd_rtcp_feedback_message_type(apiObj.messageType);
+    wireObj.kind = api2wire_rtcp_feedback_type(apiObj.kind);
+  }
+
+  void _api_fill_to_wire_rtp_codec_capability(
+      RtpCodecCapability apiObj, wire_RtpCodecCapability wireObj) {
+    wireObj.preferred_payload_type =
+        api2wire_opt_box_autoadd_i32(apiObj.preferredPayloadType);
+    wireObj.scalability_modes =
+        api2wire_list_scalability_mode(apiObj.scalabilityModes);
+    wireObj.mime_type = api2wire_String(apiObj.mimeType);
+    wireObj.name = api2wire_String(apiObj.name);
+    wireObj.kind = api2wire_media_type(apiObj.kind);
+    wireObj.clock_rate = api2wire_opt_box_autoadd_i32(apiObj.clockRate);
+    wireObj.num_channels = api2wire_opt_box_autoadd_i32(apiObj.numChannels);
+    wireObj.parameters =
+        api2wire_list___record__String_String(apiObj.parameters);
+    wireObj.feedback = api2wire_list_rtcp_feedback(apiObj.feedback);
   }
 
   void _api_fill_to_wire_rtp_transceiver_init(
@@ -4882,6 +5013,28 @@ class MedeaFlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
               ffi.Int64, wire_ArcRtpTransceiver)>>('wire_stop_transceiver');
   late final _wire_stop_transceiver = _wire_stop_transceiverPtr
       .asFunction<void Function(int, wire_ArcRtpTransceiver)>();
+
+  void wire_set_codec_preferences(
+    int port_,
+    wire_ArcRtpTransceiver transceiver,
+    ffi.Pointer<wire_list_rtp_codec_capability> codecs,
+  ) {
+    return _wire_set_codec_preferences(
+      port_,
+      transceiver,
+      codecs,
+    );
+  }
+
+  late final _wire_set_codec_preferencesPtr = _lookup<
+          ffi.NativeFunction<
+              ffi.Void Function(ffi.Int64, wire_ArcRtpTransceiver,
+                  ffi.Pointer<wire_list_rtp_codec_capability>)>>(
+      'wire_set_codec_preferences');
+  late final _wire_set_codec_preferences =
+      _wire_set_codec_preferencesPtr.asFunction<
+          void Function(int, wire_ArcRtpTransceiver,
+              ffi.Pointer<wire_list_rtp_codec_capability>)>();
 
   void wire_sender_replace_track(
     int port_,
@@ -5460,6 +5613,21 @@ class MedeaFlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
       _new_box_autoadd_rtc_rtp_send_parameters_0Ptr
           .asFunction<ffi.Pointer<wire_RtcRtpSendParameters> Function()>();
 
+  ffi.Pointer<ffi.Int32> new_box_autoadd_rtcp_feedback_message_type_0(
+    int value,
+  ) {
+    return _new_box_autoadd_rtcp_feedback_message_type_0(
+      value,
+    );
+  }
+
+  late final _new_box_autoadd_rtcp_feedback_message_type_0Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Int32> Function(ffi.Int32)>>(
+          'new_box_autoadd_rtcp_feedback_message_type_0');
+  late final _new_box_autoadd_rtcp_feedback_message_type_0 =
+      _new_box_autoadd_rtcp_feedback_message_type_0Ptr
+          .asFunction<ffi.Pointer<ffi.Int32> Function(int)>();
+
   ffi.Pointer<wire_RtpTransceiverInit>
       new_box_autoadd_rtp_transceiver_init_0() {
     return _new_box_autoadd_rtp_transceiver_init_0();
@@ -5496,6 +5664,23 @@ class MedeaFlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
   late final _new_box_autoadd_video_constraints_0 =
       _new_box_autoadd_video_constraints_0Ptr
           .asFunction<ffi.Pointer<wire_VideoConstraints> Function()>();
+
+  ffi.Pointer<wire_list___record__String_String>
+      new_list___record__String_String_0(
+    int len,
+  ) {
+    return _new_list___record__String_String_0(
+      len,
+    );
+  }
+
+  late final _new_list___record__String_String_0Ptr = _lookup<
+      ffi.NativeFunction<
+          ffi.Pointer<wire_list___record__String_String> Function(
+              ffi.Int32)>>('new_list___record__String_String_0');
+  late final _new_list___record__String_String_0 =
+      _new_list___record__String_String_0Ptr.asFunction<
+          ffi.Pointer<wire_list___record__String_String> Function(int)>();
 
   ffi.Pointer<
           wire_list___record__rtc_rtp_encoding_parameters_ArcRtpEncodingParameters>
@@ -5552,6 +5737,52 @@ class MedeaFlutterWebrtcNativeWire implements FlutterRustBridgeWireBase {
   late final _new_list_rtc_rtp_encoding_parameters_0 =
       _new_list_rtc_rtp_encoding_parameters_0Ptr.asFunction<
           ffi.Pointer<wire_list_rtc_rtp_encoding_parameters> Function(int)>();
+
+  ffi.Pointer<wire_list_rtcp_feedback> new_list_rtcp_feedback_0(
+    int len,
+  ) {
+    return _new_list_rtcp_feedback_0(
+      len,
+    );
+  }
+
+  late final _new_list_rtcp_feedback_0Ptr = _lookup<
+      ffi.NativeFunction<
+          ffi.Pointer<wire_list_rtcp_feedback> Function(
+              ffi.Int32)>>('new_list_rtcp_feedback_0');
+  late final _new_list_rtcp_feedback_0 = _new_list_rtcp_feedback_0Ptr
+      .asFunction<ffi.Pointer<wire_list_rtcp_feedback> Function(int)>();
+
+  ffi.Pointer<wire_list_rtp_codec_capability> new_list_rtp_codec_capability_0(
+    int len,
+  ) {
+    return _new_list_rtp_codec_capability_0(
+      len,
+    );
+  }
+
+  late final _new_list_rtp_codec_capability_0Ptr = _lookup<
+      ffi.NativeFunction<
+          ffi.Pointer<wire_list_rtp_codec_capability> Function(
+              ffi.Int32)>>('new_list_rtp_codec_capability_0');
+  late final _new_list_rtp_codec_capability_0 =
+      _new_list_rtp_codec_capability_0Ptr.asFunction<
+          ffi.Pointer<wire_list_rtp_codec_capability> Function(int)>();
+
+  ffi.Pointer<wire_list_scalability_mode> new_list_scalability_mode_0(
+    int len,
+  ) {
+    return _new_list_scalability_mode_0(
+      len,
+    );
+  }
+
+  late final _new_list_scalability_mode_0Ptr = _lookup<
+      ffi.NativeFunction<
+          ffi.Pointer<wire_list_scalability_mode> Function(
+              ffi.Int32)>>('new_list_scalability_mode_0');
+  late final _new_list_scalability_mode_0 = _new_list_scalability_mode_0Ptr
+      .asFunction<ffi.Pointer<wire_list_scalability_mode> Function(int)>();
 
   ffi.Pointer<wire_uint_8_list> new_uint_8_list_0(
     int len,
@@ -5779,6 +6010,68 @@ final class wire_RtpTransceiverInit extends ffi.Struct {
 
 final class wire_ArcRtpTransceiver extends ffi.Struct {
   external ffi.Pointer<ffi.Void> ptr;
+}
+
+final class wire_list_scalability_mode extends ffi.Struct {
+  external ffi.Pointer<ffi.Int32> ptr;
+
+  @ffi.Int32()
+  external int len;
+}
+
+final class wire___record__String_String extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> field0;
+
+  external ffi.Pointer<wire_uint_8_list> field1;
+}
+
+final class wire_list___record__String_String extends ffi.Struct {
+  external ffi.Pointer<wire___record__String_String> ptr;
+
+  @ffi.Int32()
+  external int len;
+}
+
+final class wire_RtcpFeedback extends ffi.Struct {
+  external ffi.Pointer<ffi.Int32> message_type;
+
+  @ffi.Int32()
+  external int kind;
+}
+
+final class wire_list_rtcp_feedback extends ffi.Struct {
+  external ffi.Pointer<wire_RtcpFeedback> ptr;
+
+  @ffi.Int32()
+  external int len;
+}
+
+final class wire_RtpCodecCapability extends ffi.Struct {
+  external ffi.Pointer<ffi.Int32> preferred_payload_type;
+
+  external ffi.Pointer<wire_list_scalability_mode> scalability_modes;
+
+  external ffi.Pointer<wire_uint_8_list> mime_type;
+
+  external ffi.Pointer<wire_uint_8_list> name;
+
+  @ffi.Int32()
+  external int kind;
+
+  external ffi.Pointer<ffi.Int32> clock_rate;
+
+  external ffi.Pointer<ffi.Int32> num_channels;
+
+  external ffi.Pointer<wire_list___record__String_String> parameters;
+
+  external ffi.Pointer<wire_list_rtcp_feedback> feedback;
+}
+
+final class wire_list_rtp_codec_capability extends ffi.Struct {
+  external ffi.Pointer<wire_RtpCodecCapability> ptr;
+
+  @ffi.Int32()
+  external int len;
 }
 
 final class wire_ArcRtpEncodingParameters extends ffi.Struct {

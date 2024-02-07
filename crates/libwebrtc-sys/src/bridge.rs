@@ -2388,6 +2388,24 @@ pub(crate) mod webrtc {
             transceiver: &RtpTransceiverInterface
         ) -> UniquePtr<RtpSenderInterface>;
 
+        // Creates a new [`RtpCodecCapability`].
+        pub fn create_codec_capability(
+            preferred_payload_type: i32,
+            name: String,
+            kind: MediaType,
+            clock_rate: i32,
+            num_channels: i32,
+            parameters: Vec<StringPair> 
+        ) -> UniquePtr<RtpCodecCapability>;
+
+        // Changes the preferred [`RtpTransceiverInterface`] codecs
+        // to the given [`Vec<RtpCodecCapability>`].
+        #[must_use]
+        pub fn set_codec_preferences(
+            transceiver: &RtpTransceiverInterface,
+            codecs: Vec<RtpCodecCapabilityContainer>
+        );
+
         /// Returns the [`RtpReceiverInterface`] of the provided
         /// [`RtpTransceiverInterface`].
         #[must_use]
