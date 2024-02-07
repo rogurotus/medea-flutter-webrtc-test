@@ -114,7 +114,7 @@ class _RtpTransceiverChannel extends RtpTransceiver {
     await _chan.invokeMethod('setDirection', {'direction': direction.index});
   }
 
-  // todo
+  @override
   Future<void> setCodecPreferences(List<RtpCodecCapability> codecs) async {
     await _chan.invokeMethod('setCodecPreferences',
         {'codecs': codecs.map((c) => c.toMap()).toList()});

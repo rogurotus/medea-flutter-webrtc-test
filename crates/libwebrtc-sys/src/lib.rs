@@ -860,14 +860,13 @@ impl RtpTransceiverInterface {
 
     /// Changes the preferred [`RtpTransceiverInterface`] codecs
     /// to the given [`Vec<RtpCodecCapability>`].
-    #[must_use]
     pub fn set_codec_preferences(&self, codecs: Vec<RtpCodecCapability>) {
         let codecs = codecs
             .into_iter()
             .map(|c| webrtc::RtpCodecCapabilityContainer { ptr: c.0 })
             .collect();
 
-        let _ = webrtc::set_codec_preferences(&self.inner, codecs);
+        webrtc::set_codec_preferences(&self.inner, codecs);
     }
 
     /// Returns the [`RtpSenderInterface`] object responsible for encoding and
@@ -964,6 +963,7 @@ pub struct RtpCodecCapability(UniquePtr<webrtc::RtpCodecCapability>);
 
 impl RtpCodecCapability {
     /// Creates a new [`RtpCodecCapability`].
+    #[must_use]
     pub fn new(
         preferred_payload_type: Option<i32>,
         name: String,

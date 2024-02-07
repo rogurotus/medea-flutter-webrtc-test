@@ -41,7 +41,7 @@ class RtpTransceiverController {
       let direction = argsMap!["direction"] as? Int
       self.transceiver
         .setDirection(direction: TransceiverDirection(rawValue: direction!)!)
-      result(nil)    
+      result(nil)
     case "setCodecPreferences":
       let args = argsMap!["codecs"] as? [String: Any]
 

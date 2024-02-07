@@ -771,6 +771,11 @@ impl RtpTransceiver {
 
     /// Changes the preferred [`RtpTransceiver`] codecs
     /// to the given [`Vec<RtpCodecCapability>`].
+    ///
+    /// # Panics
+    ///
+    /// If the [`Mutex`] guarding the [`sys::RtpTransceiverInterface`] is
+    /// poisoned.
     pub fn set_codec_preferences(&self, codecs: Vec<RtpCodecCapability>) {
         let codecs = codecs
             .into_iter()
@@ -785,7 +790,7 @@ impl RtpTransceiver {
                 )
             })
             .collect();
-        let _ = self.inner.lock().unwrap().set_codec_preferences(codecs);
+        self.inner.lock().unwrap().set_codec_preferences(codecs);
     }
 
     /// Changes the receive direction of this [`RtpTransceiver`].
