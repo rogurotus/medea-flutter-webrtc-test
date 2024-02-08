@@ -43,21 +43,32 @@ class RtpTransceiverController {
         .setDirection(direction: TransceiverDirection(rawValue: direction!)!)
       result(nil)
     case "setCodecPreferences":
-      let args = argsMap!["codecs"] as? [String: Any]
+    NSLog("WTF")
+      let args = argsMap!["codecs"] as! [[String: Any]]
+      NSLog("WTF2")
 
       let webrtcCodecCapability = args.map { codec -> RTCRtpCodecCapability in
         var capability = RTCRtpCodecCapability()
 
-        capability.name = codec["name"]
-        capability.preferredPayloadType = codec["preferredPayloadType"]
-        capability.clockRate = codec["clockRate"]
-        capability.numChannels = codec["numChannels"]
-        capability.parameters = codec["parameters"]
-        capability.mimeType = codec["mimeType"]
+        capability.name = codec["name"] as! String
+        NSLog("LOG LOG1 %@", capability.name)
+        capability.preferredPayloadType = 
+          codec["preferredPayloadType"] as? NSNumber
+        NSLog("LOG LOG2 %i", capability.preferredPayloadType ?? -1)
+        capability.clockRate = codec["clockRate"] as? NSNumber
+        capability.kind = MediaType(rawValue: codec["kind"] as! Int)!.intoWebRtc()
+        
+        NSLog("LOG LOG3 %i", capability.clockRate ?? -1)
+        capability.numChannels = codec["numChannels"] as? NSNumber
+        NSLog("LOG LOG4 %i", capability.numChannels ?? -1)
+        capability.parameters = codec["parameters"] as! [String: String]
+        NSLog("LOG LOG5 %@", capability.parameters)
         return capability
       }
 
-      self.transceiver.setCodecPreferences(webrtcCodecCapability)
+      NSLog("LOG LOG %i", webrtcCodecCapability.count)
+
+      self.transceiver.setCodecPreferences(capability: webrtcCodecCapability)
       result(nil)
     case "setRecv":
       let enabled = argsMap!["recv"] as? Bool

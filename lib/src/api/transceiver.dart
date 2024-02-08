@@ -50,7 +50,8 @@ abstract class RtpTransceiver {
   /// Changes the [TransceiverDirection] of this [RtpTransceiver].
   Future<void> setDirection(TransceiverDirection direction);
 
-  // todo
+  /// Changes the preferred [RtpTransceiver] codecs to the given
+  /// [RtpCodecCapability].
   Future<void> setCodecPreferences(List<RtpCodecCapability> codecs);
 
   /// Changes the receive direction of this [RtpTransceiver].
@@ -116,8 +117,9 @@ class _RtpTransceiverChannel extends RtpTransceiver {
 
   @override
   Future<void> setCodecPreferences(List<RtpCodecCapability> codecs) async {
-    await _chan.invokeMethod('setCodecPreferences',
-        {'codecs': codecs.map((c) => c.toMap()).toList()});
+    var a = {'codecs': codecs.map((c) => c.toMap()).toList()};
+    print("HMM ${a}");
+    await _chan.invokeMethod('setCodecPreferences', a);
   }
 
   @override
