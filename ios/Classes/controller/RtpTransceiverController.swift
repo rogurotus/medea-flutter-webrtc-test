@@ -48,12 +48,12 @@ class RtpTransceiverController {
       let webrtcCodecCapability = args.map { codec -> RTCRtpCodecCapability in
         var capability = RTCRtpCodecCapability()
 
-        capabilit.name = codec["name"]
-        capabilit.preferredPayloadType = codec["preferredPayloadType"]
-        capabilit.clockRate = codec["clockRate"]
-        capabilit.numChannels = codec["numChannels"]
-        capabilit.parameters = codec["parameters"]
-        capabilit.mimeType = codec["mimeType"]
+        capability.name = codec["name"]
+        capability.preferredPayloadType = codec["preferredPayloadType"]
+        capability.clockRate = codec["clockRate"]
+        capability.numChannels = codec["numChannels"]
+        capability.parameters = codec["parameters"]
+        capability.mimeType = codec["mimeType"]
         return capability
       }
 
