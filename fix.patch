@@ -1,0 +1,95 @@
+diff --git a/example/integration_test/webrtc_test.dart b/example/integration_test/webrtc_test.dart
+index 3de258d..98d5ab7 100644
+--- a/example/integration_test/webrtc_test.dart
++++ b/example/integration_test/webrtc_test.dart
+@@ -275,21 +275,19 @@ void main() {
+ 
+     var names = capabilities.codecs.map((c) => c.name).toList();
+     expect(names.contains("VP9"), isTrue);
+-    expect(names.contains("H264"), isTrue);
+-    expect(names.contains("AV1"), isTrue);
+     expect(names.contains("VP8"), isTrue);
+ 
+     var h264Preferences = capabilities.codecs.where((element) {
+-      return element.name == 'H264';
++      return element.name == 'VP8';
+     }).toList();
+ 
+     await vtrans.setCodecPreferences(h264Preferences);
+ 
+     var offer = await pc.createOffer();
+ 
+-    expect(offer.description.contains("H264"), isTrue);
++    expect(offer.description.contains("VP8"), isTrue);
++    expect(offer.description.contains("H264"), isFalse);
+     expect(offer.description.contains("VP9"), isFalse);
+-    expect(offer.description.contains("VP8"), isFalse);
+     expect(offer.description.contains("AV1"), isFalse);
+   });
+ 
+diff --git a/ios/Classes/controller/RtpTransceiverController.swift b/ios/Classes/controller/RtpTransceiverController.swift
+index 5f2e609..d02ee83 100644
+--- a/ios/Classes/controller/RtpTransceiverController.swift
++++ b/ios/Classes/controller/RtpTransceiverController.swift
+@@ -43,21 +43,22 @@ class RtpTransceiverController {
+         .setDirection(direction: TransceiverDirection(rawValue: direction!)!)
+       result(nil)
+     case "setCodecPreferences":
+-      let args = argsMap!["codecs"] as? [String: Any]
++      let args = argsMap!["codecs"] as! [[String: Any]]
+ 
+       let webrtcCodecCapability = args.map { codec -> RTCRtpCodecCapability in
+         var capability = RTCRtpCodecCapability()
+ 
+-        capability.name = codec["name"]
+-        capability.preferredPayloadType = codec["preferredPayloadType"]
+-        capability.clockRate = codec["clockRate"]
+-        capability.numChannels = codec["numChannels"]
+-        capability.parameters = codec["parameters"]
+-        capability.mimeType = codec["mimeType"]
++        capability.name = codec["name"] as! String
++        capability.preferredPayloadType = 
++          codec["preferredPayloadType"] as? NSNumber
++        capability.clockRate = codec["clockRate"] as? NSNumber
++        capability.kind = MediaType(rawValue: codec["kind"] as! Int)!.intoWebRtc()
++        capability.numChannels = codec["numChannels"] as? NSNumber
++        capability.parameters = codec["parameters"] as! [String: String]
+         return capability
+       }
+ 
+-      self.transceiver.setCodecPreferences(webrtcCodecCapability)
++      self.transceiver.setCodecPreferences(capability: webrtcCodecCapability)
+       result(nil)
+     case "setRecv":
+       let enabled = argsMap!["recv"] as? Bool
+diff --git a/ios/Classes/proxy/RtpTransceiverProxy.swift b/ios/Classes/proxy/RtpTransceiverProxy.swift
+index 191d4aa..2695fdb 100644
+--- a/ios/Classes/proxy/RtpTransceiverProxy.swift
++++ b/ios/Classes/proxy/RtpTransceiverProxy.swift
+@@ -35,6 +35,12 @@ class RtpTransceiverProxy {
+     self.transceiver.setDirection(direction.intoWebRtc(), error: nil)
+   }
+ 
++  /// Changes the preferred `RTCRtpTransceiver` codecs to the given
++  /// `RTCRtpCodecCapability`.
++  func setCodecPreferences(capability: [RTCRtpCodecCapability]) {
++    self.transceiver.setCodecPreferences(capability)
++  }
++
+   /// Sets `recv` direction of the underlying `RTCRtpTransceiver`.
+   func setRecv(recv: Bool) {
+     let direction = self.getDirection()
+diff --git a/lib/src/api/transceiver.dart b/lib/src/api/transceiver.dart
+index 8b1b2b0..146db48 100644
+--- a/lib/src/api/transceiver.dart
++++ b/lib/src/api/transceiver.dart
+@@ -50,7 +50,8 @@ abstract class RtpTransceiver {
+   /// Changes the [TransceiverDirection] of this [RtpTransceiver].
+   Future<void> setDirection(TransceiverDirection direction);
+ 
+-  // todo
++  /// Changes the preferred [RtpTransceiver] codecs to the given
++  /// [RtpCodecCapability].
+   Future<void> setCodecPreferences(List<RtpCodecCapability> codecs);
+ 
+   /// Changes the receive direction of this [RtpTransceiver].

@@ -43,21 +43,22 @@ class RtpTransceiverController {
         .setDirection(direction: TransceiverDirection(rawValue: direction!)!)
       result(nil)
     case "setCodecPreferences":
-      let args = argsMap!["codecs"] as? [String: Any]
+      let args = argsMap!["codecs"] as! [[String: Any]]
 
       let webrtcCodecCapability = args.map { codec -> RTCRtpCodecCapability in
         var capability = RTCRtpCodecCapability()
 
-        capability.name = codec["name"]
-        capability.preferredPayloadType = codec["preferredPayloadType"]
-        capability.clockRate = codec["clockRate"]
-        capability.numChannels = codec["numChannels"]
-        capability.parameters = codec["parameters"]
-        capability.mimeType = codec["mimeType"]
+        capability.name = codec["name"] as! String
+        capability.preferredPayloadType = 
+          codec["preferredPayloadType"] as? NSNumber
+        capability.clockRate = codec["clockRate"] as? NSNumber
+        capability.kind = MediaType(rawValue: codec["kind"] as! Int)!.intoWebRtc()
+        capability.numChannels = codec["numChannels"] as? NSNumber
+        capability.parameters = codec["parameters"] as! [String: String]
         return capability
       }
 
-      self.transceiver.setCodecPreferences(webrtcCodecCapability)
+      self.transceiver.setCodecPreferences(capability: webrtcCodecCapability)
       result(nil)
     case "setRecv":
       let enabled = argsMap!["recv"] as? Bool
