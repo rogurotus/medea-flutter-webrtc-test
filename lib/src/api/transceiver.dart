@@ -117,8 +117,9 @@ class _RtpTransceiverChannel extends RtpTransceiver {
 
   @override
   Future<void> setCodecPreferences(List<RtpCodecCapability> codecs) async {
-    await _chan.invokeMethod('setCodecPreferences',
-        {'codecs': codecs.map((c) => c.toMap()).toList()});
+    var a = {'codecs': codecs.map((c) => c.toMap()).toList()};
+    print("HMM ${a}");
+    await _chan.invokeMethod('setCodecPreferences', a);
   }
 
   @override

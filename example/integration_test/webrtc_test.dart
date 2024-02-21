@@ -281,6 +281,10 @@ void main() {
       return element.name == 'VP8';
     }).toList();
 
+    for (var i = 0; i<h264Preferences.length; ++i) {
+      print("WTF ${h264Preferences[i].name}");
+    }
+
     await vtrans.setCodecPreferences(h264Preferences);
 
     var offer = await pc.createOffer();
