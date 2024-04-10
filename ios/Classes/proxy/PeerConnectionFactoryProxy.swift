@@ -28,7 +28,7 @@ class PeerConnectionFactoryProxy {
       codecs: capabilities.codecs.map { codec -> CodecCapability in
         var preferredPayloadType: Int = (codec.preferredPayloadType != nil) ?
           Int(codec.preferredPayloadType!) : 0
-        var kind = MediaType.fromWebRtc(kind: codec.kind).toString()
+        var kind = MediaType.fromWebRtc(kind: codec.kind)
         var clockRate = (codec.clockRate != nil) ? Int(codec.clockRate!) : 0
         var numChannels: Int? = (codec.numChannels != nil) ?
           Int(codec.numChannels!) : nil
@@ -44,11 +44,11 @@ class PeerConnectionFactoryProxy {
       },
       headerExtensions: capabilities.headerExtensions
         .map { header -> HeaderExtensionCapability in
-          var preferredId = Int(header.preferred_id)
+          var preferredId = Int(header.preferredId)
           return HeaderExtensionCapability(
             uri: header.uri,
             preferredId: preferredId,
-            preferredEncrypted: header.preferred_encrypt
+            preferredEncrypted: header.preferredEncrypted
           )
         }
     )
