@@ -44,7 +44,7 @@ class PeerConnectionFactoryProxy {
       },
       headerExtensions: capabilities.headerExtensions
         .map { header -> HeaderExtensionCapability in
-          var preferredId = Int(header.preferredId)
+          var preferredId = (header.preferredId != nil) ? Int(header.preferredId!) : nil
           return HeaderExtensionCapability(
             uri: header.uri,
             preferredId: preferredId,
