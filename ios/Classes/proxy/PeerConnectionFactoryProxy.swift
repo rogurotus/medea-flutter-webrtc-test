@@ -48,7 +48,7 @@ class PeerConnectionFactoryProxy {
           return HeaderExtensionCapability(
             uri: header.uri,
             preferredId: preferredId,
-            preferredEncrypted: header.preferredEncrypted
+            preferredEncrypted: header.isPreferredEncrypted
           )
         }
     )
