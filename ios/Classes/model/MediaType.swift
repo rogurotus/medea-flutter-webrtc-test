@@ -32,4 +32,13 @@ enum MediaType: Int {
       return RTCRtpMediaType.video
     }
   }
+
+  func toString() -> String {
+      switch self {
+          case .audio:
+              return "audio"
+          case .video:
+              return "video"
+      }
+    }
 }
