@@ -22,7 +22,7 @@ class PeerConnectionFactoryProxy {
   /// Returns sender capabilities of this factory.
   func rtpSenderCapabilities(kind: RTCRtpMediaType) -> RtpCapabilities {
     var capabilities = self.factory
-      .rtpSenderCapabilities(forKind: kind.toString())
+      .rtpSenderCapabilities(forKind: MediaType.fromWebRtc(kind).toString())
 
     return RtpCapabilities(
       codecs: capabilities.codecs.map { codec -> CodecCapability in
