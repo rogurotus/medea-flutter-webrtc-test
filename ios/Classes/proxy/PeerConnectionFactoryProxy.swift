@@ -28,7 +28,7 @@ class PeerConnectionFactoryProxy {
       codecs: capabilities.codecs.map { codec -> CodecCapability in
         var preferredPayloadType: Int = (codec.preferredPayloadType != nil) ?
           Int(codec.preferredPayloadType!) : 0
-        var kind = MediaType.fromWebRtc(kind: codec.kind)
+        var kind = MediaType.fromString(kind: codec.kind)!
         var clockRate = (codec.clockRate != nil) ? Int(codec.clockRate!) : 0
         var numChannels: Int? = (codec.numChannels != nil) ?
           Int(codec.numChannels!) : nil
