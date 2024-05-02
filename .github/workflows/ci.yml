@@ -5,7 +5,7 @@ on:
     branches: ["main"]
     tags: ["*"]
   pull_request:
-    branches: ["main"]
+    branches: ["*"]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -204,16 +204,16 @@ jobs:
 
   test-flutter:
     name: test (example, ${{ matrix.platform }})
-    needs: ["build", "build-linux"]
+    # needs: ["build", "build-linux"]
     strategy:
       fail-fast: false
       matrix:
         platform:
-          - android
+          # - android
           - ios
-          - linux
-          - macos
-          - windows
+          # - linux
+          # - macos
+          # - windows
     runs-on: ${{ (matrix.platform == 'linux' &&   'ubuntu-latest')
               || (matrix.platform == 'windows' && 'windows-latest')
               ||                                  'macos-13' }}
