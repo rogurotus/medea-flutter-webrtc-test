@@ -600,7 +600,7 @@ void main() {
 
   testWidgets('Track Onended not working after stop()',
       (WidgetTester tester) async {
-        for (var i =0; i<100; ++i) {
+        for (var i =0; i<10; ++i) {
     print('raz');
     var capsAudioOnly = DeviceConstraints();
     capsAudioOnly.audio.mandatory = AudioConstraints();
@@ -663,157 +663,163 @@ void main() {
         }
   });
 
-  // testWidgets('Connect two peers', (WidgetTester tester) async {
-  //   var caps = DeviceConstraints();
-  //   caps.audio.mandatory = AudioConstraints();
-  //   caps.video.mandatory = DeviceVideoConstraints();
-  //   caps.video.mandatory!.width = 640;
-  //   caps.video.mandatory!.height = 480;
-  //   caps.video.mandatory!.fps = 30;
+  testWidgets('Connect two peers', (WidgetTester tester) async {
+            for (var i =0; i<10; ++i) {
+    print('DWA');
+    var caps = DeviceConstraints();
+    caps.audio.mandatory = AudioConstraints();
+    caps.video.mandatory = DeviceVideoConstraints();
+    caps.video.mandatory!.width = 640;
+    caps.video.mandatory!.height = 480;
+    caps.video.mandatory!.fps = 30;
 
-  //   var tracks = await getUserMedia(caps);
+    var tracks = await getUserMedia(caps);
 
-  //   var videoTrack =
-  //       tracks.firstWhere((track) => track.kind() == MediaKind.video);
-  //   var audioTrack =
-  //       tracks.firstWhere((track) => track.kind() == MediaKind.audio);
+    var videoTrack =
+        tracks.firstWhere((track) => track.kind() == MediaKind.video);
+    var audioTrack =
+        tracks.firstWhere((track) => track.kind() == MediaKind.audio);
 
-  //   var server = IceServer(['stun:stun.l.google.com:19302']);
-  //   var pc1 = await PeerConnection.create(IceTransportType.all, [server]);
-  //   var pc2 = await PeerConnection.create(IceTransportType.all, [server]);
+    var server = IceServer(['stun:stun.l.google.com:19302']);
+    var pc1 = await PeerConnection.create(IceTransportType.all, [server]);
+    var pc2 = await PeerConnection.create(IceTransportType.all, [server]);
 
-  //   var futures = List<Completer>.generate(6, (_) => Completer());
-  //   pc1.onConnectionStateChange((state) {
-  //     if (state == PeerConnectionState.connected) {
-  //       futures[0].complete();
-  //     }
-  //   });
+    var futures = List<Completer>.generate(6, (_) => Completer());
+    pc1.onConnectionStateChange((state) {
+      if (state == PeerConnectionState.connected) {
+        futures[0].complete();
+      }
+    });
 
-  //   pc2.onConnectionStateChange((state) {
-  //     if (state == PeerConnectionState.connected) {
-  //       futures[1].complete();
-  //     }
-  //   });
+    pc2.onConnectionStateChange((state) {
+      if (state == PeerConnectionState.connected) {
+        futures[1].complete();
+      }
+    });
 
-  //   pc2.onTrack((track, trans) async {
-  //     if (track.kind() == MediaKind.video) {
-  //       futures[2].complete();
-  //     } else {
-  //       futures[3].complete();
-  //     }
-  //     await track.stop();
-  //     await track.dispose();
-  //     await trans.dispose();
-  //   });
+    pc2.onTrack((track, trans) async {
+      if (track.kind() == MediaKind.video) {
+        futures[2].complete();
+      } else {
+        futures[3].complete();
+      }
+      await track.stop();
+      await track.dispose();
+      await trans.dispose();
+    });
 
-  //   pc1.onIceCandidate((IceCandidate candidate) async {
-  //     if (!pc2.closed) {
-  //       await pc2.addIceCandidate(candidate);
-  //     }
+    pc1.onIceCandidate((IceCandidate candidate) async {
+      if (!pc2.closed) {
+        await pc2.addIceCandidate(candidate);
+      }
 
-  //     if (!futures[4].isCompleted) {
-  //       futures[4].complete();
-  //     }
-  //   });
+      if (!futures[4].isCompleted) {
+        futures[4].complete();
+      }
+    });
 
-  //   pc2.onIceCandidate((IceCandidate candidate) async {
-  //     if (!pc1.closed) {
-  //       await pc1.addIceCandidate(candidate);
-  //     }
+    pc2.onIceCandidate((IceCandidate candidate) async {
+      if (!pc1.closed) {
+        await pc1.addIceCandidate(candidate);
+      }
 
-  //     if (!futures[5].isCompleted) {
-  //       futures[5].complete();
-  //     }
-  //   });
+      if (!futures[5].isCompleted) {
+        futures[5].complete();
+      }
+    });
 
-  //   var videoTransceiver = await pc1.addTransceiver(
-  //       MediaKind.video, RtpTransceiverInit(TransceiverDirection.sendOnly));
-  //   var audioTransceiver = await pc1.addTransceiver(
-  //       MediaKind.audio, RtpTransceiverInit(TransceiverDirection.sendOnly));
+    var videoTransceiver = await pc1.addTransceiver(
+        MediaKind.video, RtpTransceiverInit(TransceiverDirection.sendOnly));
+    var audioTransceiver = await pc1.addTransceiver(
+        MediaKind.audio, RtpTransceiverInit(TransceiverDirection.sendOnly));
 
-  //   videoTransceiver.sender.replaceTrack(videoTrack);
-  //   audioTransceiver.sender.replaceTrack(audioTrack);
+    videoTransceiver.sender.replaceTrack(videoTrack);
+    audioTransceiver.sender.replaceTrack(audioTrack);
 
-  //   var offer = await pc1.createOffer();
-  //   await pc1.setLocalDescription(offer);
-  //   await pc2.setRemoteDescription(offer);
+    var offer = await pc1.createOffer();
+    await pc1.setLocalDescription(offer);
+    await pc2.setRemoteDescription(offer);
 
-  //   var answer = await pc2.createAnswer();
-  //   await pc2.setLocalDescription(answer);
-  //   await pc1.setRemoteDescription(answer);
+    var answer = await pc2.createAnswer();
+    await pc2.setLocalDescription(answer);
+    await pc1.setRemoteDescription(answer);
 
-  //   await Future.wait(futures.map((e) => e.future))
-  //       .timeout(const Duration(seconds: 5));
+    await Future.wait(futures.map((e) => e.future))
+        .timeout(const Duration(seconds: 5));
 
-  //   await pc1.close();
-  //   await pc2.close();
-  //   await videoTrack.stop();
-  //   await audioTrack.stop();
-  //   await videoTrack.dispose();
-  //   await audioTrack.dispose();
-  //   await videoTransceiver.dispose();
-  //   await audioTransceiver.dispose();
-  // });
+    await pc1.close();
+    await pc2.close();
+    await videoTrack.stop();
+    await audioTrack.stop();
+    await videoTrack.dispose();
+    await audioTrack.dispose();
+    await videoTransceiver.dispose();
+    await audioTransceiver.dispose();
+            }
+  });
 
-  // testWidgets('Clone track', (WidgetTester tester) async {
-  //   var caps = DeviceConstraints();
-  //   caps.video.mandatory = DeviceVideoConstraints();
-  //   caps.video.mandatory!.width = 640;
-  //   caps.video.mandatory!.height = 480;
-  //   caps.video.mandatory!.fps = 30;
+  testWidgets('Clone track', (WidgetTester tester) async {
+                for (var i =0; i<10; ++i) {
+    print('THREEE');
+    var caps = DeviceConstraints();
+    caps.video.mandatory = DeviceVideoConstraints();
+    caps.video.mandatory!.width = 640;
+    caps.video.mandatory!.height = 480;
+    caps.video.mandatory!.fps = 30;
 
-  //   var pc1 = await PeerConnection.create(IceTransportType.all, []);
-  //   var pc2 = await PeerConnection.create(IceTransportType.all, []);
-  //   var onEndedComplete = Completer();
-  //   pc2.onTrack((track, transceiver) {
-  //     if (transceiver.mid == '0') {
-  //       track.onEnded(() async {
-  //         onEndedComplete.complete();
-  //         await track.stop();
-  //         await track.dispose();
-  //         await transceiver.dispose();
-  //       });
-  //     }
-  //   });
+    var pc1 = await PeerConnection.create(IceTransportType.all, []);
+    var pc2 = await PeerConnection.create(IceTransportType.all, []);
+    var onEndedComplete = Completer();
+    pc2.onTrack((track, transceiver) {
+      if (transceiver.mid == '0') {
+        track.onEnded(() async {
+          onEndedComplete.complete();
+          await track.stop();
+          await track.dispose();
+          await transceiver.dispose();
+        });
+      }
+    });
 
-  //   var t1 = await pc1.addTransceiver(
-  //       MediaKind.video, RtpTransceiverInit(TransceiverDirection.sendOnly));
-  //   var t2 = await pc1.addTransceiver(
-  //       MediaKind.video, RtpTransceiverInit(TransceiverDirection.sendOnly));
+    var t1 = await pc1.addTransceiver(
+        MediaKind.video, RtpTransceiverInit(TransceiverDirection.sendOnly));
+    var t2 = await pc1.addTransceiver(
+        MediaKind.video, RtpTransceiverInit(TransceiverDirection.sendOnly));
 
-  //   var tracks = await getUserMedia(caps);
+    var tracks = await getUserMedia(caps);
 
-  //   var videoTrack =
-  //       tracks.firstWhere((track) => track.kind() == MediaKind.video);
-  //   var cloneVideoTrack = await videoTrack.clone();
-  //   await cloneVideoTrack.setEnabled(false);
+    var videoTrack =
+        tracks.firstWhere((track) => track.kind() == MediaKind.video);
+    var cloneVideoTrack = await videoTrack.clone();
+    await cloneVideoTrack.setEnabled(false);
 
-  //   await t1.sender.replaceTrack(videoTrack);
-  //   await t2.sender.replaceTrack(cloneVideoTrack);
+    await t1.sender.replaceTrack(videoTrack);
+    await t2.sender.replaceTrack(cloneVideoTrack);
 
-  //   await pc2.setRemoteDescription(await pc1.createOffer());
+    await pc2.setRemoteDescription(await pc1.createOffer());
 
-  //   var transceivers = await pc2.getTransceivers();
-  //   await transceivers.firstWhere((t) => t.mid == '0').stop();
+    var transceivers = await pc2.getTransceivers();
+    await transceivers.firstWhere((t) => t.mid == '0').stop();
 
-  //   await onEndedComplete.future.timeout(const Duration(seconds: 10));
-  //   expect(videoTrack.id(), isNot(equals(cloneVideoTrack.id())));
-  //   expect(videoTrack.isEnabled(), isNot(equals(cloneVideoTrack.isEnabled())));
+    await onEndedComplete.future.timeout(const Duration(seconds: 10));
+    expect(videoTrack.id(), isNot(equals(cloneVideoTrack.id())));
+    expect(videoTrack.isEnabled(), isNot(equals(cloneVideoTrack.isEnabled())));
 
-  //   await pc1.close();
-  //   await pc2.close();
-  //   await t1.dispose();
-  //   await t2.dispose();
-  //   for (var t in tracks) {
-  //     await t.stop();
-  //     await t.dispose();
-  //   }
-  //   for (var t in transceivers) {
-  //     await t.dispose();
-  //   }
-  //   await cloneVideoTrack.stop();
-  //   await cloneVideoTrack.dispose();
-  // });
+    await pc1.close();
+    await pc2.close();
+    await t1.dispose();
+    await t2.dispose();
+    for (var t in tracks) {
+      await t.stop();
+      await t.dispose();
+    }
+    for (var t in transceivers) {
+      await t.dispose();
+    }
+    await cloneVideoTrack.stop();
+    await cloneVideoTrack.dispose();
+                }
+  });
 
   // testWidgets('Media stream constraints', (WidgetTester tester) async {
   //   var capsVideoDeviceOnly = DeviceConstraints();
