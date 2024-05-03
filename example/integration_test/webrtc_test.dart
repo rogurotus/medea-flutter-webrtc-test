@@ -604,14 +604,17 @@ void main() {
     print('raz');
     var capsAudioOnly = DeviceConstraints();
     capsAudioOnly.audio.mandatory = AudioConstraints();
+    print('raz2');
 
     var tracksAudioOnly = await getUserMedia(capsAudioOnly);
     expect(tracksAudioOnly.length, equals(1));
 
+    print('raz3');
     var track = tracksAudioOnly[0];
 
     final completer = Completer<void>();
     track.onEnded(() {
+      print('raz4');
       completer.complete();
     });
 
@@ -619,47 +622,93 @@ void main() {
     var pc1 = await PeerConnection.create(IceTransportType.all, [server]);
     var pc2 = await PeerConnection.create(IceTransportType.all, [server]);
 
+      print('raz5');
+
     pc1.onIceCandidate((IceCandidate candidate) async {
+      print('raz6');
+
       if (!pc2.closed) {
+      print('raz7');
+
         await pc2.addIceCandidate(candidate);
       }
     });
 
+      print('raz8');
+
     pc2.onIceCandidate((IceCandidate candidate) async {
+      print('raz9');
+
       if (!pc1.closed) {
+      print('raz10');
+
         await pc1.addIceCandidate(candidate);
       }
     });
 
+      print('raz11');
+
     var audioTransceiver = await pc1.addTransceiver(
         MediaKind.audio, RtpTransceiverInit(TransceiverDirection.sendOnly));
+      print('raz12');
 
     audioTransceiver.sender.replaceTrack(track);
+      print('raz13');
 
     var offer = await pc1.createOffer();
+      print('raz14');
+
     await pc1.setLocalDescription(offer);
+      print('raz15');
+
     await pc2.setRemoteDescription(offer);
+      print('raz16');
 
     var answer = await pc2.createAnswer();
+      print('raz17');
+
     await pc2.setLocalDescription(answer);
+      print('raz18');
+
     await pc1.setRemoteDescription(answer);
+      print('raz19');
 
     expect(await track.state(), equals(MediaStreamTrackState.live));
+      print('raz20');
 
     await track.stop();
+      print('raz21');
 
     try {
+      print('raz22');
+
       await completer.future.timeout(const Duration(seconds: 3));
+      print('raz23');
+
       throw Exception('Completer completed');
     } catch (e) {
+      print('raz24');
+
       expect(e is TimeoutException, isTrue);
+      print('raz25');
+
       expect(await track.state(), equals(MediaStreamTrackState.ended));
     }
 
+      print('raz26');
+
     await pc1.close();
+      print('raz27');
+
     await pc2.close();
+      print('raz28');
+
     await audioTransceiver.dispose();
+      print('raz29');
+
     await track.dispose();
+      print('raz30 \n\n\n');
+
         }
   });
 
