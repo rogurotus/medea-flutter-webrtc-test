@@ -148,7 +148,7 @@ flutter.test.desktop:
 
 flutter.test.mobile:
 	cd example/ && \
-	flutter drive --driver=test_driver/integration_driver.dart \
+	flutter drive --verbose --driver=test_driver/integration_driver.dart \
 	              --target=integration_test/webrtc_test.dart \
 	              $(if $(call eq,$(debug),yes),--debug,--profile) \
 	              $(if $(call eq,$(device),),,-d $(device))
