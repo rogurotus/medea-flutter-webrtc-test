@@ -85,23 +85,44 @@ class PeerConnectionController {
         self.sendResultFromTask(result, sdp.asFlutterResult())
       }
     case "setLocalDescription":
+      print("Hello Swift 1")
       let description = argsMap!["description"] as? [String: Any]
       let type = description!["type"] as? Int
       let sdp = description!["description"] as? String
+      print("Hello Swift 2")
+
       Task {
         do {
+      print("Hello Swift 3")
+
           var desc: SessionDescription?
           if sdp == nil {
+      print("Hello Swift 4")
+
             desc = nil
           } else {
+      print("Hello Swift 5")
+
             desc = SessionDescription(
               type: SessionDescriptionType(rawValue: type!)!, description: sdp!
             )
+      print("Hello Swift 6")
+
           }
+      print("Hello Swift 7")
+
           try await self.peer.setLocalDescription(description: desc)
+      print("Hello Swift 8")
+
           self.sendResultFromTask(result, nil)
+      print("Hello Swift 9")
+
         } catch {
+      print("Hello Swift 10")
+
           self.sendResultFromTask(result, getFlutterError(error))
+      print("Hello Swift 11")
+
         }
       }
     case "setRemoteDescription":
