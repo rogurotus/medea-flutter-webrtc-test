@@ -9,7 +9,7 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
-    await enableFakeMedia();
+    // await enableFakeMedia();
   });
 
   // testWidgets('Add transceiver', (WidgetTester tester) async {
@@ -622,6 +622,15 @@ void main() {
     var server = IceServer(['stun:stun.l.google.com:19302']);
     var pc1 = await PeerConnection.create(IceTransportType.all, [server]);
     var pc2 = await PeerConnection.create(IceTransportType.all, [server]);
+
+
+    pc2.onTrack((track, trans) async {
+      print('WO DELA 1'); 
+      track.onEnded(() {print('WO DELA');});
+      print('WO DELA 2'); 
+    });
+
+
 
       print('raz5');
 
