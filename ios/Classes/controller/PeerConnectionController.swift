@@ -50,7 +50,7 @@ class PeerConnectionController {
   private var channel: FlutterMethodChannel
 
   /// Indicator whether this controller is disposed.
-  private var isDisposed: AtomicInt = AtomicInt(initialValue: 0)
+  private var isDisposed: Bool = false
 
   /// Initializes a new `PeerConnectionController` for the provided
   /// `PeerConnectionProxy`.
@@ -89,7 +89,7 @@ class PeerConnectionController {
   /// Checks whether `FlutterMethodChannel` is not disposed before sending data.
   /// If it's disposed, then does nothing.
   func sendResultFromTask(_ result: @escaping FlutterResult, _ response: Any?) {
-    if self.isDisposed != 1 {
+    if !self.isDisposed {
       result(response)
     }
   }
@@ -296,7 +296,7 @@ class PeerConnectionController {
       result(nil)
     case "dispose":
       Logger.log("DEBA");
-      isDisposed.getAndSet(newValue: 1)
+      isDisposed = true
       Logger.log("DEBA2");
       self.peer.dispose()
       Logger.log("FIXX???");
