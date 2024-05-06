@@ -237,7 +237,10 @@ abstract class PeerConnection {
   /// [RtpTransceiver]s).
   Future<void> close() async {
     for (var e in _transceivers) {
+      print("LOGA ${e}");
       e.stoppedByPeer();
+      print("LOGA AA ${e}");
+
     }
   }
 }
@@ -444,12 +447,25 @@ class _PeerConnectionChannel extends PeerConnection {
 
   @override
   Future<void> close() async {
+    print("DADADA");
     _checkNotClosed();
+    print("DADADA2");
+
+
+    print("DADADA3");
 
     _onIceCandidate = null;
+    print("DADADA4");
+
     _closed = true;
+    print("DADADA5");
+
     await super.close();
+    print("DADADA6");
+
     await _chan.invokeMethod('dispose');
+    print("DADADA7");
+
   }
 
   @override

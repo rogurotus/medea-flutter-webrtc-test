@@ -84,7 +84,10 @@ abstract class RtpTransceiver {
 
   /// Notifies the [RtpTransceiver] that it was stopped by the peer.
   void stoppedByPeer() {
+    print("LOGA HMMM");
     _isStopped = true;
+    print("LOGA HMMM2");
+
   }
 
   /// Indicates whether this [RtpTransceiver] is not transferring media.
@@ -134,8 +137,12 @@ class _RtpTransceiverChannel extends RtpTransceiver {
 
   @override
   Future<void> stop() async {
+    print("DEAD HMMM");
     _isStopped = true;
+    print("DEAD HMMM2");
     await _chan.invokeMethod('stop');
+    print("DEAD HMMM3");
+
   }
 
   @override
