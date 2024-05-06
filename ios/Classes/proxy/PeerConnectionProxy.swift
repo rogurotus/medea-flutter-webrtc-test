@@ -273,7 +273,7 @@ class PeerConnectionProxy {
   func dispose() {
     self.peer.close()
     for receiver in self.receivers.values {
-      receiver.notifyRemoved()
+      // receiver.notifyRemoved()
     }
     self.receivers = [:]
   }

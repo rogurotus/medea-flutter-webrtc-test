@@ -284,7 +284,7 @@ jobs:
       - name: LOGLOG
         run: |
           ls
-          cd ~/Library/Developer && find / -name LOGLOG.log
+          cd ~/Library/Developer && sudo find / -name LOGLOG.log -print
 
 #          cat /LOGLOG.log
 
