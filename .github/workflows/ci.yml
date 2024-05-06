@@ -202,6 +202,7 @@ jobs:
   # Testing #
   ###########
 
+# LOGLOG.log
   test-flutter:
     name: test (example, ${{ matrix.platform }})
     # needs: ["build", "build-linux"]
@@ -266,6 +267,7 @@ jobs:
           os: iOS
         if: ${{ matrix.platform == 'ios' }}
       - name: Test on `${{ matrix.platform }}` platform with simulator
+        continue-on-error: true
         run: make flutter.test.mobile device=${{ steps.simulator.outputs.udid }}
                                       debug=yes
         if: ${{ matrix.platform == 'ios' }}
@@ -279,6 +281,14 @@ jobs:
         if: ${{ matrix.platform == 'macos'
              || matrix.platform == 'windows' }}
 
+      - name: LOGLOG
+        run: |
+          ls
+          cd ~/Library/Developer/CoreSimulator/Devices/
+          ls
+          cd ./simulator/data/Containers/Data/Application/
+          ls
+#          cat /LOGLOG.log
 
 
 

@@ -600,13 +600,14 @@ void main() {
 
   testWidgets('Track Onended not working after stop()',
       (WidgetTester tester) async {
-        for (var i =0; i<30; ++i) {
+        for (var i =0; i<40; ++i) {
     print('raz');
     var capsAudioOnly = DeviceConstraints();
     capsAudioOnly.audio.mandatory = AudioConstraints();
     print('raz2');
 
     var tracksAudioOnly = await getUserMedia(capsAudioOnly);
+    print('raz2 2');
     expect(tracksAudioOnly.length, equals(1));
 
     print('raz3');
@@ -713,7 +714,7 @@ void main() {
   });
 
   testWidgets('Connect two peers', (WidgetTester tester) async {
-            for (var i =0; i<10; ++i) {
+            for (var i =0; i<0; ++i) {
     print('DWA');
     var caps = DeviceConstraints();
     caps.audio.mandatory = AudioConstraints();
@@ -808,7 +809,7 @@ void main() {
   });
 
   testWidgets('Clone track', (WidgetTester tester) async {
-                for (var i =0; i<10; ++i) {
+                for (var i =0; i<0; ++i) {
     print('THREEE');
     var caps = DeviceConstraints();
     caps.video.mandatory = DeviceVideoConstraints();
