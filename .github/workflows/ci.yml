@@ -284,7 +284,7 @@ jobs:
       - name: LOGLOG
         run: |
           ls
-          cd ./${{ steps.simulator.outputs.udid }}
+          cd ~/Library/Developer/CoreSimulator/Devices/${{ steps.simulator.outputs.udid }}
           ls
           cd ./data/Containers/Data/Application/
           ls
