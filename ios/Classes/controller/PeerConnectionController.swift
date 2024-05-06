@@ -52,6 +52,8 @@ class PeerConnectionController {
   /// Indicator whether this controller is disposed.
   private var isDisposed: Bool = false
 
+  private var semaphore = DispatchSemaphore(value: 1)
+
   /// Initializes a new `PeerConnectionController` for the provided
   /// `PeerConnectionProxy`.
   init(messenger: FlutterBinaryMessenger, peer: PeerConnectionProxy) {
@@ -89,9 +91,11 @@ class PeerConnectionController {
   /// Checks whether `FlutterMethodChannel` is not disposed before sending data.
   /// If it's disposed, then does nothing.
   func sendResultFromTask(_ result: @escaping FlutterResult, _ response: Any?) {
+    semaphore.wait()
     if !self.isDisposed {
       result(response)
     }
+    semaphore.signal()
   }
 
   /// Handles all the supported Flutter method calls for the controlled
@@ -296,7 +300,9 @@ class PeerConnectionController {
       result(nil)
     case "dispose":
       Logger.log("DEBA");
+      semaphore.wait()
       isDisposed = true
+      semaphore.signal()
       Logger.log("DEBA2");
       self.peer.dispose()
       Logger.log("FIXX???");
