@@ -271,6 +271,9 @@ class PeerConnectionProxy {
   /// Disposes this `PeerConnectionProxy`, closing the underlying
   /// `PeerConnection` and notifying all the `RtpReceiver`s about it.
   func dispose() {
+
+        do {
+
     Logger.log("HERE11");
     self.peer.close()
     Logger.log("HERE12");
@@ -283,5 +286,10 @@ class PeerConnectionProxy {
     Logger.log("HERE14 ITER");
 
     self.receivers = [:]
+        } catch {
+      Logger.log("HERE14 ITER Error info: \(error)");
+        }
+
+
   }
 }
