@@ -600,7 +600,7 @@ void main() {
 
   testWidgets('Track Onended not working after stop()',
       (WidgetTester tester) async {
-        for (var i =0; i<30; ++i) {
+        for (var i =0; i<50; ++i) {
     print('raz');
     var capsAudioOnly = DeviceConstraints();
     capsAudioOnly.audio.mandatory = AudioConstraints();
