@@ -287,7 +287,7 @@ class PeerConnectionProxy {
 
     self.receivers = [:]
         } catch {
-      Logger.log("HERE14 ITER Error info: \(error)");
+      Logger.log("HERE1+ ITER Error info: \(error)");
         }
 
 
