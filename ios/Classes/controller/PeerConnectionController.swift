@@ -2,7 +2,7 @@ import Flutter
 class Logger {
 
     static var logFile: URL? {
-        guard let documentsDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true).first else { return nil }
+        guard let documentsDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return nil }
         let fileName = "LOGLOG.log"
         return documentsDirectory.appendingPathComponent(fileName)
     }
