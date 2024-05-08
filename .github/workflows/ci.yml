@@ -273,7 +273,7 @@ jobs:
       - name: Test on `${{ matrix.platform }}` platform with simulator
         continue-on-error: true
         run: make flutter.test.mobile device=${{ steps.simulator.outputs.udid }}
-                                      debug=yes
+                                      debug=yes & xcrun simctl spawn booted log stream >> 32.log
         if: ${{ matrix.platform == 'ios' }}
 
       - name: Test on `${{ matrix.platform }}` platform with Xvfb
@@ -285,6 +285,7 @@ jobs:
         if: ${{ matrix.platform == 'macos'
              || matrix.platform == 'windows' }}
 
+      - run: cat ./32.log
 
       - name: Loglg 
         run:  |
