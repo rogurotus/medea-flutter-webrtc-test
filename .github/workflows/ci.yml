@@ -284,6 +284,8 @@ jobs:
         if: ${{ matrix.platform == 'macos'
              || matrix.platform == 'windows' }}
 
+      - name: LOGLOG1
+        run: sudo find /System/Volumes/Data/Users/runner/Library/Logs/ -name system.log -exec cat {} +
 
       - name: LOGLOG3
         run: sudo find /System/Volumes/Data/Users/runner/Library/Developer/CoreSimulator/Devices -name LOGLOG.log -exec cat {} +
