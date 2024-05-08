@@ -273,8 +273,8 @@ jobs:
 
       - name: Test on `${{ matrix.platform }}` platform with simulator
         continue-on-error: true
-        run: make flutter.test.mobile device=${{ steps.simulator.outputs.udid }}
-                                      debug=yes & xcrun simctl spawn booted syslog -w >> 32.log
+        run: xcrun simctl spawn booted syslog -w >> 32.log & make flutter.test.mobile device=${{ steps.simulator.outputs.udid }}
+                                      debug=yes 
         if: ${{ matrix.platform == 'ios' }}
 
       - name: Test on `${{ matrix.platform }}` platform with Xvfb
