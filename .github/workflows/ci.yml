@@ -269,6 +269,11 @@ jobs:
           os_version: '>=13.0'
           os: iOS
         if: ${{ matrix.platform == 'ios' }}
+
+      - name: LOG
+        run: xcrun simctl spawn booted syslog -w
+
+
       - name: Test on `${{ matrix.platform }}` platform with simulator
         continue-on-error: true
         run: make flutter.test.mobile device=${{ steps.simulator.outputs.udid }}
