@@ -288,9 +288,9 @@ jobs:
 
       - name: Loglg 
         run:  |
-        xcrun simctl spawn booted syslog -w
-        xcrun simctl spawn booted log stream
-        tail -F "$(xcrun simctl getenv booted SIMULATOR_LOG_ROOT)/system.log"
+          xcrun simctl spawn booted syslog -w
+          xcrun simctl spawn booted log stream
+          tail -F "$(xcrun simctl getenv booted SIMULATOR_LOG_ROOT)/system.log"
       - name: LOGLOG1
         run: sudo find /System/Volumes/Data/Users/runner/Library/Logs/ -name system.log -exec cat {} + 
 
