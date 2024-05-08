@@ -161,6 +161,7 @@ class PeerConnectionController {
           }
       Logger.log("Hello Swift 7")
 
+        do {
           try await self.peer.setLocalDescription(description: desc)
       Logger.log("Hello Swift 8")
 
@@ -173,6 +174,10 @@ class PeerConnectionController {
           self.sendResultFromTask(result, getFlutterError(error))
       Logger.log("Hello Swift 11")
 
+        }
+
+        } catch {
+          Logger.log("HOOH");
         }
       }
     case "setRemoteDescription":
