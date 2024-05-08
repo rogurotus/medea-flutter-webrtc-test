@@ -270,11 +270,6 @@ jobs:
           os: iOS
         if: ${{ matrix.platform == 'ios' }}
 
-      - name: LOG
-        run: xcrun simctl spawn booted syslog -w >> 32.log &
-
-      - name: LOGLOG0
-        run: cat ./32.log
 
       - name: Test on `${{ matrix.platform }}` platform with simulator
         continue-on-error: true
