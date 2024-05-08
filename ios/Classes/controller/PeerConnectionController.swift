@@ -160,6 +160,7 @@ class PeerConnectionController {
 
           }
       Logger.log("Hello Swift 7")
+      print("Hello Swift 7")
 
         do {
           try await self.peer.setLocalDescription(description: desc)
