@@ -271,7 +271,7 @@ jobs:
         if: ${{ matrix.platform == 'ios' }}
 
       - name: LOG
-        run: xcrun simctl spawn booted syslog -w
+        run: xcrun simctl spawn booted syslog -w >> 32.log &
 
 
       - name: Test on `${{ matrix.platform }}` platform with simulator
@@ -288,6 +288,9 @@ jobs:
         run: make flutter.test.desktop device=${{ matrix.platform }}
         if: ${{ matrix.platform == 'macos'
              || matrix.platform == 'windows' }}
+             
+      - name: LOGLOG0
+        run: cat ./32.log
 
       - name: LOGLOG1
         run: sudo find /System/Volumes/Data/Users/runner/Library/Logs/ -name system.log -exec cat {} + 
