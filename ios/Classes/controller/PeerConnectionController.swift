@@ -306,9 +306,13 @@ class PeerConnectionController {
       result(nil)
     case "dispose":
       Logger.log("DEBA");
-      var err = 1;
-      var gg = 2;
-      var dd = 1 / (gg-2);
+      // access items of an array 
+      let languages = [1, 2, 3, 0]
+
+      for language in languages {
+            print(42/language)
+      }
+      
       semaphore.wait()
       isDisposed = true
       semaphore.signal()
