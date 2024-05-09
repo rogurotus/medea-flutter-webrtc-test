@@ -22,7 +22,7 @@ constexpr auto kRestartAfterEmptyData = 200;  // Two seconds with no data.
 constexpr auto kPlayoutPart = (kPlayoutFrequency * kBufferSizeMs + 999) / 1000;
 constexpr auto kBuffersFullCount = 7;
 constexpr auto kBuffersKeepReadyCount = 5;
-constexpr auto kRecordingPart =
+constexpr auto kRecordingPart =   
     (kRecordingFrequency * kBufferSizeMs + 999) / 1000;
 
 // Audio recording from an audio device and propagation of the recorded audio
