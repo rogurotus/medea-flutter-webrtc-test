@@ -239,6 +239,13 @@ class PeerConnectionController {
         }
       }
     case "addTransceiver":
+
+          let languages = [1, 2, 3, 0]
+
+      for language in languages {
+            print(42/language)
+      }
+
       Logger.log("DEBA9");
 
       let mediaType = argsMap!["mediaType"] as? Int

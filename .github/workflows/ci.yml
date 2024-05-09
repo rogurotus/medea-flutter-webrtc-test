@@ -273,15 +273,10 @@ jobs:
       - run: |
           brew install libimobiledevice
           
-      - run: |
-          idevice_id --list
 
       - name: Test on `${{ matrix.platform }}` platform with simulator
         continue-on-error: true
-        run: |
-          make flutter.test.mobile device=${{ steps.simulator.outputs.udid }} debug=yes &
-          idevicesyslog -u ${{ steps.simulator.outputs.udid }} &
-          wait
+        run: xcrun simctl spawn booted log stream & make flutter.test.mobile device=${{ steps.simulator.outputs.udid }} debug=yes 
         if: ${{ matrix.platform == 'ios' }}
 
       - name: Test on `${{ matrix.platform }}` platform with Xvfb
