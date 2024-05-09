@@ -271,8 +271,8 @@ jobs:
         if: ${{ matrix.platform == 'ios' }}
 
       - run: |
-          idevice_id --list
           brew install libimobiledevice
+          idevice_id --list
           
 
       - name: Test on `${{ matrix.platform }}` platform with simulator
