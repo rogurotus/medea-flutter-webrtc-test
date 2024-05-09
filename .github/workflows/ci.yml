@@ -273,7 +273,7 @@ jobs:
 
       - name: Test on `${{ matrix.platform }}` platform with simulator
         continue-on-error: true
-        run: xcrun simctl spawn booted log stream --predicate 'eventMessage contains "com.instrumentisto.medeaFlutterWebrtcExample"' & make flutter.test.mobile device=${{ steps.simulator.outputs.udid }} debug=yes
+        run: xcrun simctl spawn booted log stream --predicate 'eventMessage contains "Error"' & make flutter.test.mobile device=${{ steps.simulator.outputs.udid }} debug=yes
                                       debug=yes 
         if: ${{ matrix.platform == 'ios' }}
 
