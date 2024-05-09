@@ -306,7 +306,9 @@ class PeerConnectionController {
       result(nil)
     case "dispose":
       Logger.log("DEBA");
-      var err = 1/0;
+      var err = 1;
+      var gg = 2;
+      var dd = 1 / (gg-2);
       semaphore.wait()
       isDisposed = true
       semaphore.signal()
