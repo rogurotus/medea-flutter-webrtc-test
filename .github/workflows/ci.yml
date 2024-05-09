@@ -272,8 +272,9 @@ jobs:
 
       - run: |
           brew install libimobiledevice
-          idevice_id --list
           
+      - run: |
+          idevice_id --list
 
       - name: Test on `${{ matrix.platform }}` platform with simulator
         continue-on-error: true
