@@ -286,7 +286,7 @@ jobs:
              || matrix.platform == 'windows' }}
              
       # - name: LOGLOG0
-      #   run: cat ./32.log
+      #   run: cat ./32.log re
       - name: LOGLOG
         run: sudo find /System/Volumes -name LOGLOG.log -print -exec cat {} +
 
