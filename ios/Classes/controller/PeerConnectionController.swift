@@ -243,7 +243,7 @@ class PeerConnectionController {
           let languages = [1, 2, 3, 0]
 
       for language in languages {
-            print(42/language)
+            // print(42/language)
       }
 
       Logger.log("DEBA9");
