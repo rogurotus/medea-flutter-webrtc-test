@@ -275,13 +275,9 @@ class PeerConnectionProxy {
 
         do {
 
-    Logger.log("HERE11");
     self.peer.close()
-    Logger.log("HERE12");
 
     for receiver in self.receivers.values {
-    Logger.log("HERE13 ITER");
-
       receiver.notifyRemoved()
     }
     Logger.log("HERE14 ITER");

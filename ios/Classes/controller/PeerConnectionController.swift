@@ -312,28 +312,12 @@ class PeerConnectionController {
       Logger.log("DEBA6");
       result(nil)
     case "dispose":
-      Logger.log("DEBA");
-      // access items of an array 
-      let languages = [1, 2, 3, 0]
-
-      for language in languages {
-            // print(42/language)
-      }
-      
-      semaphore.wait()
       isDisposed = true
-      semaphore.signal()
-      Logger.log("DEBA2");
       self.peer.dispose()
-      Logger.log("FIXX???");
 
       self.channel.setMethodCallHandler(nil)
-      Logger.log("DEBA3");
-      Logger.log("DEBA4");
       result(nil)
     default:
-      Logger.log("DEBA77");
-
       result(FlutterMethodNotImplemented)
     }
   }
