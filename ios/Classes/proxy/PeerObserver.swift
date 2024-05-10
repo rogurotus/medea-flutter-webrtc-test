@@ -17,10 +17,14 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didChange stateChanged: RTCSignalingState
   ) {
+    Logger.log("GRHMDA 5");
     DispatchQueue.main.async {
+      Logger.log("GRHMDA DEAD 5");
+
       self.peer!.broadcastEventObserver().onSignalingStateChange(
         state: SignalingState.fromWebRtc(state: stateChanged)
       )
+      Logger.log("GRHMDA DEAD 5A");
     }
   }
 
@@ -29,10 +33,15 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didChange newState: RTCIceConnectionState
   ) {
+    Logger.log("GRHMDA 3");
     DispatchQueue.main.async {
+      Logger.log("GRHMDA DEAD 3");
+
       self.peer!.broadcastEventObserver().onIceConnectionStateChange(
         state: IceConnectionState.fromWebRtc(state: newState)
       )
+      Logger.log("GRHMDA DEAD 3A");
+
     }
   }
 
@@ -40,10 +49,13 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didChange newState: RTCPeerConnectionState
   ) {
+    Logger.log("GRHMDA 1");
     DispatchQueue.main.async {
+      Logger.log("GRHMDA DEAD");
       self.peer!.broadcastEventObserver().onConnectionStateChange(
         state: PeerConnectionState.fromWebRtc(state: newState)
       )
+      Logger.log("GRHMDA DEAD a");
     }
   }
 
@@ -63,10 +75,14 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didGenerate candidate: RTCIceCandidate
   ) {
+    Logger.log("GRHMDA 2");
     DispatchQueue.main.async {
+      Logger.log("GRHMDA DEAD 2");
+
       self.peer!.broadcastEventObserver().onIceCandidate(
         candidate: IceCandidate(candidate: candidate)
       )
+      Logger.log("GRHMDA DEAD 2A");
     }
   }
 
@@ -117,8 +133,12 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
 
   /// Does nothing.
   func peerConnectionShouldNegotiate(_: RTCPeerConnection) {
+    Logger.log("GRHMDA 4");
     DispatchQueue.main.async {
+      Logger.log("GRHMDA DEAD 4");
+
       self.peer!.broadcastEventObserver().onNegotiationNeeded()
+      Logger.log("GRHMDA DEAD 4A");
     }
   }
 

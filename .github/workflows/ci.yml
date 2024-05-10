@@ -270,13 +270,10 @@ jobs:
           os: iOS
         if: ${{ matrix.platform == 'ios' }}
 
-      - run: |
-          brew install libimobiledevice
-          
-
+      # xcrun simctl spawn booted log stream --predicate 'eventMessage contains "com.instrumentisto.medeaFlutterWebrtcExample"' & 
       - name: Test on `${{ matrix.platform }}` platform with simulator
         continue-on-error: true
-        run: xcrun simctl spawn booted log stream --predicate 'eventMessage contains "com.instrumentisto.medeaFlutterWebrtcExample"' & make flutter.test.mobile device=${{ steps.simulator.outputs.udid }} debug=yes
+        run: make flutter.test.mobile device=${{ steps.simulator.outputs.udid }} debug=yes
         if: ${{ matrix.platform == 'ios' }}
 
       - name: Test on `${{ matrix.platform }}` platform with Xvfb
@@ -288,8 +285,8 @@ jobs:
         if: ${{ matrix.platform == 'macos'
              || matrix.platform == 'windows' }}
              
-      - name: LOGLOG0
-        run: cat ./32.log
+      # - name: LOGLOG0
+      #   run: cat ./32.log
 
       - name: LOGLOG1
         run: tail -F "$(xcrun simctl getenv booted SIMULATOR_LOG_ROOT)/system.log"

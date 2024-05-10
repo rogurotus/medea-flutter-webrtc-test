@@ -601,123 +601,130 @@ void main() {
   testWidgets('Track Onended not working after stop()',
       (WidgetTester tester) async {
         for (var i =0; i<50; ++i) {
-    // print('raz');
-    // var capsAudioOnly = DeviceConstraints();
-    // capsAudioOnly.audio.mandatory = AudioConstraints();
-    // print('raz2');
+    print('raz');
+    var capsAudioOnly = DeviceConstraints();
+    capsAudioOnly.audio.mandatory = AudioConstraints();
+    print('raz2');
 
-    // var tracksAudioOnly = await getUserMedia(capsAudioOnly);
-    // print('raz2 2');
-    // expect(tracksAudioOnly.length, equals(1));
+    var tracksAudioOnly = await getUserMedia(capsAudioOnly);
+    print('raz2 2');
+    expect(tracksAudioOnly.length, equals(1));
 
-    // print('raz3');
-    // var track = tracksAudioOnly[0];
+    print('raz3');
+    var track = tracksAudioOnly[0];
 
-    // final completer = Completer<void>();
-    // track.onEnded(() {
-    //   print('raz4');
-    //   completer.complete();
-    // });
+    final completer = Completer<void>();
+    track.onEnded(() {
+      print('raz4');
+      completer.complete();
+    });
 
     var server = IceServer(['stun:stun.l.google.com:19302']);
     var pc1 = await PeerConnection.create(IceTransportType.all, [server]);
-    // var pc2 = await PeerConnection.create(IceTransportType.all, [server]);
-    await pc1.close();
-
-    // pc2.onTrack((track, trans) async {
-    //   print('WO DELA 1'); 
-    //   track.onEnded(() {print('WO DELA');});
-    //   print('WO DELA 2'); 
-    // });
-
-
-
-    //   print('raz5');
-
-    // pc1.onIceCandidate((IceCandidate candidate) async {
-    //   print('raz6');
-
-    //   if (!pc2.closed) {
-    //   print('raz7');
-
-    //     await pc2.addIceCandidate(candidate);
-    //   }
-    // });
-
-    //   print('raz8');
-
-    // pc2.onIceCandidate((IceCandidate candidate) async {
-    //   print('raz9');
-
-    //   if (!pc1.closed) {
-    //   print('raz10');
-
-    //     await pc1.addIceCandidate(candidate);
-    //   }
-    // });
-
-    //   print('raz11');
-
-    // var audioTransceiver = await pc1.addTransceiver(
-    //     MediaKind.audio, RtpTransceiverInit(TransceiverDirection.sendOnly));
-    //   print('raz12');
-
-    // audioTransceiver.sender.replaceTrack(track);
-    //   print('raz13');
-
-    // var offer = await pc1.createOffer();
-    //   print('raz14');
-
-    // await pc1.setLocalDescription(offer);
-    //   print('raz15');
-
-    // await pc2.setRemoteDescription(offer);
-    //   print('raz16');
-
-    // var answer = await pc2.createAnswer();
-    //   print('raz17');
-
-    // await pc2.setLocalDescription(answer);
-    //   print('raz18');
-
-    // await pc1.setRemoteDescription(answer);
-    //   print('raz19');
-
-    // expect(await track.state(), equals(MediaStreamTrackState.live));
-    //   print('raz20');
-
-    // await track.stop();
-    //   print('raz21');
-
-    // try {
-    //   print('raz22');
-
-    //   await completer.future.timeout(const Duration(seconds: 3));
-    //   print('raz23');
-
-    //   throw Exception('Completer completed');
-    // } catch (e) {
-    //   print('raz24');
-
-    //   expect(e is TimeoutException, isTrue);
-    //   print('raz25');
-
-    //   expect(await track.state(), equals(MediaStreamTrackState.ended));
-    // }
-
-    //   print('raz26');
-
+    var pc2 = await PeerConnection.create(IceTransportType.all, [server]);
     // await pc1.close();
-    //   print('raz27');
 
-    // await pc2.close();
-    //   print('raz28');
+    pc2.onTrack((track, trans) async {
+      // print('WO DELA 1'); 
+      track.onEnded(() {print('WO DELA');});
+    //   print('WO DELA 2'); 
+    });
 
-    // await audioTransceiver.dispose();
-    //   print('raz29');
 
-    // await track.dispose();
-    //   print('raz30 \n\n\n');
+
+      print('raz5');
+
+    pc1.onIceCandidate((IceCandidate candidate) async {
+      print('raz6');
+
+      if (!pc2.closed) {
+      print('raz7');
+
+        await pc2.addIceCandidate(candidate);
+      }
+    });
+
+      print('raz8');
+
+    pc2.onIceCandidate((IceCandidate candidate) async {
+      print('raz9');
+
+      if (!pc1.closed) {
+      print('raz10');
+
+        await pc1.addIceCandidate(candidate);
+      }
+    });
+
+      print('raz11');
+
+    var audioTransceiver = await pc1.addTransceiver(
+        MediaKind.audio, RtpTransceiverInit(TransceiverDirection.sendOnly));
+      print('raz12');
+
+    audioTransceiver.sender.replaceTrack(track);
+      print('raz13');
+
+    var offer = await pc1.createOffer();
+      print('raz14');
+
+    await pc1.setLocalDescription(offer);
+      print('raz15');
+
+    await pc2.setRemoteDescription(offer);
+      print('raz16');
+
+    var answer = await pc2.createAnswer();
+      print('raz17');
+
+    await pc2.setLocalDescription(answer);
+      print('raz18');
+
+    await pc1.setRemoteDescription(answer);
+      print('raz19');
+
+    expect(await track.state(), equals(MediaStreamTrackState.live));
+      print('raz20');
+
+    await track.stop();
+      print('raz21');
+
+    try {
+      print('raz22');
+
+      await completer.future.timeout(const Duration(seconds: 3));
+      print('raz23');
+
+      throw Exception('Completer completed');
+    } catch (e) {
+      print('raz24');
+
+      expect(e is TimeoutException, isTrue);
+      print('raz25');
+
+      expect(await track.state(), equals(MediaStreamTrackState.ended));
+    }
+
+      print('raz26');
+
+      pc2.onConnectionStateChange((p0) { print('GOOGLe1 $p0'); });
+      pc2.onIceCandidate((p0) { print('GOOGLe2 $p0'); });
+      pc2.onIceCandidateError((p0) { print('GOOGLe3 $p0'); });
+      pc2.onIceConnectionStateChange((p0) { print('GOOGLe4 $p0'); });
+      pc2.onNegotiationNeeded(() { print('GOOGLe5'); });
+      pc2.onSignalingStateChange((p0) { print('GOOGLe6 $p0');});
+    
+
+    await pc1.close();
+      print('raz27');
+    await pc2.close();
+      print('raz28');
+
+    await audioTransceiver.dispose();
+      print('raz29');
+
+    await track.dispose();
+      print('raz30 \n\n\n');
 
         }
   });
