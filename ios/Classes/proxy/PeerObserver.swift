@@ -37,9 +37,15 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
     DispatchQueue.main.async {
       Logger.log("GRHMDA DEAD 3");
 
-      self.peer!.broadcastEventObserver().onIceConnectionStateChange(
-        state: IceConnectionState.fromWebRtc(state: newState)
-      )
+      do {
+        self.peer!.broadcastEventObserver().onIceConnectionStateChange(
+          state: IceConnectionState.fromWebRtc(state: newState)
+        )
+      } catch {
+
+          Logger.log("GRHMDA Error info: \(error)");
+        }
+
       Logger.log("GRHMDA DEAD 3A");
 
     }
