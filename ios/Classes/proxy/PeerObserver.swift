@@ -17,15 +17,15 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didChange stateChanged: RTCSignalingState
   ) {
-    Logger.log("GRHMDA 5");
-    DispatchQueue.main.async {
-      Logger.log("GRHMDA DEAD 5");
+    // Logger.log("GRHMDA 5");
+    // DispatchQueue.main.async {
+    //   Logger.log("GRHMDA DEAD 5");
 
-      self.peer!.broadcastEventObserver().onSignalingStateChange(
-        state: SignalingState.fromWebRtc(state: stateChanged)
-      )
-      Logger.log("GRHMDA DEAD 5A");
-    }
+    //   self.peer!.broadcastEventObserver().onSignalingStateChange(
+    //     state: SignalingState.fromWebRtc(state: stateChanged)
+    //   )
+    //   Logger.log("GRHMDA DEAD 5A");
+    // }
   }
 
   /// Fires an `onIceConnectionStateChange` callback in the
