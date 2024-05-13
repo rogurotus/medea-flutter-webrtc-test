@@ -58,6 +58,7 @@ class PeerConnectionFactoryProxy {
   /// `PeerConnectionConfiguration`.
   func create(conf: PeerConnectionConfiguration) -> PeerConnectionProxy {
     let id = self.nextId()
+    Logger.log("HMMM REMOTE \(id)");
 
     let config = conf.intoWebRtc()
     let peerObserver = PeerObserver()
@@ -69,17 +70,21 @@ class PeerConnectionFactoryProxy {
       ),
       delegate: peerObserver
     )
+     Logger.log("HMMM REMOTE2 \(id)");
     let peerProxy = PeerConnectionProxy(id: id, peer: peer!)
     peerObserver.setPeer(peer: peerProxy)
-
+ Logger.log("HMMM REMOTE3 \(id)");
     self.peerObservers[id] = peerObserver
-
+ Logger.log("HMMM REMOTE4 \(id)");
     return peerProxy
   }
 
   /// Removes the specified [PeerObserver] from the [peerObservers].
   private func remotePeerObserver(id: Int) {
+    Logger.log("WTF REMOTE \(id)");
     self.peerObservers.removeValue(forKey: id)
+    Logger.log("WTF REMOTE A \(id)");
+
   }
 
   /// Generates the next track ID.

@@ -34,6 +34,7 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
     } catch {
       Logger.log("GRHMDA Error 4 info: \(error)");
     }
+    Logger.log("GRHMDA 44");
   }
 
   /// Fires an `onIceConnectionStateChange` callback in the
@@ -57,6 +58,7 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
     } catch {
       Logger.log("GRHMDA Error 5 info: \(error)");
     }
+    Logger.log("GRHMDA 55");
   }
 
   /// Fires an `onConnectionStateChange` callback in the `PeerConnectionProxy`.
@@ -79,6 +81,7 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
     } catch {
       Logger.log("GRHMDA Error 6 info: \(error)");
     }
+    Logger.log("GRHMDA 66");
   }
 
   /// Fires an `onIceGatheringStateChange` callback in the
@@ -102,6 +105,7 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
     } catch {
       Logger.log("GRHMDA Error 7 info: \(error)");
     }
+    Logger.log("GRHMDA 77");
   }
 
   /// Fires an `onIceCandidate` callback in the `PeerConnectionProxy`.
@@ -125,6 +129,7 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
     } catch {
       Logger.log("GRHMDA Error 8 info: \(error)");
     }
+    Logger.log("GRHMDA 88");
   }
 
   /// Fires an `onTrack` callback in the `PeerConnectionProxy`.
@@ -157,6 +162,7 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
     } catch {
       Logger.log("GRHMDA Error 9 info: \(error)");
     }
+    Logger.log("GRHMDA 99");
   }
 
   /// Does nothing.
@@ -184,6 +190,7 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
     } catch {
       Logger.log("GRHMDA Error 0 info: \(error)");
     }
+    Logger.log("GRHMDA 00");
   }
 
   /// Does nothing.
@@ -212,6 +219,7 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
     } catch {
       Logger.log("GRHMDA Error + info: \(error)");
     }
+    Logger.log("GRHMDA ++");
   }
 
   /// Does nothing.
