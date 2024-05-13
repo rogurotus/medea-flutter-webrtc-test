@@ -17,15 +17,23 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didChange stateChanged: RTCSignalingState
   ) {
-    // Logger.log("GRHMDA 5");
-    // DispatchQueue.main.async {
-    //   Logger.log("GRHMDA DEAD 5");
+    do {
+    Logger.log("GRHMDA 4");
+    DispatchQueue.main.async {
+      do {
+      Logger.log("GRHMDA DEAD 4");
 
-    //   self.peer!.broadcastEventObserver().onSignalingStateChange(
-    //     state: SignalingState.fromWebRtc(state: stateChanged)
-    //   )
-    //   Logger.log("GRHMDA DEAD 5A");
-    // }
+      self.peer!.broadcastEventObserver().onSignalingStateChange(
+        state: SignalingState.fromWebRtc(state: stateChanged)
+      )
+      Logger.log("GRHMDA DEAD 4A");
+      } catch {
+        Logger.log("GRHMDA Error into 4 info: \(error)");
+      }
+    }
+    } catch {
+      Logger.log("GRHMDA Error 4 info: \(error)");
+    }
   }
 
   /// Fires an `onIceConnectionStateChange` callback in the
@@ -33,21 +41,21 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didChange newState: RTCIceConnectionState
   ) {
-    Logger.log("GRHMDA 3");
+    do {
+    Logger.log("GRHMDA 5");
     DispatchQueue.main.async {
-      Logger.log("GRHMDA DEAD 3");
-
       do {
+      Logger.log("GRHMDA DEAD 5");
         self.peer!.broadcastEventObserver().onIceConnectionStateChange(
           state: IceConnectionState.fromWebRtc(state: newState)
         )
+        Logger.log("GRHMDA DEAD 5A");
       } catch {
-
-          Logger.log("GRHMDA Error info: \(error)");
-        }
-
-      Logger.log("GRHMDA DEAD 3A");
-
+        Logger.log("GRHMDA Error into 5 info: \(error)");
+      }
+    }
+    } catch {
+      Logger.log("GRHMDA Error 5 info: \(error)");
     }
   }
 
@@ -55,13 +63,21 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didChange newState: RTCPeerConnectionState
   ) {
-    Logger.log("GRHMDA 1");
+    do {
+    Logger.log("GRHMDA 6");
     DispatchQueue.main.async {
-      Logger.log("GRHMDA DEAD");
+      do {
+      Logger.log("GRHMDA DEAD 6");
       self.peer!.broadcastEventObserver().onConnectionStateChange(
         state: PeerConnectionState.fromWebRtc(state: newState)
       )
-      Logger.log("GRHMDA DEAD a");
+      Logger.log("GRHMDA DEAD 6A");
+      } catch {
+        Logger.log("GRHMDA Error into 6 info: \(error)");
+      }
+    }
+    } catch {
+      Logger.log("GRHMDA Error 6 info: \(error)");
     }
   }
 
@@ -70,10 +86,21 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didChange newState: RTCIceGatheringState
   ) {
+    do {
+    Logger.log("GRHMDA 7");
     DispatchQueue.main.async {
+      do {
+      Logger.log("GRHMDA DEAD 7");
       self.peer!.broadcastEventObserver().onIceGatheringStateChange(
         state: IceGatheringState.fromWebRtc(state: newState)
       )
+      Logger.log("GRHMDA DEAD 7A");
+      } catch {
+        Logger.log("GRHMDA Error into 7 info: \(error)");
+      }
+    }
+    } catch {
+      Logger.log("GRHMDA Error 7 info: \(error)");
     }
   }
 
@@ -81,14 +108,22 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didGenerate candidate: RTCIceCandidate
   ) {
-    Logger.log("GRHMDA 2");
+          do {
+    Logger.log("GRHMDA 8");
     DispatchQueue.main.async {
-      Logger.log("GRHMDA DEAD 2");
+            do {
+      Logger.log("GRHMDA DEAD 8");
 
       self.peer!.broadcastEventObserver().onIceCandidate(
         candidate: IceCandidate(candidate: candidate)
       )
-      Logger.log("GRHMDA DEAD 2A");
+      Logger.log("GRHMDA DEAD 8A");
+      } catch {
+        Logger.log("GRHMDA Error into 8 info: \(error)");
+      }
+    }
+    } catch {
+      Logger.log("GRHMDA Error 8 info: \(error)");
     }
   }
 
@@ -96,7 +131,11 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didStartReceivingOn transceiver: RTCRtpTransceiver
   ) {
+          do {
+    Logger.log("GRHMDA 9");
     DispatchQueue.main.async {
+      do {
+      Logger.log("GRHMDA DEAD 9");
       let receiver = transceiver.receiver
       let track = receiver.track
       if track != nil {
@@ -110,6 +149,13 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
           }
         }
       }
+      Logger.log("GRHMDA DEAD 9A");
+      } catch {
+        Logger.log("GRHMDA Error into 9 info: \(error)");
+      }
+    }
+    } catch {
+      Logger.log("GRHMDA Error 9 info: \(error)");
     }
   }
 
@@ -123,8 +169,20 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didRemove receiver: RTCRtpReceiver
   ) {
+    do {
+    Logger.log("GRHMDA 0");
     DispatchQueue.main.async {
+      Logger.log("GRHMDA DEAD 0");
+
+      do {
       self.peer!.receiverRemoved(endedReceiver: receiver)
+      Logger.log("GRHMDA DEAD 0A");
+      } catch {
+        Logger.log("GRHMDA Error into 0 info: \(error)");
+      }
+    }
+    } catch {
+      Logger.log("GRHMDA Error 0 info: \(error)");
     }
   }
 
@@ -139,12 +197,20 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
 
   /// Does nothing.
   func peerConnectionShouldNegotiate(_: RTCPeerConnection) {
-    Logger.log("GRHMDA 4");
+    do {
+    Logger.log("GRHMDA +");
     DispatchQueue.main.async {
-      Logger.log("GRHMDA DEAD 4");
+      do {
+      Logger.log("GRHMDA DEAD +");
 
       self.peer!.broadcastEventObserver().onNegotiationNeeded()
-      Logger.log("GRHMDA DEAD 4A");
+      Logger.log("GRHMDA DEAD +A");
+      } catch {
+        Logger.log("GRHMDA Error into + info: \(error)");
+      }
+    }
+    } catch {
+      Logger.log("GRHMDA Error + info: \(error)");
     }
   }
 
