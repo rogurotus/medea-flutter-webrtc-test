@@ -77,18 +77,33 @@ class PeerConnectionProxy {
   func setLocalDescription(description: SessionDescription?) async throws {
     return try await withCheckedThrowingContinuation { continuation in
       let completionHandler = { (error: Error?) in
+        Logger.log("completionHandler 1")
         if error == nil {
+        Logger.log("completionHandler 2")
+
           continuation.resume(returning: ())
+        Logger.log("completionHandler 3")
+
         } else {
+        Logger.log("completionHandler 4")
+
           continuation.resume(throwing: error!)
+        Logger.log("completionHandler 5")
+
         }
       }
       if description == nil {
+        Logger.log("completionHandler 6")
+
         self.peer.setLocalDescriptionWithCompletionHandler(completionHandler)
       } else {
         let sdp = description!.intoWebRtc()
+        Logger.log("completionHandler 7")
+
         self.peer.setLocalDescription(sdp, completionHandler: completionHandler)
       }
+        Logger.log("completionHandler 8")
+
     }
   }
 
