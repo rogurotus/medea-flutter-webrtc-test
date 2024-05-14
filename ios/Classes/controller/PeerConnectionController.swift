@@ -313,6 +313,7 @@ class PeerConnectionController {
       result(nil)
     case "dispose":
       isDisposed = true
+      // signaling_thread()
       self.peer.dispose()
 
       self.channel.setMethodCallHandler(nil)

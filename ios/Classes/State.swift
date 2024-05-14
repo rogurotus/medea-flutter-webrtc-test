@@ -21,3 +21,5 @@ class State {
     self.factory
   }
 }
+
+// BEGIN_PROXY_MAP(PeerConnection)

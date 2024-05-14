@@ -14,6 +14,7 @@ class PeerConnectionFactoryController {
   /// Initializes a new `PeerConnectionFactoryController` and
   /// `PeerConnectionFactoryProxy` based on the provided `State`.
   init(messenger: FlutterBinaryMessenger, state: State) {
+    Logger.log("KPRF1");
     let channelName = ChannelNameGenerator.name(
       name: "PeerConnectionFactory",
       id: 0
@@ -25,8 +26,10 @@ class PeerConnectionFactoryController {
       binaryMessenger: messenger
     )
     self.channel.setMethodCallHandler { call, result in
+      Logger.log("KPRF2");
       self.onMethodCall(call: call, result: result)
     }
+    Logger.log("KPRF3");
   }
 
   /// Handles all the supported Flutter method calls for the controlled
@@ -35,6 +38,7 @@ class PeerConnectionFactoryController {
     let argsMap = call.arguments as? [String: Any]
     switch call.method {
     case "create":
+      Logger.log("NLUD1");
       let iceTransportTypeArg = argsMap!["iceTransportType"] as? Int
       let iceTransportType = IceTransportType(rawValue: iceTransportTypeArg!)!
       let iceServersArg = argsMap!["iceServers"] as? [Any]
@@ -47,23 +51,32 @@ class PeerConnectionFactoryController {
 
         return IceServer(urls: urlsArg!, username: username, password: password)
       }
+      Logger.log("NLUD2");
+
       let conf = PeerConnectionConfiguration(
         iceServers: iceServers, iceTransportType: iceTransportType
       )
       let peer = PeerConnectionController(
         messenger: self.messenger, peer: self.peerFactory.create(conf: conf)
       )
+      Logger.log("NLUD3");
+
       result(peer.asFlutterResult())
     case "getRtpSenderCapabilities":
+      Logger.log("NAV1");
       let kind = argsMap!["kind"] as? Int
       let mediaKind = MediaType(rawValue: kind!)!
+      Logger.log("NAV2");
 
       let capabilities = self
         .peerFactory
         .rtpSenderCapabilities(kind: mediaKind.intoWebRtc())
+      Logger.log("NAV3");
 
       result(capabilities.asFlutterResult())
     case "videoEncoders":
+      Logger.log("ER1");
+
       let res = [
         VideoCodecInfo(
           isHardwareAccelerated: false,
@@ -84,8 +97,10 @@ class PeerConnectionFactoryController {
       ].map {
         $0.asFlutterResult()
       }
+      Logger.log("ER2");
       result(res)
     case "videoDecoders":
+      Logger.log("SV1");
       let res = [
         VideoCodecInfo(
           isHardwareAccelerated: false,
@@ -106,10 +121,18 @@ class PeerConnectionFactoryController {
       ].map {
         $0.asFlutterResult()
       }
+      Logger.log("SV2");
       result(res)
     case "dispose":
-      self.channel.setMethodCallHandler(nil)
-      result(nil)
+      do {
+        Logger.log("LDPR1");
+        self.channel.setMethodCallHandler(nil)
+        Logger.log("LDPR2");
+        result(nil)
+        Logger.log("LDPR3");
+      } catch {
+        Logger.log("LDPR4");
+      }
     default:
       result(FlutterMethodNotImplemented)
     }
