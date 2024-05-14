@@ -17,23 +17,23 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didChange stateChanged: RTCSignalingState
   ) {
-    do {
-    Logger.log("GRHMDA 4");
-    DispatchQueue.main.async {
-      do {
-      Logger.log("GRHMDA DEAD 4");
+    // do {
+    // Logger.log("GRHMDA 4");
+    // DispatchQueue.main.async {
+    //   do {
+    //   Logger.log("GRHMDA DEAD 4");
 
-      self.peer!.broadcastEventObserver().onSignalingStateChange(
-        state: SignalingState.fromWebRtc(state: stateChanged)
-      )
-      Logger.log("GRHMDA DEAD 4A");
-      } catch {
-        Logger.log("GRHMDA Error into 4 info: \(error)");
-      }
-    }
-    } catch {
-      Logger.log("GRHMDA Error 4 info: \(error)");
-    }
+    //   self.peer!.broadcastEventObserver().onSignalingStateChange(
+    //     state: SignalingState.fromWebRtc(state: stateChanged)
+    //   )
+    //   Logger.log("GRHMDA DEAD 4A");
+    //   } catch {
+    //     Logger.log("GRHMDA Error into 4 info: \(error)");
+    //   }
+    // }
+    // } catch {
+    //   Logger.log("GRHMDA Error 4 info: \(error)");
+    // }
     Logger.log("GRHMDA 44");
   }
 
@@ -42,22 +42,22 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didChange newState: RTCIceConnectionState
   ) {
-    do {
-    Logger.log("GRHMDA 5");
-    DispatchQueue.main.async {
-      do {
-      Logger.log("GRHMDA DEAD 5");
-        self.peer!.broadcastEventObserver().onIceConnectionStateChange(
-          state: IceConnectionState.fromWebRtc(state: newState)
-        )
-        Logger.log("GRHMDA DEAD 5A");
-      } catch {
-        Logger.log("GRHMDA Error into 5 info: \(error)");
-      }
-    }
-    } catch {
-      Logger.log("GRHMDA Error 5 info: \(error)");
-    }
+    // do {
+    // Logger.log("GRHMDA 5");
+    // DispatchQueue.main.async {
+    //   do {
+    //   Logger.log("GRHMDA DEAD 5");
+    //     self.peer!.broadcastEventObserver().onIceConnectionStateChange(
+    //       state: IceConnectionState.fromWebRtc(state: newState)
+    //     )
+    //     Logger.log("GRHMDA DEAD 5A");
+    //   } catch {
+    //     Logger.log("GRHMDA Error into 5 info: \(error)");
+    //   }
+    // }
+    // } catch {
+    //   Logger.log("GRHMDA Error 5 info: \(error)");
+    // }
     Logger.log("GRHMDA 55");
   }
 
@@ -65,22 +65,22 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didChange newState: RTCPeerConnectionState
   ) {
-    do {
-    Logger.log("GRHMDA 6");
-    DispatchQueue.main.async {
-      do {
-      Logger.log("GRHMDA DEAD 6");
-      self.peer!.broadcastEventObserver().onConnectionStateChange(
-        state: PeerConnectionState.fromWebRtc(state: newState)
-      )
-      Logger.log("GRHMDA DEAD 6A");
-      } catch {
-        Logger.log("GRHMDA Error into 6 info: \(error)");
-      }
-    }
-    } catch {
-      Logger.log("GRHMDA Error 6 info: \(error)");
-    }
+    // do {
+    // Logger.log("GRHMDA 6");
+    // DispatchQueue.main.async {
+    //   do {
+    //   Logger.log("GRHMDA DEAD 6");
+    //   self.peer!.broadcastEventObserver().onConnectionStateChange(
+    //     state: PeerConnectionState.fromWebRtc(state: newState)
+    //   )
+    //   Logger.log("GRHMDA DEAD 6A");
+    //   } catch {
+    //     Logger.log("GRHMDA Error into 6 info: \(error)");
+    //   }
+    // }
+    // } catch {
+    //   Logger.log("GRHMDA Error 6 info: \(error)");
+    // }
     Logger.log("GRHMDA 66");
   }
 
@@ -89,22 +89,22 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didChange newState: RTCIceGatheringState
   ) {
-    do {
-    Logger.log("GRHMDA 7");
-    DispatchQueue.main.async {
-      do {
-      Logger.log("GRHMDA DEAD 7");
-      self.peer!.broadcastEventObserver().onIceGatheringStateChange(
-        state: IceGatheringState.fromWebRtc(state: newState)
-      )
-      Logger.log("GRHMDA DEAD 7A");
-      } catch {
-        Logger.log("GRHMDA Error into 7 info: \(error)");
-      }
-    }
-    } catch {
-      Logger.log("GRHMDA Error 7 info: \(error)");
-    }
+    // do {
+    // Logger.log("GRHMDA 7");
+    // DispatchQueue.main.async {
+    //   do {
+    //   Logger.log("GRHMDA DEAD 7");
+    //   self.peer!.broadcastEventObserver().onIceGatheringStateChange(
+    //     state: IceGatheringState.fromWebRtc(state: newState)
+    //   )
+    //   Logger.log("GRHMDA DEAD 7A");
+    //   } catch {
+    //     Logger.log("GRHMDA Error into 7 info: \(error)");
+    //   }
+    // }
+    // } catch {
+    //   Logger.log("GRHMDA Error 7 info: \(error)");
+    // }
     Logger.log("GRHMDA 77");
   }
 
@@ -175,22 +175,22 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
   func peerConnection(
     _: RTCPeerConnection, didRemove receiver: RTCRtpReceiver
   ) {
-    do {
-    Logger.log("GRHMDA 0");
-    DispatchQueue.main.async {
-      Logger.log("GRHMDA DEAD 0");
+    // do {
+    // Logger.log("GRHMDA 0");
+    // DispatchQueue.main.async {
+    //   Logger.log("GRHMDA DEAD 0");
 
-      do {
-      self.peer!.receiverRemoved(endedReceiver: receiver)
-      Logger.log("GRHMDA DEAD 0A");
-      } catch {
-        Logger.log("GRHMDA Error into 0 info: \(error)");
-      }
-    }
-    } catch {
-      Logger.log("GRHMDA Error 0 info: \(error)");
-    }
-    Logger.log("GRHMDA 00");
+    //   do {
+    //   self.peer!.receiverRemoved(endedReceiver: receiver)
+    //   Logger.log("GRHMDA DEAD 0A");
+    //   } catch {
+    //     Logger.log("GRHMDA Error into 0 info: \(error)");
+    //   }
+    // }
+    // } catch {
+    //   Logger.log("GRHMDA Error 0 info: \(error)");
+    // }
+    // Logger.log("GRHMDA 00");
   }
 
   /// Does nothing.
@@ -204,22 +204,22 @@ class PeerObserver: NSObject, RTCPeerConnectionDelegate {
 
   /// Does nothing.
   func peerConnectionShouldNegotiate(_: RTCPeerConnection) {
-    do {
-    Logger.log("GRHMDA +");
-    DispatchQueue.main.async {
-      do {
-      Logger.log("GRHMDA DEAD +");
+    // do {
+    // Logger.log("GRHMDA +");
+    // DispatchQueue.main.async {
+    //   do {
+    //   Logger.log("GRHMDA DEAD +");
 
-      self.peer!.broadcastEventObserver().onNegotiationNeeded()
-      Logger.log("GRHMDA DEAD +A");
-      } catch {
-        Logger.log("GRHMDA Error into + info: \(error)");
-      }
-    }
-    } catch {
-      Logger.log("GRHMDA Error + info: \(error)");
-    }
-    Logger.log("GRHMDA ++");
+    //   self.peer!.broadcastEventObserver().onNegotiationNeeded()
+    //   Logger.log("GRHMDA DEAD +A");
+    //   } catch {
+    //     Logger.log("GRHMDA Error into + info: \(error)");
+    //   }
+    // }
+    // } catch {
+    //   Logger.log("GRHMDA Error + info: \(error)");
+    // }
+    // Logger.log("GRHMDA ++");
   }
 
   /// Does nothing.
