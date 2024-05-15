@@ -53,11 +53,15 @@ class PeerConnectionFactoryController {
       }
       Logger.log("NLUD2");
 
+      var p = self.peerFactory.create(conf: conf);
+      var a = p.signalingThread();
+      Logger.log("NLUD2 \(a.size())");
+
       let conf = PeerConnectionConfiguration(
         iceServers: iceServers, iceTransportType: iceTransportType
       )
       let peer = PeerConnectionController(
-        messenger: self.messenger, peer: self.peerFactory.create(conf: conf)
+        messenger: self.messenger, peer: p
       )
       Logger.log("NLUD3");
 
