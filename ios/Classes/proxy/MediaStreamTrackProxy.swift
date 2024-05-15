@@ -183,10 +183,13 @@ class MediaStreamTrackProxy: Equatable {
   ///
   /// Source will be stopped and disposed once all its tracks are stopped.
   func stop() {
+    Logger.log("STOPE 1");
     self.isStopped = true
     for cb in self.onStopSubscribers {
+      Logger.log("STOPE into 1");
       cb()
     }
+    Logger.log("STOPE 2");
   }
 
   /// Returns the current `readyState` of this track.

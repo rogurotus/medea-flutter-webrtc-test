@@ -59,9 +59,9 @@ class PeerConnectionFactoryController {
       )
 
       var p = self.peerFactory.create(conf: conf);
-      var a = p.signalingThread();
+      var a = self.peerFactory.signalingThread();
       Logger.log("NLUD2 \(a.size())");
-      
+
       let peer = PeerConnectionController(
         messenger: self.messenger, peer: p
       )
