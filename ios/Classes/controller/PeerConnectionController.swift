@@ -312,6 +312,7 @@ class PeerConnectionController {
       Logger.log("DEBA6");
       result(nil)
     case "dispose":
+    Logger.log("DEBA6 \(self.peer.getId())");
       isDisposed = true
       // signaling_thread()
       self.peer.dispose()
